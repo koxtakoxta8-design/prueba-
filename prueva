@@ -1,113 +1,316 @@
-local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Datos de huevos con su "suerte" numérica para comparar
 local EggData = {
-    ["White Egg"] = { Lucky = 1 },
-    ["Brown Egg"] = { Lucky = 5 },
-    ["Cracked Egg"] = { Lucky = 30 },
-    ["Easter Egg"] = { Lucky = 50 },
-    ["Stone Egg"] = { Lucky = 100 },
-    ["Leaf Egg"] = { Lucky = 200 },
-    ["Mushroom Egg"] = { Lucky = 500 },
-    ["Flower Egg"] = { Lucky = 750 },
-    ["Slime Egg"] = { Lucky = 1000 },
-    ["Ice Egg"] = { Lucky = 3000 },
-    ["Glass Egg"] = { Lucky = 10000 },
-    ["Golden Egg"] = { Lucky = 30000 },
-    ["Crystal Egg"] = { Lucky = 150000 },
-    ["Skull Egg"] = { Lucky = 250000 },
-    ["Dominus Egg"] = { Lucky = 700000 },
-    ["Flaming Egg"] = { Lucky = 1000000 },
-    ["Sinister Egg"] = { Lucky = 3000000 },
-    ["Soul Egg"] = { Lucky = 7000000 },
-    ["Aurora Egg"] = { Lucky = 300000000 },
-    ["Galaxy Egg"] = { Lucky = 1500000000 },
-    ["Black Hole Egg"] = { Lucky = 100000000000 },
-    ["Cherub Egg"] = { Lucky = 1000000000000 },
+    ["White Egg"] = {Lucky = 1},
+    ["Brown Egg"] = {Lucky = 5},
+    ["Cracked Egg"] = {Lucky = 30},
+    ["Easter Egg"] = {Lucky = 50},
+    ["Stone Egg"] = {Lucky = 100},
+    ["Leaf Egg"] = {Lucky = 200},
+    ["Mushroom Egg"] = {Lucky = 500},
+    ["Flower Egg"] = {Lucky = 750},
+    ["Slime Egg"] = {Lucky = 1000},
+    ["Ice Egg"] = {Lucky = 3000},
+    ["Glass Egg"] = {Lucky = 10000},
+    ["Golden Egg"] = {Lucky = 30000},
+    ["Crystal Egg"] = {Lucky = 150000},
+    ["Skull Egg"] = {Lucky = 250000},
+    ["Dominus Egg"] = {Lucky = 700000},
+    ["Flaming Egg"] = {Lucky = 1000000},
+    ["Sinister Egg"] = {Lucky = 3000000},
+    ["Soul Egg"] = {Lucky = 7000000},
+    ["Aurora Egg"] = {Lucky = 300000000},
+    ["Galaxy Egg"] = {Lucky = 1500000000},
+    ["Black Hole Egg"] = {Lucky = 100000000000},
+    ["Cherub Egg"] = {Lucky = 1000000000000},
 }
 
--- Función para encontrar el huevo con mayor suerte visible en el Workspace
+local function GetCharacter()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    return character, character:WaitForChild("HumanoidRootPart")
+end
+
 local function FindBestEgg()
     local eggsFolder = Workspace:FindFirstChild("Eggs") or Workspace
-    local bestEggPart = nil
+    local bestEgg = nil
     local bestLuck = -math.huge
 
-    for _, part in pairs(eggsFolder:GetChildren()) do
-        if part:IsA("BasePart") then
-            local eggName = part.Name
-            local data = EggData[eggName]
-
+    for _, obj in ipairs(eggsFolder:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local data = EggData[obj.Name]
             if data and data.Lucky > bestLuck then
                 bestLuck = data.Lucky
-                bestEggPart = part
+                bestEgg = obj
             end
         end
     end
 
-    return bestEggPart
+    return bestEgg, bestLuck
 end
 
--- Función para teletransportar al jugador a una posición
-local function Teleport(position)
-    if HumanoidRootPart and HumanoidRootPart.Parent then
-        HumanoidRootPart.CFrame = CFrame.new(position + Vector3.new(0, 3, 0))
+local function GetBaseSpawn()
+    local names = {
+        "SpawnLocation",
+        "BaseSpawn",
+        "Base",
+        "Spawn",
+        "Home",
+    }
+
+    for _, name in ipairs(names) do
+        local obj = Workspace:FindFirstChild(name, true)
+        if obj then
+            if obj:IsA("BasePart") then
+                return obj.Position
+            elseif obj:IsA("Model") then
+                local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                if part then
+                    return part.Position
+                end
+            end
+        end
     end
+
+    return nil
 end
 
--- Función para obtener la posición del spawn/base
-local function GetSpawnPosition()
-    local spawnLocation = Workspace:FindFirstChild("SpawnLocation")
+local function TeleportTo(position)
+    local character, root = GetCharacter()
+    if root and root.Parent then
+        character:PivotTo(CFrame.new(position + Vector3.new(0, 3, 0)))
+        return true
+    end
+    return false
+end
 
-    if spawnLocation and spawnLocation:IsA("SpawnLocation") then
-        return spawnLocation.Position
+-- Busca un ProximityPrompt perteneciente al huevo.
+local function FindEggPrompt(egg)
+    if not egg then return nil end
+
+    if egg:IsA("ProximityPrompt") then
+        return egg
     end
 
-    return Vector3.new(0, 10, 0)
+    local prompt = egg:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt then
+        return prompt
+    end
+
+    local parent = egg.Parent
+    if parent then
+        prompt = parent:FindFirstChildWhichIsA("ProximityPrompt", true)
+    end
+
+    return prompt
 end
 
--- Función principal para ir al mejor huevo, agarrarlo y volver al spawn
-local function GrabBestEggAndReturn()
-    local bestEgg = FindBestEgg()
+local function GrabBestEggAndReturn(setStatus)
+    setStatus("Buscando mejor huevo...")
 
-    if not bestEgg then
-        warn("No se encontró ningún huevo para agarrar.")
+    local egg, luck = FindBestEgg()
+
+    if not egg then
+        setStatus("No encontré ningún huevo.")
         return
     end
 
-    -- Teletransportar al mejor huevo
-    Teleport(bestEgg.Position)
+    setStatus("Huevo: " .. egg.Name .. " | Lucky: " .. tostring(luck))
 
-    -- Esperar un poco para simular que agarra el huevo
+    if not TeleportTo(egg.Position) then
+        setStatus("No se pudo llegar al huevo.")
+        return
+    end
+
     task.wait(0.5)
 
-    -- Volver al spawn
-    local spawnPos = GetSpawnPosition()
-    Teleport(spawnPos)
+    -- Si el juego usa un ProximityPrompt para recogerlo,
+    -- intenta activarlo cuando existe.
+    local prompt = FindEggPrompt(egg)
+
+    if prompt then
+        pcall(function()
+            prompt.HoldDuration = 0
+        end)
+
+        pcall(function()
+            fireproximityprompt(prompt)
+        end)
+
+        task.wait(0.5)
+        setStatus("Huevo recogido. Regresando...")
+    else
+        setStatus("No encontré un ProximityPrompt para recogerlo.")
+        task.wait(0.5)
+    end
+
+    local basePosition = GetBaseSpawn()
+
+    if not basePosition then
+        setStatus("No encontré el spawn de la base.")
+        return
+    end
+
+    TeleportTo(basePosition)
+    setStatus("Listo: regresé a la base.")
 end
 
--- Crear GUI con botón para activar la función
+-- GUI
+local old = PlayerGui:FindFirstChild("BestEggPanel")
+if old then
+    old:Destroy()
+end
+
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "EggTPGui"
+ScreenGui.Name = "BestEggPanel"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = PlayerGui
 
-local Button = Instance.new("TextButton")
-Button.Size = UDim2.new(0, 200, 0, 50)
-Button.Position = UDim2.new(0.5, -100, 0.9, 0)
-Button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-Button.TextColor3 = Color3.new(1, 1, 1)
-Button.Font = Enum.Font.GothamBold
-Button.TextSize = 20
-Button.Text = "Ir al Mejor Huevo"
-Button.Parent = ScreenGui
+local Panel = Instance.new("Frame")
+Panel.Size = UDim2.new(0, 300, 0, 190)
+Panel.Position = UDim2.new(0.5, -150, 0.5, -95)
+Panel.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+Panel.BorderSizePixel = 0
+Panel.Parent = ScreenGui
 
-Button.Activated:Connect(function()
-    GrabBestEggAndReturn()
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 14)
+Corner.Parent = Panel
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(80, 80, 90)
+Stroke.Thickness = 1.5
+Stroke.Parent = Panel
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 0, 42)
+Title.Position = UDim2.new(0, 10, 0, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "🥚 BEST EGG"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 22
+Title.Parent = Panel
+
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, -20, 0, 35)
+Status.Position = UDim2.new(0, 10, 0, 47)
+Status.BackgroundTransparency = 1
+Status.Text = "Listo"
+Status.TextColor3 = Color3.fromRGB(190, 190, 200)
+Status.Font = Enum.Font.Gotham
+Status.TextSize = 13
+Status.TextWrapped = true
+Status.Parent = Panel
+
+local GoButton = Instance.new("TextButton")
+GoButton.Size = UDim2.new(1, -30, 0, 55)
+GoButton.Position = UDim2.new(0, 15, 0, 90)
+GoButton.BackgroundColor3 = Color3.fromRGB(35, 190, 105)
+GoButton.Text = "🥚  IR AL MEJOR HUEVO"
+GoButton.TextColor3 = Color3.new(1, 1, 1)
+GoButton.Font = Enum.Font.GothamBold
+GoButton.TextSize = 17
+GoButton.Parent = Panel
+
+local GoCorner = Instance.new("UICorner")
+GoCorner.CornerRadius = UDim.new(0, 10)
+GoCorner.Parent = GoButton
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 28, 0, 28)
+CloseButton.Position = UDim2.new(1, -35, 0, 8)
+CloseButton.BackgroundColor3 = Color3.fromRGB(210, 55, 55)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.new(1, 1, 1)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 14
+CloseButton.Parent = Panel
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(1, 0)
+CloseCorner.Parent = CloseButton
+
+-- Botón para volver a mostrar el panel.
+local OpenButton = Instance.new("TextButton")
+OpenButton.Size = UDim2.new(0, 55, 0, 55)
+OpenButton.Position = UDim2.new(1, -70, 0, 20)
+OpenButton.BackgroundColor3 = Color3.fromRGB(35, 190, 105)
+OpenButton.Text = "🥚"
+OpenButton.TextSize = 25
+OpenButton.Visible = false
+OpenButton.Parent = ScreenGui
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(1, 0)
+OpenCorner.Parent = OpenButton
+
+GoButton.Activated:Connect(function()
+    if GoButton:GetAttribute("Busy") then
+        return
+    end
+
+    GoButton:SetAttribute("Busy", true)
+    GoButton.Text = "⏳ BUSCANDO..."
+
+    task.spawn(function()
+        GrabBestEggAndReturn(function(message)
+            Status.Text = message
+        end)
+
+        GoButton.Text = "🥚  IR AL MEJOR HUEVO"
+        GoButton:SetAttribute("Busy", false)
+    end)
+end)
+
+CloseButton.Activated:Connect(function()
+    Panel.Visible = false
+    OpenButton.Visible = true
+end)
+
+OpenButton.Activated:Connect(function()
+    Panel.Visible = true
+    OpenButton.Visible = false
+end)
+
+-- Panel arrastrable en PC y móvil.
+local dragging = false
+local dragStart
+local startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    Panel.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+Panel.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Panel.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Panel.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+        if dragging then
+            updateDrag(input)
+        end
+    end
 end)
