@@ -1,122 +1,311 @@
 --==============================================================
--- KOXTA • ZONA DE EXCLUSIÓN
--- CÍRCULO 3D + COORDENADAS + SLIDER DE STUDS
+-- KOXTA • ZONA DE EXCLUSIÓN v2
+-- CÍRCULO AZUL + COORDENADAS EN TIEMPO REAL + SLIDER
 --==============================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
 
 --==============================================================
--- CONFIGURACIÓN
+-- CONFIG
 --==============================================================
+
+local MIN_RADIUS = 25
+local MAX_RADIUS = 500
 
 local Radius = 100
-local MinRadius = 25
-local MaxRadius = 500
-
 local CenterPosition = nil
-local CirclePart = nil
-local CircleConnection = nil
+local Locked = false
 
 --==============================================================
--- OBTENER PERSONAJE
+-- GUI
 --==============================================================
 
-local function GetRoot()
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "KOXTA_ZONE_V2"
+Gui.ResetOnSpawn = false
+Gui.IgnoreGuiInset = true
+Gui.Parent = Player:WaitForChild("PlayerGui")
 
-    local character = Player.Character
+local Main = Instance.new("Frame")
+Main.Size = UDim2.fromOffset(330, 310)
+Main.Position = UDim2.new(0.5, -165, 0.5, -155)
+Main.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+Main.BorderSizePixel = 0
+Main.Parent = Gui
 
-    if not character then
-        return nil
-    end
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 14)
+Corner.Parent = Main
 
-    return character:FindFirstChild(
-        "HumanoidRootPart"
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(0, 170, 255)
+Stroke.Thickness = 2
+Stroke.Parent = Main
+
+--==============================================================
+-- TÍTULO
+--==============================================================
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 0, 32)
+Title.Position = UDim2.fromOffset(10, 8)
+Title.BackgroundTransparency = 1
+Title.Text = "KOXTA • ZONA DE EXCLUSIÓN"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 15
+Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.Parent = Main
+
+--==============================================================
+-- ESTADO
+--==============================================================
+
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, -20, 0, 22)
+Status.Position = UDim2.fromOffset(10, 42)
+Status.BackgroundTransparency = 1
+Status.Text = "● MOVIENDO CENTRO"
+Status.Font = Enum.Font.GothamBold
+Status.TextSize = 11
+Status.TextColor3 = Color3.fromRGB(0,170,255)
+Status.Parent = Main
+
+--==============================================================
+-- COORDENADAS
+--==============================================================
+
+local Coords = Instance.new("TextLabel")
+Coords.Size = UDim2.new(1, -20, 0, 65)
+Coords.Position = UDim2.fromOffset(10, 68)
+Coords.BackgroundColor3 = Color3.fromRGB(18,20,28)
+Coords.BorderSizePixel = 0
+Coords.Font = Enum.Font.Code
+Coords.TextSize = 13
+Coords.TextColor3 = Color3.fromRGB(220,230,255)
+Coords.TextXAlignment = Enum.TextXAlignment.Left
+Coords.TextYAlignment = Enum.TextYAlignment.Center
+Coords.Text = "X: 0\nY: 0\nZ: 0"
+Coords.Parent = Main
+
+local CoordCorner = Instance.new("UICorner")
+CoordCorner.CornerRadius = UDim.new(0,8)
+CoordCorner.Parent = Coords
+
+--==============================================================
+-- RADIO
+--==============================================================
+
+local RadiusText = Instance.new("TextLabel")
+RadiusText.Size = UDim2.new(1,-20,0,25)
+RadiusText.Position = UDim2.fromOffset(10,140)
+RadiusText.BackgroundTransparency = 1
+RadiusText.Text = "RADIO: 100 STUDS"
+RadiusText.Font = Enum.Font.GothamBold
+RadiusText.TextSize = 13
+RadiusText.TextColor3 = Color3.fromRGB(0,170,255)
+RadiusText.Parent = Main
+
+--==============================================================
+-- SLIDER
+--==============================================================
+
+local Slider = Instance.new("Frame")
+Slider.Size = UDim2.new(1,-40,0,10)
+Slider.Position = UDim2.fromOffset(20,173)
+Slider.BackgroundColor3 = Color3.fromRGB(45,48,58)
+Slider.BorderSizePixel = 0
+Slider.Parent = Main
+
+local SliderCorner = Instance.new("UICorner")
+SliderCorner.CornerRadius = UDim.new(1,0)
+SliderCorner.Parent = Slider
+
+local Fill = Instance.new("Frame")
+Fill.Size = UDim2.new(
+    (Radius-MIN_RADIUS)/(MAX_RADIUS-MIN_RADIUS),
+    0,1,0
+)
+Fill.BackgroundColor3 = Color3.fromRGB(0,170,255)
+Fill.BorderSizePixel = 0
+Fill.Parent = Slider
+
+local FillCorner = Instance.new("UICorner")
+FillCorner.CornerRadius = UDim.new(1,0)
+FillCorner.Parent = Fill
+
+local Knob = Instance.new("TextButton")
+Knob.Size = UDim2.fromOffset(22,22)
+Knob.AnchorPoint = Vector2.new(0.5,0.5)
+Knob.Position = UDim2.new(
+    (Radius-MIN_RADIUS)/(MAX_RADIUS-MIN_RADIUS),
+    0,0.5,0
+)
+Knob.BackgroundColor3 = Color3.fromRGB(255,255,255)
+Knob.Text = ""
+Knob.BorderSizePixel = 0
+Knob.Parent = Slider
+
+local KnobCorner = Instance.new("UICorner")
+KnobCorner.CornerRadius = UDim.new(1,0)
+KnobCorner.Parent = Knob
+
+--==============================================================
+-- SLIDER
+--==============================================================
+
+local Dragging = false
+
+local function SetRadiusFromX(x)
+
+    local left = Slider.AbsolutePosition.X
+    local width = Slider.AbsoluteSize.X
+
+    local alpha = math.clamp(
+        (x-left)/width,
+        0,
+        1
     )
+
+    Radius = math.floor(
+        MIN_RADIUS +
+        (MAX_RADIUS-MIN_RADIUS)*alpha
+    )
+
+    local visualAlpha =
+        (Radius-MIN_RADIUS)/
+        (MAX_RADIUS-MIN_RADIUS)
+
+    Fill.Size = UDim2.new(
+        visualAlpha,0,1,0
+    )
+
+    Knob.Position = UDim2.new(
+        visualAlpha,0,0.5,0
+    )
+
+    RadiusText.Text =
+        "RADIO: " ..
+        tostring(Radius) ..
+        " STUDS"
+
+    UpdateCircle()
 end
 
---==============================================================
--- CREAR CÍRCULO
---==============================================================
+Knob.MouseButton1Down:Connect(function()
+    Dragging = true
+end)
 
-local function CreateCircle()
+Slider.InputBegan:Connect(function(input)
 
-    if CirclePart then
-        CirclePart:Destroy()
-    end
+    if input.UserInputType ==
+        Enum.UserInputType.MouseButton1 then
 
-    CirclePart = Instance.new("Part")
+        Dragging = true
 
-    CirclePart.Name =
-        "KOXTA_ExclusionCircle"
-
-    CirclePart.Anchored = true
-    CirclePart.CanCollide = false
-    CirclePart.CanTouch = false
-    CirclePart.CanQuery = false
-
-    CirclePart.Transparency = 0.75
-
-    CirclePart.Color =
-        Color3.fromRGB(
-            255,
-            70,
-            70
+        SetRadiusFromX(
+            input.Position.X
         )
-
-    CirclePart.Material =
-        Enum.Material.ForceField
-
-    CirclePart.Shape =
-        Enum.PartType.Cylinder
-
-    CirclePart.Size =
-        Vector3.new(
-            0.15,
-            Radius * 2,
-            Radius * 2
-        )
-
-    CirclePart.Parent =
-        workspace
-
-    if CenterPosition then
-
-        CirclePart.CFrame =
-            CFrame.new(
-                CenterPosition
-            ) *
-            CFrame.Angles(
-                0,
-                0,
-                math.rad(90)
-            )
     end
-end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+
+    if Dragging
+    and input.UserInputType ==
+        Enum.UserInputType.MouseMovement then
+
+        SetRadiusFromX(
+            input.Position.X
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+
+    if input.UserInputType ==
+        Enum.UserInputType.MouseButton1 then
+
+        Dragging = false
+    end
+end)
+
+--==============================================================
+-- CÍRCULO 3D
+--==============================================================
+
+local Circle = Instance.new("Part")
+Circle.Name = "KOXTA_BLUE_ZONE"
+Circle.Anchored = true
+Circle.CanCollide = false
+Circle.CanTouch = false
+Circle.CanQuery = false
+Circle.Material = Enum.Material.Neon
+Circle.Color = Color3.fromRGB(0,170,255)
+Circle.Transparency = 0.72
+Circle.Shape = Enum.PartType.Cylinder
+Circle.Parent = workspace
+
+--==============================================================
+-- ARO EXTERIOR
+--==============================================================
+
+local Ring = Instance.new("Part")
+Ring.Name = "KOXTA_BLUE_RING"
+Ring.Anchored = true
+Ring.CanCollide = false
+Ring.CanTouch = false
+Ring.CanQuery = false
+Ring.Material = Enum.Material.Neon
+Ring.Color = Color3.fromRGB(0,200,255)
+Ring.Transparency = 0.1
+Ring.Shape = Enum.PartType.Cylinder
+Ring.Parent = workspace
 
 --==============================================================
 -- ACTUALIZAR CÍRCULO
 --==============================================================
 
-local function UpdateCircle()
+function UpdateCircle()
 
-    if not CirclePart
-    or not CenterPosition then
+    if not CenterPosition then
         return
     end
 
-    CirclePart.Size =
-        Vector3.new(
-            0.15,
-            Radius * 2,
-            Radius * 2
+    -- superficie azul
+    Circle.Size = Vector3.new(
+        0.12,
+        Radius*2,
+        Radius*2
+    )
+
+    Circle.CFrame =
+        CFrame.new(
+            CenterPosition.X,
+            CenterPosition.Y,
+            CenterPosition.Z
+        ) *
+        CFrame.Angles(
+            0,
+            0,
+            math.rad(90)
         )
 
-    CirclePart.CFrame =
+    -- aro exterior
+    Ring.Size = Vector3.new(
+        0.18,
+        Radius*2 + 1,
+        Radius*2 + 1
+    )
+
+    Ring.CFrame =
         CFrame.new(
-            CenterPosition
+            CenterPosition.X,
+            CenterPosition.Y + 0.08,
+            CenterPosition.Z
         ) *
         CFrame.Angles(
             0,
@@ -126,625 +315,160 @@ local function UpdateCircle()
 end
 
 --==============================================================
--- TOMAR COORDENADAS ACTUALES
+-- BOTÓN FIJAR
 --==============================================================
 
-local function SetCenterHere()
+local FixButton = Instance.new("TextButton")
+FixButton.Size = UDim2.new(1,-20,0,42)
+FixButton.Position = UDim2.fromOffset(10,205)
+FixButton.BackgroundColor3 = Color3.fromRGB(0,65,100)
+FixButton.BorderSizePixel = 0
+FixButton.Text = "🔵 FIJAR CENTRO"
+FixButton.Font = Enum.Font.GothamBold
+FixButton.TextSize = 12
+FixButton.TextColor3 = Color3.fromRGB(255,255,255)
+FixButton.Parent = Main
 
-    local root = GetRoot()
+local FixCorner = Instance.new("UICorner")
+FixCorner.CornerRadius = UDim.new(0,9)
+FixCorner.Parent = FixButton
 
-    if not root then
-        return false
+--==============================================================
+-- BOTÓN LIBERAR
+--==============================================================
+
+local UnlockButton = Instance.new("TextButton")
+UnlockButton.Size = UDim2.new(1,-20,0,35)
+UnlockButton.Position = UDim2.fromOffset(10,254)
+UnlockButton.BackgroundColor3 = Color3.fromRGB(35,35,42)
+UnlockButton.BorderSizePixel = 0
+UnlockButton.Text = "LIBERAR CENTRO"
+UnlockButton.Font = Enum.Font.GothamBold
+UnlockButton.TextSize = 11
+UnlockButton.TextColor3 = Color3.fromRGB(180,190,210)
+UnlockButton.Parent = Main
+
+local UnlockCorner = Instance.new("UICorner")
+UnlockCorner.CornerRadius = UDim.new(0,9)
+UnlockCorner.Parent = UnlockButton
+
+--==============================================================
+-- BOTÓN FIJAR
+--==============================================================
+
+FixButton.Activated:Connect(function()
+
+    local Character = Player.Character
+
+    if not Character then
+        return
     end
 
-    CenterPosition =
-        root.Position
-
-    CreateCircle()
-
-    return true
-end
-
---==============================================================
--- GUI
---==============================================================
-
-local Gui =
-    Instance.new("ScreenGui")
-
-Gui.Name =
-    "KOXTA_ZONE_EDITOR"
-
-Gui.ResetOnSpawn = false
-
-Gui.Parent =
-    Player:WaitForChild(
-        "PlayerGui"
-    )
-
-local Main =
-    Instance.new("Frame")
-
-Main.Size =
-    UDim2.fromOffset(
-        320,
-        285
-    )
-
-Main.Position =
-    UDim2.new(
-        0.5,
-        -160,
-        0.5,
-        -142
-    )
-
-Main.BackgroundColor3 =
-    Color3.fromRGB(
-        12,
-        12,
-        16
-    )
-
-Main.BorderSizePixel = 0
-
-Main.Parent = Gui
-
-local Corner =
-    Instance.new("UICorner")
-
-Corner.CornerRadius =
-    UDim.new(
-        0,
-        14
-    )
-
-Corner.Parent = Main
-
-local Stroke =
-    Instance.new("UIStroke")
-
-Stroke.Color =
-    Color3.fromRGB(
-        0,
-        255,
-        140
-    )
-
-Stroke.Thickness = 1.5
-
-Stroke.Parent = Main
-
---==============================================================
--- TÍTULO
---==============================================================
-
-local Title =
-    Instance.new("TextLabel")
-
-Title.Size =
-    UDim2.new(
-        1,
-        -20,
-        0,
-        30
-    )
-
-Title.Position =
-    UDim2.fromOffset(
-        10,
-        7
-    )
-
-Title.BackgroundTransparency = 1
-
-Title.Text =
-    "KOXTA • ZONA DE BASE"
-
-Title.Font =
-    Enum.Font.GothamBold
-
-Title.TextSize = 16
-
-Title.TextColor3 =
-    Color3.new(
-        1,
-        1,
-        1
-    )
-
-Title.Parent = Main
-
---==============================================================
--- COORDENADAS
---==============================================================
-
-local Coordinates =
-    Instance.new("TextLabel")
-
-Coordinates.Size =
-    UDim2.new(
-        1,
-        -20,
-        0,
-        55
-    )
-
-Coordinates.Position =
-    UDim2.fromOffset(
-        10,
-        42
-    )
-
-Coordinates.BackgroundTransparency = 1
-
-Coordinates.Font =
-    Enum.Font.Gotham
-
-Coordinates.TextSize = 12
-
-Coordinates.TextColor3 =
-    Color3.fromRGB(
-        220,
-        220,
-        220
-    )
-
-Coordinates.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-Coordinates.TextYAlignment =
-    Enum.TextYAlignment.Top
-
-Coordinates.Text =
-    "X: ---\nY: ---\nZ: ---"
-
-Coordinates.Parent = Main
-
---==============================================================
--- RADIO
---==============================================================
-
-local RadiusLabel =
-    Instance.new("TextLabel")
-
-RadiusLabel.Size =
-    UDim2.new(
-        1,
-        -20,
-        0,
-        25
-    )
-
-RadiusLabel.Position =
-    UDim2.fromOffset(
-        10,
-        100
-    )
-
-RadiusLabel.BackgroundTransparency = 1
-
-RadiusLabel.Font =
-    Enum.Font.GothamBold
-
-RadiusLabel.TextSize = 13
-
-RadiusLabel.TextColor3 =
-    Color3.fromRGB(
-        0,
-        255,
-        140
-    )
-
-RadiusLabel.Text =
-    "RADIO: " ..
-    Radius ..
-    " STUDS"
-
-RadiusLabel.Parent = Main
-
---==============================================================
--- SLIDER
---==============================================================
-
-local Slider =
-    Instance.new("Frame")
-
-Slider.Size =
-    UDim2.new(
-        1,
-        -30,
-        0,
-        8
-    )
-
-Slider.Position =
-    UDim2.fromOffset(
-        15,
-        135
-    )
-
-Slider.BackgroundColor3 =
-    Color3.fromRGB(
-        40,
-        40,
-        45
-    )
-
-Slider.BorderSizePixel = 0
-
-Slider.Parent = Main
-
-local SliderCorner =
-    Instance.new("UICorner")
-
-SliderCorner.CornerRadius =
-    UDim.new(
-        1,
-        0
-    )
-
-SliderCorner.Parent =
-    Slider
-
-local Fill =
-    Instance.new("Frame")
-
-Fill.Size =
-    UDim2.new(
-        0.15,
-        0,
-        1,
-        0
-    )
-
-Fill.BackgroundColor3 =
-    Color3.fromRGB(
-        0,
-        255,
-        140
-    )
-
-Fill.BorderSizePixel = 0
-
-Fill.Parent = Slider
-
-local FillCorner =
-    Instance.new("UICorner")
-
-FillCorner.CornerRadius =
-    UDim.new(
-        1,
-        0
-    )
-
-FillCorner.Parent =
-    Fill
-
-local Knob =
-    Instance.new("TextButton")
-
-Knob.Size =
-    UDim2.fromOffset(
-        20,
-        20
-    )
-
-Knob.AnchorPoint =
-    Vector2.new(
-        0.5,
-        0.5
-    )
-
-Knob.Position =
-    UDim2.new(
-        0.15,
-        0,
-        0.5,
-        0
-    )
-
-Knob.BackgroundColor3 =
-    Color3.fromRGB(
-        255,
-        255,
-        255
-    )
-
-Knob.Text = ""
-
-Knob.BorderSizePixel = 0
-
-Knob.Parent = Slider
-
-local KnobCorner =
-    Instance.new("UICorner")
-
-KnobCorner.CornerRadius =
-    UDim.new(
-        1,
-        0
-    )
-
-KnobCorner.Parent =
-    Knob
-
---==============================================================
--- SLIDER CONTROL
---==============================================================
-
-local dragging = false
-
-local function SetSliderFromX(x)
-
-    local startX =
-        Slider.AbsolutePosition.X
-
-    local width =
-        Slider.AbsoluteSize.X
-
-    local alpha =
-        math.clamp(
-            (x - startX) / width,
-            0,
-            1
+    local Root =
+        Character:FindFirstChild(
+            "HumanoidRootPart"
         )
 
-    Radius =
-        math.floor(
-            MinRadius +
-            (
-                MaxRadius -
-                MinRadius
-            ) * alpha
+    if not Root then
+        return
+    end
+
+    CenterPosition = Root.Position
+    Locked = true
+
+    Status.Text =
+        "● CENTRO FIJADO"
+
+    Status.TextColor3 =
+        Color3.fromRGB(
+            0,255,140
         )
 
-    Fill.Size =
-        UDim2.new(
-            alpha,
-            0,
-            1,
-            0
-        )
-
-    Knob.Position =
-        UDim2.new(
-            alpha,
-            0,
-            0.5,
-            0
-        )
-
-    RadiusLabel.Text =
-        "RADIO: " ..
-        Radius ..
-        " STUDS"
+    FixButton.Text =
+        "✓ CENTRO GUARDADO"
 
     UpdateCircle()
-end
-
-Knob.MouseButton1Down:Connect(
-    function()
-        dragging = true
-    end
-)
-
-Slider.InputBegan:Connect(
-    function(input)
-
-        if input.UserInputType ==
-            Enum.UserInputType.MouseButton1 then
-
-            dragging = true
-
-            SetSliderFromX(
-                input.Position.X
-            )
-        end
-    end
-)
-
-game:GetService("UserInputService")
-    .InputChanged:Connect(
-    function(input)
-
-        if dragging
-        and input.UserInputType ==
-            Enum.UserInputType.MouseMovement then
-
-            SetSliderFromX(
-                input.Position.X
-            )
-        end
-    end
-)
-
-game:GetService("UserInputService")
-    .InputEnded:Connect(
-    function(input)
-
-        if input.UserInputType ==
-            Enum.UserInputType.MouseButton1 then
-
-            dragging = false
-        end
-    end
-)
+end)
 
 --==============================================================
--- BOTÓN TOMAR POSICIÓN
+-- LIBERAR
 --==============================================================
 
-local SetPosition =
-    Instance.new("TextButton")
+UnlockButton.Activated:Connect(function()
 
-SetPosition.Size =
-    UDim2.new(
-        1,
-        -20,
-        0,
-        40
-    )
+    Locked = false
 
-SetPosition.Position =
-    UDim2.fromOffset(
-        10,
-        160
-    )
+    Status.Text =
+        "● MOVIENDO CENTRO"
 
-SetPosition.BackgroundColor3 =
-    Color3.fromRGB(
-        20,
-        40,
-        30
-    )
-
-SetPosition.BorderSizePixel = 0
-
-SetPosition.Font =
-    Enum.Font.GothamBold
-
-SetPosition.TextSize = 12
-
-SetPosition.Text =
-    "USAR MI POSICIÓN ACTUAL"
-
-SetPosition.TextColor3 =
-    Color3.fromRGB(
-        0,
-        255,
-        140
-    )
-
-SetPosition.Parent = Main
-
-local SetCorner =
-    Instance.new("UICorner")
-
-SetCorner.CornerRadius =
-    UDim.new(
-        0,
-        9
-    )
-
-SetCorner.Parent =
-    SetPosition
-
-SetPosition.Activated:Connect(
-    function()
-
-        if SetCenterHere() then
-
-            Coordinates.Text =
-                string.format(
-                    "X: %.2f\nY: %.2f\nZ: %.2f",
-                    CenterPosition.X,
-                    CenterPosition.Y,
-                    CenterPosition.Z
-                )
-
-            SetPosition.Text =
-                "✓ CENTRO ESTABLECIDO"
-
-            task.wait(1)
-
-            SetPosition.Text =
-                "USAR MI POSICIÓN ACTUAL"
-        end
-    end
-)
-
---==============================================================
--- CERRAR CÍRCULO
---==============================================================
-
-local Hide =
-    Instance.new("TextButton")
-
-Hide.Size =
-    UDim2.new(
-        1,
-        -20,
-        0,
-        35
-    )
-
-Hide.Position =
-    UDim2.fromOffset(
-        10,
-        210
-    )
-
-Hide.BackgroundColor3 =
-    Color3.fromRGB(
-        35,
-        20,
-        20
-    )
-
-Hide.BorderSizePixel = 0
-
-Hide.Font =
-    Enum.Font.GothamBold
-
-Hide.TextSize = 11
-
-Hide.Text =
-    "OCULTAR CÍRCULO"
-
-Hide.TextColor3 =
-    Color3.fromRGB(
-        255,
-        100,
-        100
-    )
-
-Hide.Parent = Main
-
-local HideCorner =
-    Instance.new("UICorner")
-
-HideCorner.CornerRadius =
-    UDim.new(
-        0,
-        9
-    )
-
-HideCorner.Parent =
-    Hide
-
-Hide.Activated:Connect(
-    function()
-
-        if CirclePart then
-
-            CirclePart:Destroy()
-
-            CirclePart = nil
-
-        end
-    end
-)
-
---==============================================================
--- INICIO AUTOMÁTICO
---==============================================================
-
-SetCenterHere()
-
-if CenterPosition then
-
-    Coordinates.Text =
-        string.format(
-            "X: %.2f\nY: %.2f\nZ: %.2f",
-            CenterPosition.X,
-            CenterPosition.Y,
-            CenterPosition.Z
+    Status.TextColor3 =
+        Color3.fromRGB(
+            0,170,255
         )
-end
 
-CreateCircle()
+    FixButton.Text =
+        "🔵 FIJAR CENTRO"
+end)
 
-print(
-    "KOXTA ZONE EDITOR iniciado"
-)
+--==============================================================
+-- ACTUALIZACIÓN
+--==============================================================
+
+RunService.RenderStepped:Connect(function()
+
+    local Character =
+        Player.Character
+
+    if not Character then
+        return
+    end
+
+    local Root =
+        Character:FindFirstChild(
+            "HumanoidRootPart"
+        )
+
+    if not Root then
+        return
+    end
+
+    -- Mientras NO esté fijado,
+    -- el centro sigue al jugador.
+    if not Locked then
+
+        CenterPosition =
+            Root.Position
+
+    end
+
+    if CenterPosition then
+
+        Coords.Text =
+            string.format(
+                "X: %.2f\nY: %.2f\nZ: %.2f",
+                CenterPosition.X,
+                CenterPosition.Y,
+                CenterPosition.Z
+            )
+
+        UpdateCircle()
+    end
+end)
+
+--==============================================================
+-- INICIO
+--==============================================================
+
+local Character =
+    Player.Character or
+    Player.CharacterAdded:Wait()
+
+local Root =
+    Character:WaitForChild(
+        "HumanoidRootPart"
+    )
+
+CenterPosition =
+    Root.Position
+
+UpdateCircle()
