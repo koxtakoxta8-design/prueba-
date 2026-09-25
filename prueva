@@ -1,12 +1,14 @@
 --==============================================================
--- KOXTA • RIDE A PET • BEST EGG AUTO
--- Snapshot -> mejor Lucky -> TP -> congelar -> Prompt -> volver
--- Para probar en tu propia experiencia Roblox
+-- KOXTA • RIDE A PET • SNAPSHOT BEST EGG
+-- DETECCIÓN REAL POR AskFieldEggSnapshot
+-- TP POR BottomCFrame
+-- CONGELAMIENTO
+-- REGRESO AL PUNTO ORIGINAL
 --==============================================================
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
 
@@ -14,124 +16,7 @@ local Running = false
 local ReturnCFrame = nil
 
 --==============================================================
--- 22 HUEVOS
---==============================================================
-
-local EggData = {
-
-    ["White Egg"] = {
-        Luck = "1",
-        Rarity = "Common"
-    },
-
-    ["Brown Egg"] = {
-        Luck = "5",
-        Rarity = "Common"
-    },
-
-    ["Cracked Egg"] = {
-        Luck = "30",
-        Rarity = "Rare"
-    },
-
-    ["Easter Egg"] = {
-        Luck = "50",
-        Rarity = "Rare"
-    },
-
-    ["Stone Egg"] = {
-        Luck = "100",
-        Rarity = "Rare"
-    },
-
-    ["Leaf Egg"] = {
-        Luck = "200",
-        Rarity = "Rare"
-    },
-
-    ["Mushroom Egg"] = {
-        Luck = "500",
-        Rarity = "Epic"
-    },
-
-    ["Flower Egg"] = {
-        Luck = "750",
-        Rarity = "Epic"
-    },
-
-    ["Slime Egg"] = {
-        Luck = "1K",
-        Rarity = "Epic"
-    },
-
-    ["Ice Egg"] = {
-        Luck = "3K",
-        Rarity = "Epic"
-    },
-
-    ["Glass Egg"] = {
-        Luck = "10K",
-        Rarity = "Legendary"
-    },
-
-    ["Golden Egg"] = {
-        Luck = "30K",
-        Rarity = "Legendary"
-    },
-
-    ["Crystal Egg"] = {
-        Luck = "150K",
-        Rarity = "Mythic"
-    },
-
-    ["Skull Egg"] = {
-        Luck = "250K",
-        Rarity = "Mythic"
-    },
-
-    ["Dominus Egg"] = {
-        Luck = "700K",
-        Rarity = "Mythic"
-    },
-
-    ["Flaming Egg"] = {
-        Luck = "1M",
-        Rarity = "Mythic"
-    },
-
-    ["Sinister Egg"] = {
-        Luck = "3M",
-        Rarity = "Mythic"
-    },
-
-    ["Soul Egg"] = {
-        Luck = "7M",
-        Rarity = "Mythic"
-    },
-
-    ["Aurora Egg"] = {
-        Luck = "300M",
-        Rarity = "Divine"
-    },
-
-    ["Galaxy Egg"] = {
-        Luck = "1.5B",
-        Rarity = "Divine"
-    },
-
-    ["Black Hole Egg"] = {
-        Luck = "100B",
-        Rarity = "Ethereal"
-    },
-
-    ["Cherub Egg"] = {
-        Luck = "1T",
-        Rarity = "Ethereal"
-    }
-}
-
---==============================================================
--- SNAPSHOT REMOTE
+-- REMOTE
 --==============================================================
 
 local function FindRemote(path)
@@ -156,7 +41,37 @@ local SnapshotRemote =
     )
 
 --==============================================================
--- LUCK -> NUMERO
+-- 22 HUEVOS
+--==============================================================
+
+local EggData = {
+
+    ["White Egg"]      = {Luck="1", Rarity="Common"},
+    ["Brown Egg"]      = {Luck="5", Rarity="Common"},
+    ["Cracked Egg"]    = {Luck="30", Rarity="Rare"},
+    ["Easter Egg"]     = {Luck="50", Rarity="Rare"},
+    ["Stone Egg"]      = {Luck="100", Rarity="Rare"},
+    ["Leaf Egg"]       = {Luck="200", Rarity="Rare"},
+    ["Mushroom Egg"]   = {Luck="500", Rarity="Epic"},
+    ["Flower Egg"]     = {Luck="750", Rarity="Epic"},
+    ["Slime Egg"]      = {Luck="1K", Rarity="Epic"},
+    ["Ice Egg"]        = {Luck="3K", Rarity="Epic"},
+    ["Glass Egg"]      = {Luck="10K", Rarity="Legendary"},
+    ["Golden Egg"]     = {Luck="30K", Rarity="Legendary"},
+    ["Crystal Egg"]    = {Luck="150K", Rarity="Mythic"},
+    ["Skull Egg"]      = {Luck="250K", Rarity="Mythic"},
+    ["Dominus Egg"]    = {Luck="700K", Rarity="Mythic"},
+    ["Flaming Egg"]    = {Luck="1M", Rarity="Mythic"},
+    ["Sinister Egg"]   = {Luck="3M", Rarity="Mythic"},
+    ["Soul Egg"]       = {Luck="7M", Rarity="Mythic"},
+    ["Aurora Egg"]     = {Luck="300M", Rarity="Divine"},
+    ["Galaxy Egg"]     = {Luck="1.5B", Rarity="Divine"},
+    ["Black Hole Egg"] = {Luck="100B", Rarity="Ethereal"},
+    ["Cherub Egg"]     = {Luck="1T", Rarity="Ethereal"}
+}
+
+--==============================================================
+-- CONVERTIR LUCK
 --==============================================================
 
 local function LuckNumber(value)
@@ -164,7 +79,9 @@ local function LuckNumber(value)
     local text = tostring(value or "0")
 
     local number =
-        tonumber(text:match("[%d%.]+")) or 0
+        tonumber(
+            text:match("[%d%.]+")
+        ) or 0
 
     if text:find("T") then
         return number * 1e12
@@ -186,31 +103,105 @@ local function LuckNumber(value)
 end
 
 --==============================================================
--- DATOS DEL HUEVO
+-- CATÁLOGO
 --==============================================================
 
-local function GetEggData(name)
+local Catalog = {}
 
-    if not name then
-        return nil
+pcall(function()
+
+    local Data =
+        ReplicatedStorage:FindFirstChild("Data")
+
+    if not Data then
+        return
     end
 
-    if EggData[name] then
-        return EggData[name], name
+    local Assets =
+        Data:FindFirstChild("Assets")
+
+    if not Assets then
+        return
     end
 
-    local lower =
-        tostring(name):lower()
+    local module =
+        require(Assets)
+
+    if type(module) == "table"
+    and type(module.Directory) == "table" then
+
+        Catalog =
+            module.Directory
+    end
+end)
+
+--==============================================================
+-- OBTENER DATOS DEL ASSET
+--==============================================================
+
+local function GetAssetData(assetCategory)
+
+    local key =
+        tostring(assetCategory or "")
+
+    local entry =
+        Catalog[key]
+
+    if type(entry) == "table" then
+
+        local name =
+            entry.DisplayName
+            or entry._id
+            or key
+
+        local rarity = "Common"
+
+        if type(entry.Rarity) == "table" then
+
+            rarity =
+                entry.Rarity.DisplayName
+                or entry.Rarity._id
+                or "Common"
+
+        elseif entry.Rarity then
+
+            rarity =
+                tostring(entry.Rarity)
+        end
+
+        local luck =
+            entry.Luck
+            or entry.Lucky
+            or entry.LuckMultiplier
+
+        if luck then
+
+            return {
+                Name = tostring(name),
+                Luck = tostring(luck),
+                LuckNumber = LuckNumber(luck),
+                Rarity = rarity
+            }
+        end
+    end
+
+    -- Buscar por nombre conocido
 
     for eggName, data in pairs(EggData) do
 
-        if lower:find(
+        if key:lower():find(
             eggName:lower(),
             1,
             true
         ) then
 
-            return data, eggName
+            return {
+                Name = eggName,
+                Luck = data.Luck,
+                LuckNumber =
+                    LuckNumber(data.Luck),
+                Rarity = data.Rarity
+            }
         end
     end
 
@@ -218,28 +209,141 @@ local function GetEggData(name)
 end
 
 --==============================================================
--- PARTE DE UN MODELO
+-- SNAPSHOT
 --==============================================================
 
-local function GetPart(obj)
+local function GetSnapshot()
 
-    if obj:IsA("BasePart") then
-        return obj
-    end
+    if not SnapshotRemote then
 
-    if obj:IsA("Model") then
-
-        if obj.PrimaryPart then
-            return obj.PrimaryPart
-        end
-
-        return obj:FindFirstChildWhichIsA(
-            "BasePart",
-            true
+        warn(
+            "KOXTA: AskFieldEggSnapshot no encontrado"
         )
+
+        return nil
     end
 
-    return nil
+    local success, result =
+        pcall(function()
+
+            return SnapshotRemote:InvokeServer()
+
+        end)
+
+    if not success then
+
+        warn(
+            "KOXTA: fallo InvokeServer"
+        )
+
+        return nil
+    end
+
+    if type(result) ~= "table" then
+        return nil
+    end
+
+    return result
+end
+
+--==============================================================
+-- DETECTAR TODOS LOS HUEVOS
+--==============================================================
+
+local function GetAllEggs()
+
+    local snapshot =
+        GetSnapshot()
+
+    if not snapshot then
+        return {}
+    end
+
+    local records =
+        snapshot.Records or snapshot
+
+    if type(records) ~= "table" then
+        return {}
+    end
+
+    local eggs = {}
+
+    for _, record in ipairs(records) do
+
+        if type(record) == "table"
+        and record.State == "Slot"
+        and record.BottomCFrame then
+
+            local position
+
+            if typeof(
+                record.BottomCFrame
+            ) == "CFrame" then
+
+                position =
+                    record.BottomCFrame.Position
+
+            elseif typeof(
+                record.BottomCFrame
+            ) == "Vector3" then
+
+                position =
+                    record.BottomCFrame
+            end
+
+            if position then
+
+                local info =
+                    GetAssetData(
+                        record.AssetCategory
+                    )
+
+                if info then
+
+                    table.insert(
+                        eggs,
+                        {
+                            Position = position,
+                            Name = info.Name,
+                            Luck = info.Luck,
+                            LuckNumber =
+                                info.LuckNumber,
+                            Rarity = info.Rarity,
+                            Record = record,
+                            AssetCategory =
+                                record.AssetCategory
+                        }
+                    )
+                end
+            end
+        end
+    end
+
+    return eggs
+end
+
+--==============================================================
+-- MEJOR HUEVO
+--==============================================================
+
+local function FindBestEgg()
+
+    local eggs =
+        GetAllEggs()
+
+    local best = nil
+
+    for _, egg in ipairs(eggs) do
+
+        if not best
+        or egg.LuckNumber >
+           best.LuckNumber then
+
+            best = egg
+        end
+    end
+
+    return best, #eggs
 end
 
 --==============================================================
@@ -261,12 +365,13 @@ local function GetRoot()
 end
 
 --==============================================================
--- GUARDAR BASE EXACTA
+-- GUARDAR POSICIÓN
 --==============================================================
 
 local function SaveReturnPosition()
 
-    local root = GetRoot()
+    local root =
+        GetRoot()
 
     if not root then
         return false
@@ -279,204 +384,6 @@ local function SaveReturnPosition()
 end
 
 --==============================================================
--- SNAPSHOT
---==============================================================
-
-local function GetSnapshot()
-
-    if not SnapshotRemote then
-
-        warn(
-            "AskFieldEggSnapshot no encontrado"
-        )
-
-        return nil
-    end
-
-    local success, snapshot =
-        pcall(function()
-
-            return SnapshotRemote:InvokeServer()
-
-        end)
-
-    if not success then
-
-        warn(
-            "Error obteniendo snapshot"
-        )
-
-        return nil
-    end
-
-    if type(snapshot) ~= "table" then
-        return nil
-    end
-
-    return snapshot
-end
-
---==============================================================
--- OBTENER HUEVOS DEL CAMPO
---==============================================================
-
-local function GetFieldEggs()
-
-    local snapshot =
-        GetSnapshot()
-
-    if not snapshot then
-        return {}
-    end
-
-    local records =
-        snapshot.Records or snapshot
-
-    if type(records) ~= "table" then
-        return {}
-    end
-
-    local eggs = {}
-
-    for _, rec in ipairs(records) do
-
-        if type(rec) == "table"
-        and rec.State == "Slot"
-        and rec.BottomCFrame then
-
-            local position
-
-            if typeof(
-                rec.BottomCFrame
-            ) == "CFrame" then
-
-                position =
-                    rec.BottomCFrame.Position
-
-            elseif typeof(
-                rec.BottomCFrame
-            ) == "Vector3" then
-
-                position =
-                    rec.BottomCFrame
-            end
-
-            if position then
-
-                table.insert(
-                    eggs,
-                    {
-                        Position = position,
-                        AssetCategory =
-                            tostring(
-                                rec.AssetCategory or ""
-                            ),
-                        Record = rec
-                    }
-                )
-            end
-        end
-    end
-
-    return eggs
-end
-
---==============================================================
--- ENCONTRAR OBJETO CERCA DE SNAPSHOT
---==============================================================
-
-local function FindEggObject(position)
-
-    local closest = nil
-    local closestDistance = math.huge
-
-    for _, obj in ipairs(
-        Workspace:GetDescendants()
-    ) do
-
-        local data, realName =
-            GetEggData(obj.Name)
-
-        if data then
-
-            local part =
-                GetPart(obj)
-
-            if part then
-
-                local distance =
-                    (
-                        part.Position -
-                        position
-                    ).Magnitude
-
-                if distance <= 15
-                and distance < closestDistance then
-
-                    closestDistance =
-                        distance
-
-                    closest = {
-                        Object = obj,
-                        Part = part,
-                        Name = realName,
-                        Luck = data.Luck,
-                        LuckNumber =
-                            LuckNumber(
-                                data.Luck
-                            ),
-                        Rarity = data.Rarity,
-                        Position = position
-                    }
-                end
-            end
-        end
-    end
-
-    return closest
-end
-
---==============================================================
--- BUSCAR MEJOR
---==============================================================
-
-local function FindBestEgg()
-
-    local snapshotEggs =
-        GetFieldEggs()
-
-    local best = nil
-    local bestLuck = -1
-    local detected = 0
-
-    for _, snapshotEgg in ipairs(
-        snapshotEggs
-    ) do
-
-        local egg =
-            FindEggObject(
-                snapshotEgg.Position
-            )
-
-        if egg then
-
-            detected += 1
-
-            if egg.LuckNumber >
-                bestLuck then
-
-                bestLuck =
-                    egg.LuckNumber
-
-                best = egg
-            end
-        end
-    end
-
-    return best, detected
-end
-
---==============================================================
 -- CONGELAR
 --==============================================================
 
@@ -485,14 +392,16 @@ local function FreezeCharacter()
     local character =
         Player.Character
 
+    if not character then
+        return
+    end
+
     local humanoid =
-        character and
         character:FindFirstChildOfClass(
             "Humanoid"
         )
 
     local root =
-        character and
         character:FindFirstChild(
             "HumanoidRootPart"
         )
@@ -502,17 +411,17 @@ local function FreezeCharacter()
     end
 
     humanoid:SetAttribute(
-        "KOXTA_OldWalkSpeed",
+        "KOXTA_OLD_SPEED",
         humanoid.WalkSpeed
     )
 
     humanoid:SetAttribute(
-        "KOXTA_OldJumpPower",
+        "KOXTA_OLD_JUMP",
         humanoid.JumpPower
     )
 
     humanoid:SetAttribute(
-        "KOXTA_OldAutoRotate",
+        "KOXTA_OLD_ROTATE",
         humanoid.AutoRotate
     )
 
@@ -539,8 +448,11 @@ local function UnfreezeCharacter()
     local character =
         Player.Character
 
+    if not character then
+        return
+    end
+
     local humanoid =
-        character and
         character:FindFirstChildOfClass(
             "Humanoid"
         )
@@ -551,26 +463,28 @@ local function UnfreezeCharacter()
 
     humanoid.WalkSpeed =
         humanoid:GetAttribute(
-            "KOXTA_OldWalkSpeed"
+            "KOXTA_OLD_SPEED"
         ) or 16
 
     humanoid.JumpPower =
         humanoid:GetAttribute(
-            "KOXTA_OldJumpPower"
+            "KOXTA_OLD_JUMP"
         ) or 50
 
-    humanoid.AutoRotate =
+    local rotate =
         humanoid:GetAttribute(
-            "KOXTA_OldAutoRotate"
+            "KOXTA_OLD_ROTATE"
         )
 
-    if humanoid.AutoRotate == nil then
+    if rotate == nil then
         humanoid.AutoRotate = true
+    else
+        humanoid.AutoRotate = rotate
     end
 end
 
 --==============================================================
--- TP AL HUEVO
+-- TP
 --==============================================================
 
 local function TeleportToEgg(egg)
@@ -578,7 +492,10 @@ local function TeleportToEgg(egg)
     local root =
         GetRoot()
 
-    if not root or not egg then
+    if not root
+    or not egg
+    or not egg.Position then
+
         return false
     end
 
@@ -602,150 +519,7 @@ local function TeleportToEgg(egg)
 end
 
 --==============================================================
--- BUSCAR PROMPT DEL HUEVO
---==============================================================
-
-local function FindEggPrompt(egg)
-
-    if not egg then
-        return nil
-    end
-
-    local root =
-        egg.Object
-
-    if root then
-
-        for _, obj in ipairs(
-            root:GetDescendants()
-        ) do
-
-            if obj:IsA(
-                "ProximityPrompt"
-            ) then
-
-                return obj
-            end
-        end
-    end
-
-    -- Segundo intento:
-    -- buscar el prompt físicamente cerca
-    -- de la posición del huevo.
-
-    local closest = nil
-    local distanceBest = math.huge
-
-    for _, obj in ipairs(
-        Workspace:GetDescendants()
-    ) do
-
-        if obj:IsA(
-            "ProximityPrompt"
-        ) then
-
-            local parent =
-                obj.Parent
-
-            local part = nil
-
-            if parent:IsA(
-                "BasePart"
-            ) then
-
-                part = parent
-
-            elseif parent:IsA(
-                "Attachment"
-            ) then
-
-                if parent.Parent:IsA(
-                    "BasePart"
-                ) then
-
-                    part =
-                        parent.Parent
-                end
-            end
-
-            if part then
-
-                local distance =
-                    (
-                        part.Position -
-                        egg.Position
-                    ).Magnitude
-
-                if distance <= 15
-                and distance < distanceBest then
-
-                    distanceBest =
-                        distance
-
-                    closest = obj
-                end
-            end
-        end
-    end
-
-    return closest
-end
-
---==============================================================
--- AUTO GRAB
---==============================================================
-
-local function GrabEgg(egg)
-
-    local prompt =
-        FindEggPrompt(egg)
-
-    if not prompt then
-
-        warn(
-            "No encontré ProximityPrompt del huevo"
-        )
-
-        return false
-    end
-
-    print(
-        "Prompt encontrado:",
-        prompt:GetFullName()
-    )
-
-    -- Si la experiencia utiliza ProximityPrompt
-    -- y el método está disponible, iniciar la interacción.
-
-    local began, ended =
-        pcall(function()
-
-            if prompt:IsA(
-                "ProximityPrompt"
-            ) then
-
-                prompt:InputHoldBegin()
-
-                task.wait(
-                    math.max(
-                        prompt.HoldDuration,
-                        0.05
-                    )
-                )
-
-                prompt:InputHoldEnd()
-
-                return true
-            end
-
-            return false
-        end)
-
-    return began and ended
-end
-
---==============================================================
--- REGRESAR EXACTAMENTE
+-- REGRESAR
 --==============================================================
 
 local function ReturnToBase()
@@ -1028,7 +802,7 @@ Button.TextColor3 =
     )
 
 Button.Text =
-    "BUSCAR Y AUTO GRAB"
+    "BUSCAR MEJOR HUEVO"
 
 Button.Parent = Main
 
@@ -1042,7 +816,7 @@ ButtonCorner.Parent =
     Button
 
 --==============================================================
--- PROCESO PRINCIPAL
+-- EJECUTAR
 --==============================================================
 
 local function Run()
@@ -1054,7 +828,7 @@ local function Run()
     Running = true
 
     ----------------------------------------------------------
-    -- GUARDAR POSICIÓN ORIGINAL
+    -- GUARDAR PUNTO ORIGINAL
     ----------------------------------------------------------
 
     if not SaveReturnPosition() then
@@ -1082,12 +856,21 @@ local function Run()
 
     if not egg then
 
+        Info.Text =
+            "🥚 Mejor: NO ENCONTRADO\n" ..
+            "🍀 Lucky: ---\n" ..
+            "⭐ Rareza: ---"
+
         Status.Text =
-            "Estado: NO HAY HUEVOS"
+            "Estado: NO SE DETECTARON HUEVOS"
 
         Running = false
         return
     end
+
+    ----------------------------------------------------------
+    -- MOSTRAR
+    ----------------------------------------------------------
 
     Info.Text =
         "🥚 Mejor: " ..
@@ -1102,11 +885,9 @@ local function Run()
     ----------------------------------------------------------
 
     Status.Text =
-        "Estado: TP AL HUEVO"
+        "Estado: TP AL MEJOR HUEVO"
 
-    if not TeleportToEgg(
-        egg
-    ) then
+    if not TeleportToEgg(egg) then
 
         Status.Text =
             "Estado: ERROR TP"
@@ -1122,47 +903,29 @@ local function Run()
     ----------------------------------------------------------
 
     Status.Text =
-        "Estado: CONGELADO"
+        "Estado: CONGELADO EN EL HUEVO"
 
-    task.wait(0.5)
+    task.wait(1)
 
     ----------------------------------------------------------
-    -- GRAB
+    -- AQUÍ FALTA EL REMOTE REAL DE GRAB
     ----------------------------------------------------------
 
     Status.Text =
-        "Estado: AUTO GRAB"
+        "Estado: ESPERANDO GRAB"
 
-    local grabbed =
-        GrabEgg(egg)
-
-    if grabbed then
-
-        Status.Text =
-            "Estado: GRAB EJECUTADO"
-
-    else
-
-        Status.Text =
-            "Estado: PROMPT NO ACTIVADO"
-    end
-
-    task.wait(0.8)
+    task.wait(1)
 
     ----------------------------------------------------------
     -- REGRESAR
     ----------------------------------------------------------
 
     Status.Text =
-        "Estado: VOLVIENDO"
+        "Estado: REGRESANDO"
 
     ReturnToBase()
 
-    task.wait(0.2)
-
-    ----------------------------------------------------------
-    -- DESCONGELAR
-    ----------------------------------------------------------
+    task.wait(.2)
 
     UnfreezeCharacter()
 
@@ -1172,10 +935,8 @@ local function Run()
     Running = false
 end
 
-Button.Activated:Connect(
-    Run
-)
+Button.Activated:Connect(Run)
 
 print(
-    "KOXTA BEST EGG cargado"
+    "KOXTA BEST EGG • SNAPSHOT cargado"
 )
