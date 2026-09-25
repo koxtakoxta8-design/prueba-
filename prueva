@@ -1,8 +1,9 @@
 --==============================================================
--- KOXTA • RIDE A PET • EGG ESP UNIVERSAL
--- 22 HUEVOS
--- WORKSPACE + EGG SNAPSHOT
--- ALCANCE: 100K STUDS
+-- KOXTA - RIDE A PET EGG ESP
+-- WORKSPACE + SNAPSHOT
+-- NOMBRE + LUCKY + RAREZA
+-- MARCA EL MEJOR HUEVO
+-- SIN TP / SIN AUTOGRAB
 --==============================================================
 
 local Players = game:GetService("Players")
@@ -11,228 +12,79 @@ local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
---==============================================================
--- CONFIG
---==============================================================
-
 local ESP_ENABLED = true
 local UPDATE_TIME = 1
+local MAX_DISTANCE = 100000
 
 --==============================================================
 -- 22 HUEVOS
 --==============================================================
 
 local EggData = {
-
-    ["White Egg"] = {
-        Luck = 1,
-        LuckText = "1",
-        Rarity = "Common"
-    },
-
-    ["Brown Egg"] = {
-        Luck = 5,
-        LuckText = "5",
-        Rarity = "Common"
-    },
-
-    ["Cracked Egg"] = {
-        Luck = 30,
-        LuckText = "30",
-        Rarity = "Rare"
-    },
-
-    ["Easter Egg"] = {
-        Luck = 50,
-        LuckText = "50",
-        Rarity = "Rare"
-    },
-
-    ["Stone Egg"] = {
-        Luck = 100,
-        LuckText = "100",
-        Rarity = "Rare"
-    },
-
-    ["Leaf Egg"] = {
-        Luck = 200,
-        LuckText = "200",
-        Rarity = "Rare"
-    },
-
-    ["Mushroom Egg"] = {
-        Luck = 500,
-        LuckText = "500",
-        Rarity = "Epic"
-    },
-
-    ["Flower Egg"] = {
-        Luck = 750,
-        LuckText = "750",
-        Rarity = "Epic"
-    },
-
-    ["Slime Egg"] = {
-        Luck = 1000,
-        LuckText = "1K",
-        Rarity = "Epic"
-    },
-
-    ["Ice Egg"] = {
-        Luck = 3000,
-        LuckText = "3K",
-        Rarity = "Epic"
-    },
-
-    ["Glass Egg"] = {
-        Luck = 10000,
-        LuckText = "10K",
-        Rarity = "Legendary"
-    },
-
-    ["Golden Egg"] = {
-        Luck = 30000,
-        LuckText = "30K",
-        Rarity = "Legendary"
-    },
-
-    ["Crystal Egg"] = {
-        Luck = 150000,
-        LuckText = "150K",
-        Rarity = "Mythic"
-    },
-
-    ["Skull Egg"] = {
-        Luck = 250000,
-        LuckText = "250K",
-        Rarity = "Mythic"
-    },
-
-    ["Dominus Egg"] = {
-        Luck = 700000,
-        LuckText = "700K",
-        Rarity = "Mythic"
-    },
-
-    ["Flaming Egg"] = {
-        Luck = 1000000,
-        LuckText = "1M",
-        Rarity = "Mythic"
-    },
-
-    ["Sinister Egg"] = {
-        Luck = 3000000,
-        LuckText = "3M",
-        Rarity = "Mythic"
-    },
-
-    ["Soul Egg"] = {
-        Luck = 7000000,
-        LuckText = "7M",
-        Rarity = "Mythic"
-    },
-
-    ["Aurora Egg"] = {
-        Luck = 300000000,
-        LuckText = "300M",
-        Rarity = "Divine"
-    },
-
-    ["Galaxy Egg"] = {
-        Luck = 1500000000,
-        LuckText = "1.5B",
-        Rarity = "Divine"
-    },
-
-    ["Black Hole Egg"] = {
-        Luck = 100000000000,
-        LuckText = "100B",
-        Rarity = "Ethereal"
-    },
-
-    ["Cherub Egg"] = {
-        Luck = 1000000000000,
-        LuckText = "1T",
-        Rarity = "Ethereal"
-    }
+    ["White Egg"]      = {Luck=1,          LuckText="1",      Rarity="Common"},
+    ["Brown Egg"]      = {Luck=5,          LuckText="5",      Rarity="Common"},
+    ["Cracked Egg"]    = {Luck=30,         LuckText="30",     Rarity="Rare"},
+    ["Easter Egg"]     = {Luck=50,         LuckText="50",     Rarity="Rare"},
+    ["Stone Egg"]      = {Luck=100,        LuckText="100",    Rarity="Rare"},
+    ["Leaf Egg"]       = {Luck=200,        LuckText="200",    Rarity="Rare"},
+    ["Mushroom Egg"]   = {Luck=500,        LuckText="500",    Rarity="Epic"},
+    ["Flower Egg"]     = {Luck=750,        LuckText="750",    Rarity="Epic"},
+    ["Slime Egg"]      = {Luck=1000,       LuckText="1K",     Rarity="Epic"},
+    ["Ice Egg"]        = {Luck=3000,       LuckText="3K",     Rarity="Epic"},
+    ["Glass Egg"]      = {Luck=10000,      LuckText="10K",    Rarity="Legendary"},
+    ["Golden Egg"]     = {Luck=30000,      LuckText="30K",    Rarity="Legendary"},
+    ["Crystal Egg"]    = {Luck=150000,     LuckText="150K",   Rarity="Mythic"},
+    ["Skull Egg"]      = {Luck=250000,     LuckText="250K",   Rarity="Mythic"},
+    ["Dominus Egg"]    = {Luck=700000,     LuckText="700K",   Rarity="Mythic"},
+    ["Flaming Egg"]    = {Luck=1000000,    LuckText="1M",     Rarity="Mythic"},
+    ["Sinister Egg"]   = {Luck=3000000,    LuckText="3M",     Rarity="Mythic"},
+    ["Soul Egg"]       = {Luck=7000000,    LuckText="7M",     Rarity="Mythic"},
+    ["Aurora Egg"]     = {Luck=300000000,  LuckText="300M",   Rarity="Divine"},
+    ["Galaxy Egg"]     = {Luck=1500000000, LuckText="1.5B",   Rarity="Divine"},
+    ["Black Hole Egg"] = {Luck=100000000000,LuckText="100B",  Rarity="Ethereal"},
+    ["Cherub Egg"]     = {Luck=1000000000000,LuckText="1T",   Rarity="Ethereal"}
 }
 
 --==============================================================
--- SNAPSHOT REMOTE
+-- SNAPSHOT
 --==============================================================
 
-local function FindRemote(path)
+local function FindSnapshotRemote()
 
-    local current = ReplicatedStorage
+    local Packages = ReplicatedStorage:FindFirstChild("Packages")
+    if not Packages then return nil end
 
-    for part in string.gmatch(path, "[^%.]+") do
+    local Networking = Packages:FindFirstChild("Networking")
+    if not Networking then return nil end
 
-        if not current then
-            return nil
-        end
+    local RF = Networking:FindFirstChild("RF")
+    if not RF then return nil end
 
-        current = current:FindFirstChild(part)
-    end
+    local EggWorld = RF:FindFirstChild("EggWorld")
+    if not EggWorld then return nil end
 
-    return current
+    return EggWorld:FindFirstChild("AskFieldEggSnapshot")
 end
 
-local SnapshotRemote =
-    FindRemote(
-        "Packages.Networking.RF.EggWorld.AskFieldEggSnapshot"
-    )
-
--- También intenta la ruta con "/" por si el juego la
--- presenta de esa forma.
-if not SnapshotRemote then
-
-    local Packages =
-        ReplicatedStorage:FindFirstChild("Packages")
-
-    local Networking =
-        Packages and
-        Packages:FindFirstChild("Networking")
-
-    local RF =
-        Networking and
-        Networking:FindFirstChild("RF")
-
-    local EggWorld =
-        RF and
-        RF:FindFirstChild("EggWorld")
-
-    SnapshotRemote =
-        EggWorld and
-        EggWorld:FindFirstChild(
-            "AskFieldEggSnapshot"
-        )
-end
+local SnapshotRemote = FindSnapshotRemote()
 
 --==============================================================
--- DATOS DEL NOMBRE
+-- DATOS DEL HUEVO
 --==============================================================
 
-local function GetEggData(name)
+local function GetEggData(value)
 
-    if not name then
-        return nil
+    if value == nil then
+        return nil,nil
     end
 
-    local text =
-        string.lower(
-            tostring(name)
-        )
+    local text = string.lower(tostring(value))
 
-    for eggName, data in pairs(EggData) do
+    for eggName,data in pairs(EggData) do
 
-        if text ==
-            string.lower(eggName) then
-
-            return eggName, data
+        if text == string.lower(eggName) then
+            return eggName,data
         end
-    end
-
-    for eggName, data in pairs(EggData) do
 
         if string.find(
             text,
@@ -240,12 +92,11 @@ local function GetEggData(name)
             1,
             true
         ) then
-
-            return eggName, data
+            return eggName,data
         end
     end
 
-    return nil
+    return nil,nil
 end
 
 --==============================================================
@@ -278,58 +129,18 @@ local function GetPart(obj)
 end
 
 --==============================================================
--- FORMATO
---==============================================================
-
-local function FormatLucky(n)
-
-    n = tonumber(n) or 0
-
-    if n >= 1e12 then
-        return string.format(
-            "%.2fT",
-            n / 1e12
-        )
-    end
-
-    if n >= 1e9 then
-        return string.format(
-            "%.2fB",
-            n / 1e9
-        )
-    end
-
-    if n >= 1e6 then
-        return string.format(
-            "%.2fM",
-            n / 1e6
-        )
-    end
-
-    if n >= 1e3 then
-        return string.format(
-            "%.2fK",
-            n / 1e3
-        )
-    end
-
-    return tostring(n)
-end
-
---==============================================================
 -- ESP
 --==============================================================
 
 local ActiveESP = {}
 
-local function RemoveESP(id)
+local function DestroyESP(id)
 
-    local gui = ActiveESP[id]
+    local old = ActiveESP[id]
 
-    if gui then
-
+    if old then
         pcall(function()
-            gui:Destroy()
+            old:Destroy()
         end)
 
         ActiveESP[id] = nil
@@ -340,6 +151,119 @@ local function CreateESP(
     id,
     position,
     eggName,
+    data,
+    isBest
+)
+
+    if not position or not data then
+        return
+    end
+
+    DestroyESP(id)
+
+    local anchor = Instance.new("Part")
+    anchor.Name = "KOXTA_EggAnchor"
+    anchor.Size = Vector3.new(1,1,1)
+    anchor.Transparency = 1
+    anchor.Anchored = true
+    anchor.CanCollide = false
+    anchor.CanTouch = false
+    anchor.CanQuery = false
+    anchor.Position = position + Vector3.new(0,3,0)
+    anchor.Parent = Workspace
+
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "KOXTA_EggESP"
+    gui.Size = UDim2.fromOffset(160,82)
+    gui.StudsOffset = Vector3.new(0,2,0)
+    gui.AlwaysOnTop = true
+    gui.MaxDistance = MAX_DISTANCE
+    gui.Adornee = anchor
+    gui.Parent = anchor
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.fromScale(1,1)
+    frame.BackgroundColor3 = Color3.fromRGB(10,12,18)
+    frame.BackgroundTransparency = 0.12
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,8)
+    corner.Parent = frame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = isBest and 2.5 or 1.5
+    stroke.Color = isBest
+        and Color3.fromRGB(255,210,40)
+        or Color3.fromRGB(0,255,140)
+    stroke.Parent = frame
+
+    -- MEJOR
+    if isBest then
+
+        local best = Instance.new("TextLabel")
+        best.Size = UDim2.new(1,0,0,18)
+        best.Position = UDim2.fromOffset(0,-18)
+        best.BackgroundTransparency = 1
+        best.Font = Enum.Font.GothamBold
+        best.Text = "🏆 MEJOR HUEVO"
+        best.TextSize = 11
+        best.TextColor3 = Color3.fromRGB(255,220,50)
+        best.TextXAlignment = Enum.TextXAlignment.Center
+        best.Parent = frame
+    end
+
+    -- NOMBRE
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,-8,0,22)
+    title.Position = UDim2.fromOffset(4,2)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBold
+    title.Text = "🥚 "..eggName
+    title.TextSize = 10
+    title.TextColor3 = Color3.new(1,1,1)
+    title.TextXAlignment = Enum.TextXAlignment.Center
+    title.TextTruncate = Enum.TextTruncate.AtEnd
+    title.Parent = frame
+
+    -- LUCK
+    local lucky = Instance.new("TextLabel")
+    lucky.Size = UDim2.new(1,-8,0,20)
+    lucky.Position = UDim2.fromOffset(4,24)
+    lucky.BackgroundTransparency = 1
+    lucky.Font = Enum.Font.GothamBold
+    lucky.Text = "🍀 Lucky: "..data.LuckText
+    lucky.TextSize = 10
+    lucky.TextColor3 = Color3.fromRGB(80,255,140)
+    lucky.TextXAlignment = Enum.TextXAlignment.Center
+    lucky.Parent = frame
+
+    -- RAREZA
+    local rarity = Instance.new("TextLabel")
+    rarity.Size = UDim2.new(1,-8,0,20)
+    rarity.Position = UDim2.fromOffset(4,44)
+    rarity.BackgroundTransparency = 1
+    rarity.Font = Enum.Font.GothamBold
+    rarity.Text = "⭐ "..data.Rarity
+    rarity.TextSize = 10
+    rarity.TextColor3 = Color3.fromRGB(255,220,80)
+    rarity.TextXAlignment = Enum.TextXAlignment.Center
+    rarity.Parent = frame
+
+    ActiveESP[id] = anchor
+end
+
+--==============================================================
+-- CANDIDATOS
+--==============================================================
+
+local Candidates = {}
+
+local function AddCandidate(
+    id,
+    position,
+    eggName,
     data
 )
 
@@ -347,211 +271,11 @@ local function CreateESP(
         return
     end
 
-    RemoveESP(id)
-
-    --==========================================================
-    -- ANCHOR
-    --==========================================================
-
-    local anchor =
-        Instance.new("Part")
-
-    anchor.Name =
-        "KOXTA_EggAnchor"
-
-    anchor.Size =
-        Vector3.new(1,1,1)
-
-    anchor.Transparency = 1
-    anchor.Anchored = true
-    anchor.CanCollide = false
-    anchor.CanTouch = false
-    anchor.CanQuery = false
-
-    anchor.Position =
-        position + Vector3.new(0,3,0)
-
-    anchor.Parent =
-        Workspace
-
-    --==========================================================
-    -- BILLBOARD
-    --==========================================================
-
-    local gui =
-        Instance.new("BillboardGui")
-
-    gui.Name =
-        "KOXTA_EggESP"
-
-    gui.Size =
-        UDim2.fromOffset(155,72)
-
-    gui.StudsOffset =
-        Vector3.new(0,2,0)
-
-    gui.AlwaysOnTop = true
-
-    gui.MaxDistance =
-        100000
-
-    gui.Adornee =
-        anchor
-
-    gui.Parent =
-        anchor
-
-    --==========================================================
-    -- FONDO
-    --==========================================================
-
-    local frame =
-        Instance.new("Frame")
-
-    frame.Size =
-        UDim2.fromScale(1,1)
-
-    frame.BackgroundColor3 =
-        Color3.fromRGB(
-            10,12,18
-        )
-
-    frame.BackgroundTransparency =
-        0.12
-
-    frame.BorderSizePixel = 0
-
-    frame.Parent =
-        gui
-
-    local corner =
-        Instance.new("UICorner")
-
-    corner.CornerRadius =
-        UDim.new(0,8)
-
-    corner.Parent =
-        frame
-
-    local stroke =
-        Instance.new("UIStroke")
-
-    stroke.Color =
-        Color3.fromRGB(
-            0,255,140
-        )
-
-    stroke.Thickness = 1.5
-
-    stroke.Parent =
-        frame
-
-    --==========================================================
-    -- NOMBRE
-    --==========================================================
-
-    local title =
-        Instance.new("TextLabel")
-
-    title.Size =
-        UDim2.new(1,-8,0,22)
-
-    title.Position =
-        UDim2.fromOffset(4,2)
-
-    title.BackgroundTransparency = 1
-
-    title.Font =
-        Enum.Font.GothamBold
-
-    title.Text =
-        "🥚 " .. eggName
-
-    title.TextSize = 10
-
-    title.TextColor3 =
-        Color3.new(1,1,1)
-
-    title.TextXAlignment =
-        Enum.TextXAlignment.Center
-
-    title.TextTruncate =
-        Enum.TextTruncate.AtEnd
-
-    title.Parent =
-        frame
-
-    --==========================================================
-    -- LUCKY
-    --==========================================================
-
-    local lucky =
-        Instance.new("TextLabel")
-
-    lucky.Size =
-        UDim2.new(1,-8,0,20)
-
-    lucky.Position =
-        UDim2.fromOffset(4,24)
-
-    lucky.BackgroundTransparency = 1
-
-    lucky.Font =
-        Enum.Font.GothamBold
-
-    lucky.Text =
-        "🍀 Lucky: " ..
-        data.LuckText
-
-    lucky.TextSize = 10
-
-    lucky.TextColor3 =
-        Color3.fromRGB(
-            80,255,140
-        )
-
-    lucky.TextXAlignment =
-        Enum.TextXAlignment.Center
-
-    lucky.Parent =
-        frame
-
-    --==========================================================
-    -- RAREZA
-    --==========================================================
-
-    local rarity =
-        Instance.new("TextLabel")
-
-    rarity.Size =
-        UDim2.new(1,-8,0,20)
-
-    rarity.Position =
-        UDim2.fromOffset(4,44)
-
-    rarity.BackgroundTransparency = 1
-
-    rarity.Font =
-        Enum.Font.GothamBold
-
-    rarity.Text =
-        "⭐ " .. data.Rarity
-
-    rarity.TextSize = 10
-
-    rarity.TextColor3 =
-        Color3.fromRGB(
-            255,220,80
-        )
-
-    rarity.TextXAlignment =
-        Enum.TextXAlignment.Center
-
-    rarity.Parent =
-        frame
-
-    ActiveESP[id] =
-        anchor
+    Candidates[id] = {
+        Position = position,
+        Name = eggName,
+        Data = data
+    }
 end
 
 --==============================================================
@@ -560,30 +284,21 @@ end
 
 local function ScanWorkspace()
 
-    if not ESP_ENABLED then
-        return
-    end
-
-    for _, obj in ipairs(
+    for _,obj in ipairs(
         Workspace:GetDescendants()
     ) do
 
-        local eggName, data =
+        local eggName,data =
             GetEggData(obj.Name)
 
         if eggName and data then
 
-            local part =
-                GetPart(obj)
+            local part = GetPart(obj)
 
             if part then
 
-                local id =
-                    "WS_" ..
-                    obj:GetFullName()
-
-                CreateESP(
-                    id,
+                AddCandidate(
+                    "WS_"..obj:GetFullName(),
                     part.Position,
                     eggName,
                     data
@@ -603,18 +318,12 @@ local function ScanSnapshot()
         return
     end
 
-    local ok, snapshot =
+    local success,snapshot =
         pcall(function()
-
             return SnapshotRemote:InvokeServer()
-
         end)
 
-    if not ok then
-        return
-    end
-
-    if type(snapshot) ~= "table" then
+    if not success or type(snapshot) ~= "table" then
         return
     end
 
@@ -625,64 +334,38 @@ local function ScanSnapshot()
         return
     end
 
-    for index, rec in ipairs(records) do
+    for index,rec in ipairs(records) do
 
         if type(rec) == "table" then
 
-            local position = nil
+            local position
 
-            -- CFrame
-            if typeof(
-                rec.BottomCFrame
-            ) == "CFrame" then
+            if typeof(rec.BottomCFrame) == "CFrame" then
+                position = rec.BottomCFrame.Position
 
-                position =
-                    rec.BottomCFrame.Position
-
-            -- Vector3
-            elseif typeof(
-                rec.BottomCFrame
-            ) == "Vector3" then
-
-                position =
-                    rec.BottomCFrame
+            elseif typeof(rec.BottomCFrame) == "Vector3" then
+                position = rec.BottomCFrame
             end
 
             if position then
 
-                -- Intentamos identificar el huevo
-                -- usando AssetCategory.
-                local eggName, data =
-                    GetEggData(
-                        rec.AssetCategory
-                    )
+                local eggName,data =
+                    GetEggData(rec.AssetCategory)
 
-                -- También probamos otros campos
-                -- por si el juego los usa.
                 if not data then
-
-                    eggName, data =
-                        GetEggData(
-                            rec.Name
-                        )
+                    eggName,data =
+                        GetEggData(rec.Name)
                 end
 
                 if not data then
-
-                    eggName, data =
-                        GetEggData(
-                            rec.DisplayName
-                        )
+                    eggName,data =
+                        GetEggData(rec.DisplayName)
                 end
 
                 if eggName and data then
 
-                    local id =
-                        "SNAP_" ..
-                        tostring(index)
-
-                    CreateESP(
-                        id,
+                    AddCandidate(
+                        "SNAP_"..tostring(index),
                         position,
                         eggName,
                         data
@@ -694,103 +377,84 @@ local function ScanSnapshot()
 end
 
 --==============================================================
--- ESCANEO GENERAL
+-- REDIBUJAR
 --==============================================================
 
-local function ScanAll()
+local function RefreshESP()
 
     if not ESP_ENABLED then
         return
     end
 
-    pcall(ScanWorkspace)
-    pcall(ScanSnapshot)
+    Candidates = {}
+
+    ScanWorkspace()
+    ScanSnapshot()
+
+    -- Buscar el mayor Lucky
+    local bestId = nil
+    local bestLuck = -1
+
+    for id,info in pairs(Candidates) do
+
+        if info.Data.Luck > bestLuck then
+
+            bestLuck = info.Data.Luck
+            bestId = id
+        end
+    end
+
+    -- Dibujar
+    for id,info in pairs(Candidates) do
+
+        CreateESP(
+            id,
+            info.Position,
+            info.Name,
+            info.Data,
+            id == bestId
+        )
+    end
 end
 
 --==============================================================
--- OBJETOS NUEVOS
+-- LIMPIAR
 --==============================================================
 
-Workspace.DescendantAdded:Connect(
-    function(obj)
+local function ClearAll()
 
-        task.wait(0.1)
-
-        if not ESP_ENABLED then
-            return
-        end
-
-        local eggName, data =
-            GetEggData(obj.Name)
-
-        if eggName and data then
-
-            local part =
-                GetPart(obj)
-
-            if part then
-
-                local id =
-                    "WS_" ..
-                    obj:GetFullName()
-
-                CreateESP(
-                    id,
-                    part.Position,
-                    eggName,
-                    data
-                )
-            end
-        end
+    for id in pairs(ActiveESP) do
+        DestroyESP(id)
     end
-)
+end
 
 --==============================================================
 -- GUI
 --==============================================================
 
-local ScreenGui =
-    Instance.new("ScreenGui")
-
-ScreenGui.Name =
-    "KOXTA_EggESP_GUI"
-
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "KOXTA_EggESP_GUI"
 ScreenGui.ResetOnSpawn = false
-
 ScreenGui.Parent =
-    LocalPlayer:WaitForChild(
-        "PlayerGui"
-    )
+    LocalPlayer:WaitForChild("PlayerGui")
 
-local Button =
-    Instance.new("TextButton")
+local Button = Instance.new("TextButton")
 
-Button.Size =
-    UDim2.fromOffset(
-        115,
-        40
-    )
+Button.Size = UDim2.fromOffset(120,40)
 
 Button.Position =
     UDim2.new(
-        1,
-        -130,
-        0,
-        100
+        1,-135,
+        0,100
     )
 
 Button.BackgroundColor3 =
-    Color3.fromRGB(
-        12,15,20
-    )
+    Color3.fromRGB(12,15,20)
 
-Button.Text =
-    "ESP: ON"
+Button.Text = "ESP: ON"
 
 Button.TextColor3 =
-    Color3.fromRGB(
-        0,255,140
-    )
+    Color3.fromRGB(0,255,140)
 
 Button.TextSize = 12
 
@@ -799,65 +463,43 @@ Button.Font =
 
 Button.BorderSizePixel = 0
 
-Button.Parent =
-    ScreenGui
+Button.Parent = ScreenGui
 
-local ButtonCorner =
-    Instance.new("UICorner")
+local BC = Instance.new("UICorner")
+BC.CornerRadius = UDim.new(0,8)
+BC.Parent = Button
 
-ButtonCorner.CornerRadius =
-    UDim.new(0,8)
-
-ButtonCorner.Parent =
-    Button
-
-local ButtonStroke =
-    Instance.new("UIStroke")
-
-ButtonStroke.Color =
-    Color3.fromRGB(
-        0,255,140
-    )
-
-ButtonStroke.Thickness = 1.5
-
-ButtonStroke.Parent =
-    Button
+local BS = Instance.new("UIStroke")
+BS.Color =
+    Color3.fromRGB(0,255,140)
+BS.Thickness = 1.5
+BS.Parent = Button
 
 --==============================================================
--- ON / OFF
+-- BOTÓN
 --==============================================================
 
 Button.Activated:Connect(function()
 
-    ESP_ENABLED =
-        not ESP_ENABLED
+    ESP_ENABLED = not ESP_ENABLED
 
     if ESP_ENABLED then
 
-        Button.Text =
-            "ESP: ON"
+        Button.Text = "ESP: ON"
 
         Button.TextColor3 =
-            Color3.fromRGB(
-                0,255,140
-            )
+            Color3.fromRGB(0,255,140)
 
-        ScanAll()
+        RefreshESP()
 
     else
 
-        Button.Text =
-            "ESP: OFF"
+        Button.Text = "ESP: OFF"
 
         Button.TextColor3 =
-            Color3.fromRGB(
-                255,80,80
-            )
+            Color3.fromRGB(255,80,80)
 
-        for id in pairs(ActiveESP) do
-            RemoveESP(id)
-        end
+        ClearAll()
     end
 end)
 
@@ -867,15 +509,14 @@ end)
 
 task.spawn(function()
 
-    while task.wait(
-        UPDATE_TIME
-    ) do
+    while task.wait(UPDATE_TIME) do
 
         if ESP_ENABLED then
 
             pcall(function()
-                ScanAll()
+                RefreshESP()
             end)
+
         end
     end
 end)
@@ -886,21 +527,13 @@ end)
 
 task.wait(1)
 
-ScanAll()
+RefreshESP()
 
+print("================================")
+print("KOXTA EGG ESP")
+print("ESP:", ESP_ENABLED)
 print(
-    "================================"
-)
-
-print(
-    "KOXTA EGG ESP INICIADO"
-)
-
-print(
-    "Snapshot:",
+    "SNAPSHOT:",
     SnapshotRemote and "ENCONTRADO" or "NO ENCONTRADO"
 )
-
-print(
-    "================================"
-)
+print("================================")
