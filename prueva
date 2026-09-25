@@ -1,6 +1,7 @@
 --==============================================================
--- KOXTA • RIDE A PET • WORKSPACE BEST EGG
--- DETECCIÓN POR WORKSPACE
+-- KOXTA • RIDE A PET • BEST EGG
+-- WORKSPACE DETECTOR
+-- EXCLUYE TU PLOT
 -- 22 HUEVOS
 -- TP + FREEZE + RETURN
 --==============================================================
@@ -14,36 +15,124 @@ local Running = false
 local ReturnCFrame = nil
 
 --==============================================================
--- 22 HUEVOS
+-- HUEVOS
 --==============================================================
 
 local EggData = {
-    ["White Egg"]      = {Luck="1", Rarity="Common"},
-    ["Brown Egg"]      = {Luck="5", Rarity="Common"},
-    ["Cracked Egg"]    = {Luck="30", Rarity="Rare"},
-    ["Easter Egg"]     = {Luck="50", Rarity="Rare"},
-    ["Stone Egg"]      = {Luck="100", Rarity="Rare"},
-    ["Leaf Egg"]       = {Luck="200", Rarity="Rare"},
-    ["Mushroom Egg"]   = {Luck="500", Rarity="Epic"},
-    ["Flower Egg"]     = {Luck="750", Rarity="Epic"},
-    ["Slime Egg"]      = {Luck="1K", Rarity="Epic"},
-    ["Ice Egg"]        = {Luck="3K", Rarity="Epic"},
-    ["Glass Egg"]      = {Luck="10K", Rarity="Legendary"},
-    ["Golden Egg"]     = {Luck="30K", Rarity="Legendary"},
-    ["Crystal Egg"]    = {Luck="150K", Rarity="Mythic"},
-    ["Skull Egg"]      = {Luck="250K", Rarity="Mythic"},
-    ["Dominus Egg"]    = {Luck="700K", Rarity="Mythic"},
-    ["Flaming Egg"]    = {Luck="1M", Rarity="Mythic"},
-    ["Sinister Egg"]   = {Luck="3M", Rarity="Mythic"},
-    ["Soul Egg"]       = {Luck="7M", Rarity="Mythic"},
-    ["Aurora Egg"]     = {Luck="300M", Rarity="Divine"},
-    ["Galaxy Egg"]     = {Luck="1.5B", Rarity="Divine"},
-    ["Black Hole Egg"] = {Luck="100B", Rarity="Ethereal"},
-    ["Cherub Egg"]     = {Luck="1T", Rarity="Ethereal"}
+
+    ["White Egg"] = {
+        Luck = "1",
+        Rarity = "Common"
+    },
+
+    ["Brown Egg"] = {
+        Luck = "5",
+        Rarity = "Common"
+    },
+
+    ["Cracked Egg"] = {
+        Luck = "30",
+        Rarity = "Rare"
+    },
+
+    ["Easter Egg"] = {
+        Luck = "50",
+        Rarity = "Rare"
+    },
+
+    ["Stone Egg"] = {
+        Luck = "100",
+        Rarity = "Rare"
+    },
+
+    ["Leaf Egg"] = {
+        Luck = "200",
+        Rarity = "Rare"
+    },
+
+    ["Mushroom Egg"] = {
+        Luck = "500",
+        Rarity = "Epic"
+    },
+
+    ["Flower Egg"] = {
+        Luck = "750",
+        Rarity = "Epic"
+    },
+
+    ["Slime Egg"] = {
+        Luck = "1K",
+        Rarity = "Epic"
+    },
+
+    ["Ice Egg"] = {
+        Luck = "3K",
+        Rarity = "Epic"
+    },
+
+    ["Glass Egg"] = {
+        Luck = "10K",
+        Rarity = "Legendary"
+    },
+
+    ["Golden Egg"] = {
+        Luck = "30K",
+        Rarity = "Legendary"
+    },
+
+    ["Crystal Egg"] = {
+        Luck = "150K",
+        Rarity = "Mythic"
+    },
+
+    ["Skull Egg"] = {
+        Luck = "250K",
+        Rarity = "Mythic"
+    },
+
+    ["Dominus Egg"] = {
+        Luck = "700K",
+        Rarity = "Mythic"
+    },
+
+    ["Flaming Egg"] = {
+        Luck = "1M",
+        Rarity = "Mythic"
+    },
+
+    ["Sinister Egg"] = {
+        Luck = "3M",
+        Rarity = "Mythic"
+    },
+
+    ["Soul Egg"] = {
+        Luck = "7M",
+        Rarity = "Mythic"
+    },
+
+    ["Aurora Egg"] = {
+        Luck = "300M",
+        Rarity = "Divine"
+    },
+
+    ["Galaxy Egg"] = {
+        Luck = "1.5B",
+        Rarity = "Divine"
+    },
+
+    ["Black Hole Egg"] = {
+        Luck = "100B",
+        Rarity = "Ethereal"
+    },
+
+    ["Cherub Egg"] = {
+        Luck = "1T",
+        Rarity = "Ethereal"
+    }
 }
 
 --==============================================================
--- CONVERTIR LUCK
+-- LUCK -> NUMERO
 --==============================================================
 
 local function LuckNumber(value)
@@ -51,15 +140,23 @@ local function LuckNumber(value)
     local text = tostring(value or "0")
 
     local number =
-        tonumber(text:match("[%d%.]+")) or 0
+        tonumber(
+            text:match("[%d%.]+")
+        ) or 0
 
     if text:find("T") then
         return number * 1e12
-    elseif text:find("B") then
+    end
+
+    if text:find("B") then
         return number * 1e9
-    elseif text:find("M") then
+    end
+
+    if text:find("M") then
         return number * 1e6
-    elseif text:find("K") then
+    end
+
+    if text:find("K") then
         return number * 1e3
     end
 
@@ -67,26 +164,30 @@ local function LuckNumber(value)
 end
 
 --==============================================================
--- DETECTAR NOMBRE
+-- OBTENER DATOS
 --==============================================================
 
 local function GetEggData(name)
 
-    local exact = EggData[name]
-
-    if exact then
-        return exact, name
+    if not name then
+        return nil
     end
 
-    local lower = tostring(name):lower()
+    if EggData[name] then
+        return EggData[name], name
+    end
+
+    local lowerName =
+        tostring(name):lower()
 
     for eggName, data in pairs(EggData) do
 
-        if lower:find(
+        if lowerName:find(
             eggName:lower(),
             1,
             true
         ) then
+
             return data, eggName
         end
     end
@@ -95,7 +196,7 @@ local function GetEggData(name)
 end
 
 --==============================================================
--- PARTE DEL OBJETO
+-- OBTENER PARTE
 --==============================================================
 
 local function GetPart(obj)
@@ -125,7 +226,8 @@ end
 
 local function GetRoot()
 
-    local character = LocalPlayer.Character
+    local character =
+        LocalPlayer.Character
 
     if not character then
         return nil
@@ -142,15 +244,304 @@ end
 
 local function SavePosition()
 
-    local root = GetRoot()
+    local root =
+        GetRoot()
 
     if not root then
         return false
     end
 
-    ReturnCFrame = root.CFrame
+    ReturnCFrame =
+        root.CFrame
 
     return true
+end
+
+--==============================================================
+-- BUSCAR PLOT DEL JUGADOR
+--==============================================================
+
+local function GetMyPlot()
+
+    local playerName =
+        LocalPlayer.Name:lower()
+
+    local displayName =
+        LocalPlayer.DisplayName:lower()
+
+    local candidates = {}
+
+    for _, obj in ipairs(
+        Workspace:GetChildren()
+    ) do
+
+        local name =
+            obj.Name:lower()
+
+        local matchesPlayer =
+            name == playerName
+            or name == displayName
+            or name:find(
+                playerName,
+                1,
+                true
+            )
+            or name:find(
+                displayName,
+                1,
+                true
+            )
+
+        if matchesPlayer then
+
+            table.insert(
+                candidates,
+                obj
+            )
+        end
+    end
+
+    -- Buscar también un nivel más profundo
+    if #candidates == 0 then
+
+        for _, obj in ipairs(
+            Workspace:GetDescendants()
+        ) do
+
+            if obj:IsA("Model")
+            or obj:IsA("Folder") then
+
+                local name =
+                    obj.Name:lower()
+
+                if name == playerName
+                or name == displayName
+                or name:find(
+                    playerName,
+                    1,
+                    true
+                )
+                or name:find(
+                    displayName,
+                    1,
+                    true
+                ) then
+
+                    table.insert(
+                        candidates,
+                        obj
+                    )
+                end
+            end
+        end
+    end
+
+    -- Si hay varios, buscar uno que parezca plot
+    for _, candidate in ipairs(candidates) do
+
+        local score = 0
+
+        for _, child in ipairs(
+            candidate:GetDescendants()
+        ) do
+
+            local childName =
+                child.Name:lower()
+
+            if childName:find(
+                "plot",
+                1,
+                true
+            ) then
+                score += 3
+            end
+
+            if childName:find(
+                "ranch",
+                1,
+                true
+            ) then
+                score += 3
+            end
+
+            if childName:find(
+                "base",
+                1,
+                true
+            ) then
+                score += 3
+            end
+
+            if childName:find(
+                "nest",
+                1,
+                true
+            ) then
+                score += 2
+            end
+        end
+
+        if score > 0 then
+            return candidate
+        end
+    end
+
+    return candidates[1]
+end
+
+--==============================================================
+-- PUNTO DENTRO DE PARTE
+--==============================================================
+
+local function PointInsidePart(
+    position,
+    part
+)
+
+    local localPos =
+        part.CFrame:PointToObjectSpace(
+            position
+        )
+
+    local half =
+        part.Size / 2
+
+    return
+        math.abs(localPos.X) <= half.X
+        and
+        math.abs(localPos.Y) <= half.Y
+        and
+        math.abs(localPos.Z) <= half.Z
+end
+
+--==============================================================
+-- ¿ESTÁ DENTRO DEL PLOT?
+--==============================================================
+
+local function IsInsideMyPlot(
+    part,
+    plot
+)
+
+    if not part or not plot then
+        return false
+    end
+
+    -- Revisar las partes del plot
+    for _, child in ipairs(
+        plot:GetDescendants()
+    ) do
+
+        if child:IsA("BasePart") then
+
+            -- Evitar usar partes diminutas
+            if child.Size.X > 4
+            or child.Size.Z > 4 then
+
+                if PointInsidePart(
+                    part.Position,
+                    child
+                ) then
+
+                    return true
+                end
+            end
+        end
+    end
+
+    return false
+end
+
+--==============================================================
+-- ESCANEAR WORKSPACE
+--==============================================================
+
+local function ScanWorkspace()
+
+    local plot =
+        GetMyPlot()
+
+    local found = {}
+    local processed = {}
+
+    for _, obj in ipairs(
+        Workspace:GetDescendants()
+    ) do
+
+        local data, realName =
+            GetEggData(obj.Name)
+
+        if data then
+
+            local part =
+                GetPart(obj)
+
+            if part
+            and not processed[obj] then
+
+                processed[obj] = true
+
+                local insideBase =
+                    IsInsideMyPlot(
+                        part,
+                        plot
+                    )
+
+                if not insideBase then
+
+                    table.insert(
+                        found,
+                        {
+                            Object = obj,
+
+                            Part = part,
+
+                            Name = realName,
+
+                            Luck = data.Luck,
+
+                            LuckNumber =
+                                LuckNumber(
+                                    data.Luck
+                                ),
+
+                            Rarity =
+                                data.Rarity,
+
+                            Position =
+                                part.Position
+                        }
+                    )
+                end
+            end
+        end
+    end
+
+    return found
+end
+
+--==============================================================
+-- MEJOR HUEVO
+--==============================================================
+
+local function FindBestEgg()
+
+    local eggs =
+        ScanWorkspace()
+
+    local best = nil
+
+    for _, egg in ipairs(eggs) do
+
+        if not best
+        or egg.LuckNumber >
+           best.LuckNumber then
+
+            best = egg
+        end
+    end
+
+    return best, #eggs
 end
 
 --==============================================================
@@ -159,7 +550,8 @@ end
 
 local function Freeze()
 
-    local character = LocalPlayer.Character
+    local character =
+        LocalPlayer.Character
 
     if not character then
         return
@@ -198,6 +590,7 @@ local function Freeze()
     end
 
     if root then
+
         root.AssemblyLinearVelocity =
             Vector3.zero
 
@@ -212,7 +605,8 @@ end
 
 local function Unfreeze()
 
-    local character = LocalPlayer.Character
+    local character =
+        LocalPlayer.Character
 
     if not character then
         return
@@ -237,101 +631,27 @@ local function Unfreeze()
             "KOXTA_OLD_JUMP"
         ) or 50
 
-    humanoid.AutoRotate =
+    local oldRotate =
         humanoid:GetAttribute(
             "KOXTA_OLD_ROTATE"
         )
 
-    if humanoid.AutoRotate == nil then
+    if oldRotate == nil then
         humanoid.AutoRotate = true
+    else
+        humanoid.AutoRotate =
+            oldRotate
     end
 end
 
 --==============================================================
--- ESCANEAR WORKSPACE
---==============================================================
-
-local function ScanWorkspace()
-
-    local found = {}
-
-    for _, obj in ipairs(
-        Workspace:GetDescendants()
-    ) do
-
-        local data, realName =
-            GetEggData(obj.Name)
-
-        if data then
-
-            local part = GetPart(obj)
-
-            if part then
-
-                -- Evita duplicar un mismo huevo
-                local already = false
-
-                for _, egg in ipairs(found) do
-
-                    if egg.Object == obj then
-                        already = true
-                        break
-                    end
-                end
-
-                if not already then
-
-                    table.insert(
-                        found,
-                        {
-                            Object = obj,
-                            Part = part,
-                            Name = realName,
-                            Luck = data.Luck,
-                            LuckNumber =
-                                LuckNumber(data.Luck),
-                            Rarity = data.Rarity,
-                            Position = part.Position
-                        }
-                    )
-                end
-            end
-        end
-    end
-
-    return found
-end
-
---==============================================================
--- ELEGIR MEJOR
---==============================================================
-
-local function FindBestEgg()
-
-    local eggs = ScanWorkspace()
-
-    local best = nil
-
-    for _, egg in ipairs(eggs) do
-
-        if not best
-        or egg.LuckNumber >
-           best.LuckNumber then
-
-            best = egg
-        end
-    end
-
-    return best, #eggs
-end
-
---==============================================================
--- TP
+-- TP AL HUEVO
 --==============================================================
 
 local function TeleportToEgg(egg)
 
-    local root = GetRoot()
+    local root =
+        GetRoot()
 
     if not root or not egg then
         return false
@@ -340,29 +660,42 @@ local function TeleportToEgg(egg)
     root.CFrame =
         CFrame.new(
             egg.Position +
-            Vector3.new(0, 3, 0)
+            Vector3.new(
+                0,
+                3,
+                0
+            )
         )
 
     task.wait()
 
     Freeze()
 
+    root.AssemblyLinearVelocity =
+        Vector3.zero
+
+    root.AssemblyAngularVelocity =
+        Vector3.zero
+
     return true
 end
 
 --==============================================================
--- VOLVER
+-- REGRESAR
 --==============================================================
 
 local function ReturnToStart()
 
-    local root = GetRoot()
+    local root =
+        GetRoot()
 
-    if not root or not ReturnCFrame then
+    if not root
+    or not ReturnCFrame then
         return false
     end
 
-    root.CFrame = ReturnCFrame
+    root.CFrame =
+        ReturnCFrame
 
     root.AssemblyLinearVelocity =
         Vector3.zero
@@ -381,9 +714,10 @@ local Gui =
     Instance.new("ScreenGui")
 
 Gui.Name =
-    "KOXTA_BEST_EGG_GUI"
+    "KOXTA_BEST_EGG"
 
-Gui.ResetOnSpawn = false
+Gui.ResetOnSpawn =
+    false
 
 Gui.Parent =
     LocalPlayer:WaitForChild(
@@ -396,7 +730,7 @@ local Main =
 Main.Size =
     UDim2.fromOffset(
         285,
-        220
+        225
     )
 
 Main.Position =
@@ -404,7 +738,7 @@ Main.Position =
         0.5,
         -142,
         0.5,
-        -110
+        -112
     )
 
 Main.BackgroundColor3 =
@@ -421,9 +755,13 @@ local Corner =
     Instance.new("UICorner")
 
 Corner.CornerRadius =
-    UDim.new(0, 14)
+    UDim.new(
+        0,
+        14
+    )
 
-Corner.Parent = Main
+Corner.Parent =
+    Main
 
 local Stroke =
     Instance.new("UIStroke")
@@ -452,7 +790,7 @@ Title.Size =
 Title.Position =
     UDim2.fromOffset(
         10,
-        5
+        6
     )
 
 Title.BackgroundTransparency = 1
@@ -472,7 +810,8 @@ Title.TextColor3 =
         1
     )
 
-Title.Parent = Main
+Title.Parent =
+    Main
 
 local Info =
     Instance.new("TextLabel")
@@ -498,6 +837,12 @@ Info.Font =
 
 Info.TextSize = 12
 
+Info.TextXAlignment =
+    Enum.TextXAlignment.Left
+
+Info.TextYAlignment =
+    Enum.TextYAlignment.Top
+
 Info.TextColor3 =
     Color3.new(
         1,
@@ -505,18 +850,13 @@ Info.TextColor3 =
         1
     )
 
-Info.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-Info.TextYAlignment =
-    Enum.TextYAlignment.Top
-
 Info.Text =
     "🥚 Mejor: ---\n" ..
     "🍀 Lucky: ---\n" ..
     "⭐ Rareza: ---"
 
-Info.Parent = Main
+Info.Parent =
+    Main
 
 local Count =
     Instance.new("TextLabel")
@@ -552,7 +892,8 @@ Count.TextColor3 =
 Count.Text =
     "Huevos encontrados: 0"
 
-Count.Parent = Main
+Count.Parent =
+    Main
 
 local Status =
     Instance.new("TextLabel")
@@ -588,7 +929,8 @@ Status.TextColor3 =
         140
     )
 
-Status.Parent = Main
+Status.Parent =
+    Main
 
 local Button =
     Instance.new("TextButton")
@@ -604,7 +946,7 @@ Button.Size =
 Button.Position =
     UDim2.fromOffset(
         10,
-        165
+        166
     )
 
 Button.BackgroundColor3 =
@@ -631,18 +973,23 @@ Button.TextColor3 =
         140
     )
 
-Button.Parent = Main
+Button.Parent =
+    Main
 
 local ButtonCorner =
     Instance.new("UICorner")
 
 ButtonCorner.CornerRadius =
-    UDim.new(0, 10)
+    UDim.new(
+        0,
+        10
+    )
 
-ButtonCorner.Parent = Button
+ButtonCorner.Parent =
+    Button
 
 --==============================================================
--- EJECUTAR
+-- EJECUCIÓN
 --==============================================================
 
 local function Run()
@@ -653,36 +1000,54 @@ local function Run()
 
     Running = true
 
-    Status.Text =
-        "Estado: GUARDANDO POSICIÓN..."
+    ----------------------------------------------------------
+    -- GUARDAR POSICIÓN
+    ----------------------------------------------------------
 
     if not SavePosition() then
 
         Status.Text =
-            "Estado: ERROR"
+            "Estado: ERROR POSICIÓN"
 
         Running = false
         return
     end
 
+    ----------------------------------------------------------
+    -- ESCANEAR
+    ----------------------------------------------------------
+
     Status.Text =
-        "Estado: ESCANEANDO WORKSPACE..."
+        "Estado: ESCANEANDO MAPA..."
 
     local best, amount =
         FindBestEgg()
 
     Count.Text =
-        "Huevos encontrados: " ..
+        "Huevos del mapa: " ..
         tostring(amount)
+
+    ----------------------------------------------------------
+    -- NO ENCONTRADO
+    ----------------------------------------------------------
 
     if not best then
 
+        Info.Text =
+            "🥚 Mejor: NO ENCONTRADO\n" ..
+            "🍀 Lucky: ---\n" ..
+            "⭐ Rareza: ---"
+
         Status.Text =
-            "Estado: NO ENCONTRÉ HUEVOS"
+            "Estado: NO HAY HUEVOS"
 
         Running = false
         return
     end
+
+    ----------------------------------------------------------
+    -- MOSTRAR
+    ----------------------------------------------------------
 
     Info.Text =
         "🥚 Mejor: " ..
@@ -691,6 +1056,10 @@ local function Run()
         best.Luck ..
         "\n⭐ Rareza: " ..
         best.Rarity
+
+    ----------------------------------------------------------
+    -- TP
+    ----------------------------------------------------------
 
     Status.Text =
         "Estado: TP → " ..
@@ -707,14 +1076,28 @@ local function Run()
         return
     end
 
+    ----------------------------------------------------------
+    -- CONGELADO
+    ----------------------------------------------------------
+
     Status.Text =
         "Estado: CONGELADO EN EL HUEVO"
 
     task.wait(2)
 
-    -- Aquí queda detenido en el huevo.
-    -- Cuando conectemos la interacción real de
-    -- montar/recoger, se ejecutará aquí.
+    ----------------------------------------------------------
+    -- AQUÍ SE CONECTARÍA LA MECÁNICA
+    -- REAL DE RECOGER/MONTAR DEL JUEGO
+    ----------------------------------------------------------
+
+    Status.Text =
+        "Estado: HUEVO SELECCIONADO"
+
+    task.wait(1)
+
+    ----------------------------------------------------------
+    -- VOLVER
+    ----------------------------------------------------------
 
     Status.Text =
         "Estado: REGRESANDO"
@@ -731,12 +1114,14 @@ local function Run()
     Running = false
 end
 
-Button.Activated:Connect(Run)
+Button.Activated:Connect(
+    Run
+)
 
 --==============================================================
 -- INICIO
 --==============================================================
 
 print(
-    "KOXTA BEST EGG • WORKSPACE cargado"
+    "KOXTA BEST EGG WORKSPACE cargado"
 )
