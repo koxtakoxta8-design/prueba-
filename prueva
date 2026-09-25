@@ -1,21 +1,113 @@
-local Workspace = game:GetService("Workspace")local Players = game:GetService("Players")local RunService = game:GetService("RunService")local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayerlocal Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
--- Datos de huevos con su "suerte" numérica para compararlocal EggData = {    ["White Egg"] = { Lucky = 1 },    ["Brown Egg"] = { Lucky = 5 },
-    ["Cracked Egg"] = { Lucky = 30 },    ["Easter Egg"] = { Lucky = 50 },    ["Stone Egg"] = { Lucky = 100 },    ["Leaf Egg"] = { Lucky = 200 },
-    ["Mushroom Egg"] = { Lucky = 500 },    ["Flower Egg"] = { Lucky = 750 },    ["Slime Egg"] = { Lucky = 1000 },    ["Ice Egg"] = { Lucky = 3000 },
-    ["Glass Egg"] = { Lucky = 10000 },    ["Golden Egg"] = { Lucky = 30000 },
-    ["Crystal Egg"] = { Lucky = 150000 },    ["Skull Egg"] = { Lucky = 250000 },    ["Dominus Egg"] = { Lucky = 700000 },    ["Flaming Egg"] = { Lucky = 1000000 },    ["Sinister Egg"] = { Lucky = 3000000 },    ["Soul Egg"] = { Lucky = 7000000 },
-    ["Aurora Egg"] = { Lucky = 300000000 },    ["Galaxy Egg"] = { Lucky = 1500000000 },
-    ["Black Hole Egg"] = { Lucky = 100000000000 },    ["Cherub Egg"] = { Lucky = 1000000000000 },}
--- Función para encontrar el huevo con mayor suerte visible en el Workspacelocal function FindBestEgg()    local eggsFolder = Workspace:FindFirstChild("Eggs") or Workspace    local bestEggPart = nil    local bestLuck = -math.huge
-    for _, part in pairs(eggsFolder:GetChildren()) do        if part:IsA("BasePart") then            local eggName = part.Name            local data = EggData[eggName]            if data and data.Lucky > bestLuck then                bestLuck = data.Lucky                bestEggPart = part            end        end    end
-    return bestEggPartend
--- Función para teletransportar al jugador a una posiciónlocal function Teleport(position)    if HumanoidRootPart then        HumanoidRootPart.CFrame = CFrame.new(position + Vector3.new(0, 3, 0))    endend
--- Función para obtener la posición del spawn/baselocal function GetSpawnPosition()    local spawnLocation = Workspace:FindFirstChild("SpawnLocation")    if spawnLocation and spawnLocation:IsA("SpawnLocation") then        return spawnLocation.Position    end    -- Si no hay SpawnLocation, usa una posición por defecto o la inicial del personaje    return Vector3.new(0, 10, 0)end
--- Función principal para ir al mejor huevo, agarrarlo y volver al spawnlocal function GrabBestEggAndReturn()    local bestEgg = FindBestEgg()    if not bestEgg then        warn("No se encontró ningún huevo para agarrar.")        return    end
-    -- Teletransportar al mejor huevo    Teleport(bestEgg.Position)
-    -- Esperar un poco para simular que agarra el huevo    wait(0.5)
-    -- Volver al spawn    local spawnPos = GetSpawnPosition()    Teleport(spawnPos)end
--- Crear GUI con botón para activar la funciónlocal ScreenGui = Instance.new("ScreenGui")ScreenGui.Name = "EggTPGui"ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-local Button = Instance.new("TextButton")Button.Size = UDim2.new(0, 200, 0, 50)Button.Position = UDim2.new(0.5, -100, 0.9, 0)Button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)Button.TextColor3 = Color3.new(1, 1, 1)Button.Font = Enum.Font.GothamBoldButton.TextSize = 20Button.Text = "Ir al Mejor Huevo"Button.Parent = ScreenGui
-Button.MouseButton1Click:Connect(function()    GrabBestEggAndReturn()end)
+local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+-- Datos de huevos con su "suerte" numérica para comparar
+local EggData = {
+    ["White Egg"] = { Lucky = 1 },
+    ["Brown Egg"] = { Lucky = 5 },
+    ["Cracked Egg"] = { Lucky = 30 },
+    ["Easter Egg"] = { Lucky = 50 },
+    ["Stone Egg"] = { Lucky = 100 },
+    ["Leaf Egg"] = { Lucky = 200 },
+    ["Mushroom Egg"] = { Lucky = 500 },
+    ["Flower Egg"] = { Lucky = 750 },
+    ["Slime Egg"] = { Lucky = 1000 },
+    ["Ice Egg"] = { Lucky = 3000 },
+    ["Glass Egg"] = { Lucky = 10000 },
+    ["Golden Egg"] = { Lucky = 30000 },
+    ["Crystal Egg"] = { Lucky = 150000 },
+    ["Skull Egg"] = { Lucky = 250000 },
+    ["Dominus Egg"] = { Lucky = 700000 },
+    ["Flaming Egg"] = { Lucky = 1000000 },
+    ["Sinister Egg"] = { Lucky = 3000000 },
+    ["Soul Egg"] = { Lucky = 7000000 },
+    ["Aurora Egg"] = { Lucky = 300000000 },
+    ["Galaxy Egg"] = { Lucky = 1500000000 },
+    ["Black Hole Egg"] = { Lucky = 100000000000 },
+    ["Cherub Egg"] = { Lucky = 1000000000000 },
+}
+
+-- Función para encontrar el huevo con mayor suerte visible en el Workspace
+local function FindBestEgg()
+    local eggsFolder = Workspace:FindFirstChild("Eggs") or Workspace
+    local bestEggPart = nil
+    local bestLuck = -math.huge
+
+    for _, part in pairs(eggsFolder:GetChildren()) do
+        if part:IsA("BasePart") then
+            local eggName = part.Name
+            local data = EggData[eggName]
+
+            if data and data.Lucky > bestLuck then
+                bestLuck = data.Lucky
+                bestEggPart = part
+            end
+        end
+    end
+
+    return bestEggPart
+end
+
+-- Función para teletransportar al jugador a una posición
+local function Teleport(position)
+    if HumanoidRootPart and HumanoidRootPart.Parent then
+        HumanoidRootPart.CFrame = CFrame.new(position + Vector3.new(0, 3, 0))
+    end
+end
+
+-- Función para obtener la posición del spawn/base
+local function GetSpawnPosition()
+    local spawnLocation = Workspace:FindFirstChild("SpawnLocation")
+
+    if spawnLocation and spawnLocation:IsA("SpawnLocation") then
+        return spawnLocation.Position
+    end
+
+    return Vector3.new(0, 10, 0)
+end
+
+-- Función principal para ir al mejor huevo, agarrarlo y volver al spawn
+local function GrabBestEggAndReturn()
+    local bestEgg = FindBestEgg()
+
+    if not bestEgg then
+        warn("No se encontró ningún huevo para agarrar.")
+        return
+    end
+
+    -- Teletransportar al mejor huevo
+    Teleport(bestEgg.Position)
+
+    -- Esperar un poco para simular que agarra el huevo
+    task.wait(0.5)
+
+    -- Volver al spawn
+    local spawnPos = GetSpawnPosition()
+    Teleport(spawnPos)
+end
+
+-- Crear GUI con botón para activar la función
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "EggTPGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(0, 200, 0, 50)
+Button.Position = UDim2.new(0.5, -100, 0.9, 0)
+Button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+Button.TextColor3 = Color3.new(1, 1, 1)
+Button.Font = Enum.Font.GothamBold
+Button.TextSize = 20
+Button.Text = "Ir al Mejor Huevo"
+Button.Parent = ScreenGui
+
+Button.Activated:Connect(function()
+    GrabBestEggAndReturn()
+end)
