@@ -1,9 +1,23 @@
 --==============================================================
--- KOXTA - RIDE A PET EGG ESP
--- WORKSPACE + SNAPSHOT
--- NOMBRE + LUCKY + RAREZA
--- MARCA EL MEJOR HUEVO
--- SIN TP / SIN AUTOGRAB
+-- KOXTA - RIDE A PET
+-- UNIVERSAL EGG ESP
+--
+-- Busca huevos mediante:
+--   1. Workspace
+--   2. Attributes
+--   3. StringValues
+--   4. ProximityPrompts
+--   5. TextLabels / TextButtons
+--   6. AskFieldEggSnapshot
+--
+-- Muestra:
+--   🥚 Nombre
+--   🍀 Lucky
+--   ⭐ Rareza
+--   🏆 MEJOR HUEVO
+--
+-- SIN TP
+-- SIN AUTOGRAB
 --==============================================================
 
 local Players = game:GetService("Players")
@@ -12,247 +26,336 @@ local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 
-local ESP_ENABLED = true
-local UPDATE_TIME = 1
+--==============================================================
+-- CONFIGURACIÓN
+--==============================================================
+
+local ENABLED = true
+local UPDATE_TIME = 1.5
 local MAX_DISTANCE = 100000
 
+-- Evita crear cientos de carteles duplicados
+local MAX_ESP = 300
+
 --==============================================================
--- 22 HUEVOS
+-- HUEVOS
 --==============================================================
 
 local EggData = {
-    ["White Egg"]      = {Luck=1,          LuckText="1",      Rarity="Common"},
-    ["Brown Egg"]      = {Luck=5,          LuckText="5",      Rarity="Common"},
-    ["Cracked Egg"]    = {Luck=30,         LuckText="30",     Rarity="Rare"},
-    ["Easter Egg"]     = {Luck=50,         LuckText="50",     Rarity="Rare"},
-    ["Stone Egg"]      = {Luck=100,        LuckText="100",    Rarity="Rare"},
-    ["Leaf Egg"]       = {Luck=200,        LuckText="200",    Rarity="Rare"},
-    ["Mushroom Egg"]   = {Luck=500,        LuckText="500",    Rarity="Epic"},
-    ["Flower Egg"]     = {Luck=750,        LuckText="750",    Rarity="Epic"},
-    ["Slime Egg"]      = {Luck=1000,       LuckText="1K",     Rarity="Epic"},
-    ["Ice Egg"]        = {Luck=3000,       LuckText="3K",     Rarity="Epic"},
-    ["Glass Egg"]      = {Luck=10000,      LuckText="10K",    Rarity="Legendary"},
-    ["Golden Egg"]     = {Luck=30000,      LuckText="30K",    Rarity="Legendary"},
-    ["Crystal Egg"]    = {Luck=150000,     LuckText="150K",   Rarity="Mythic"},
-    ["Skull Egg"]      = {Luck=250000,     LuckText="250K",   Rarity="Mythic"},
-    ["Dominus Egg"]    = {Luck=700000,     LuckText="700K",   Rarity="Mythic"},
-    ["Flaming Egg"]    = {Luck=1000000,    LuckText="1M",     Rarity="Mythic"},
-    ["Sinister Egg"]   = {Luck=3000000,    LuckText="3M",     Rarity="Mythic"},
-    ["Soul Egg"]       = {Luck=7000000,    LuckText="7M",     Rarity="Mythic"},
-    ["Aurora Egg"]     = {Luck=300000000,  LuckText="300M",   Rarity="Divine"},
-    ["Galaxy Egg"]     = {Luck=1500000000, LuckText="1.5B",   Rarity="Divine"},
-    ["Black Hole Egg"] = {Luck=100000000000,LuckText="100B",  Rarity="Ethereal"},
-    ["Cherub Egg"]     = {Luck=1000000000000,LuckText="1T",   Rarity="Ethereal"}
+
+    ["White Egg"] = {
+        Luck = 1,
+        LuckText = "1",
+        Rarity = "Common"
+    },
+
+    ["Brown Egg"] = {
+        Luck = 5,
+        LuckText = "5",
+        Rarity = "Common"
+    },
+
+    ["Cracked Egg"] = {
+        Luck = 30,
+        LuckText = "30",
+        Rarity = "Rare"
+    },
+
+    ["Easter Egg"] = {
+        Luck = 50,
+        LuckText = "50",
+        Rarity = "Rare"
+    },
+
+    ["Stone Egg"] = {
+        Luck = 100,
+        LuckText = "100",
+        Rarity = "Rare"
+    },
+
+    ["Leaf Egg"] = {
+        Luck = 200,
+        LuckText = "200",
+        Rarity = "Rare"
+    },
+
+    ["Mushroom Egg"] = {
+        Luck = 500,
+        LuckText = "500",
+        Rarity = "Epic"
+    },
+
+    ["Flower Egg"] = {
+        Luck = 750,
+        LuckText = "750",
+        Rarity = "Epic"
+    },
+
+    ["Slime Egg"] = {
+        Luck = 1000,
+        LuckText = "1K",
+        Rarity = "Epic"
+    },
+
+    ["Ice Egg"] = {
+        Luck = 3000,
+        LuckText = "3K",
+        Rarity = "Epic"
+    },
+
+    ["Glass Egg"] = {
+        Luck = 10000,
+        LuckText = "10K",
+        Rarity = "Legendary"
+    },
+
+    ["Golden Egg"] = {
+        Luck = 30000,
+        LuckText = "30K",
+        Rarity = "Legendary"
+    },
+
+    ["Crystal Egg"] = {
+        Luck = 150000,
+        LuckText = "150K",
+        Rarity = "Mythic"
+    },
+
+    ["Skull Egg"] = {
+        Luck = 250000,
+        LuckText = "250K",
+        Rarity = "Mythic"
+    },
+
+    ["Dominus Egg"] = {
+        Luck = 700000,
+        LuckText = "700K",
+        Rarity = "Mythic"
+    },
+
+    ["Flaming Egg"] = {
+        Luck = 1000000,
+        LuckText = "1M",
+        Rarity = "Mythic"
+    },
+
+    ["Sinister Egg"] = {
+        Luck = 3000000,
+        LuckText = "3M",
+        Rarity = "Mythic"
+    },
+
+    ["Soul Egg"] = {
+        Luck = 7000000,
+        LuckText = "7M",
+        Rarity = "Mythic"
+    },
+
+    ["Aurora Egg"] = {
+        Luck = 300000000,
+        LuckText = "300M",
+        Rarity = "Divine"
+    },
+
+    ["Galaxy Egg"] = {
+        Luck = 1500000000,
+        LuckText = "1.5B",
+        Rarity = "Divine"
+    },
+
+    ["Black Hole Egg"] = {
+        Luck = 100000000000,
+        LuckText = "100B",
+        Rarity = "Ethereal"
+    },
+
+    ["Cherub Egg"] = {
+        Luck = 1000000000000,
+        LuckText = "1T",
+        Rarity = "Ethereal"
+    }
 }
 
 --==============================================================
--- SNAPSHOT
+-- NORMALIZAR TEXTO
 --==============================================================
 
-local function FindSnapshotRemote()
+local function Normalize(text)
 
-    local Packages = ReplicatedStorage:FindFirstChild("Packages")
-    if not Packages then return nil end
-
-    local Networking = Packages:FindFirstChild("Networking")
-    if not Networking then return nil end
-
-    local RF = Networking:FindFirstChild("RF")
-    if not RF then return nil end
-
-    local EggWorld = RF:FindFirstChild("EggWorld")
-    if not EggWorld then return nil end
-
-    return EggWorld:FindFirstChild("AskFieldEggSnapshot")
-end
-
-local SnapshotRemote = FindSnapshotRemote()
-
---==============================================================
--- DATOS DEL HUEVO
---==============================================================
-
-local function GetEggData(value)
-
-    if value == nil then
-        return nil,nil
+    if text == nil then
+        return ""
     end
 
-    local text = string.lower(tostring(value))
+    text = tostring(text)
 
-    for eggName,data in pairs(EggData) do
+    text = text
+        :gsub("🍀", "")
+        :gsub("🥚", "")
+        :gsub("⭐", "")
+        :gsub("🏆", "")
 
-        if text == string.lower(eggName) then
-            return eggName,data
+    text = text:gsub("^%s+", "")
+    text = text:gsub("%s+$", "")
+
+    return string.lower(text)
+end
+
+--==============================================================
+-- BUSCAR EGG DATA
+--==============================================================
+
+local function FindEggData(value)
+
+    if value == nil then
+        return nil, nil
+    end
+
+    local text = Normalize(value)
+
+    if text == "" then
+        return nil, nil
+    end
+
+    -- Exacto
+    for eggName, data in pairs(EggData) do
+
+        if text == Normalize(eggName) then
+            return eggName, data
         end
+    end
+
+    -- Contenido
+    for eggName, data in pairs(EggData) do
 
         if string.find(
             text,
-            string.lower(eggName),
+            Normalize(eggName),
             1,
             true
         ) then
-            return eggName,data
+
+            return eggName, data
         end
     end
 
-    return nil,nil
+    return nil, nil
 end
 
 --==============================================================
--- PARTE
+-- PARTE / POSICIÓN
 --==============================================================
 
-local function GetPart(obj)
+local function GetPosition(obj)
 
     if not obj then
         return nil
     end
 
     if obj:IsA("BasePart") then
-        return obj
+        return obj.Position
+    end
+
+    if obj:IsA("Attachment") then
+        return obj.WorldPosition
     end
 
     if obj:IsA("Model") then
 
         if obj.PrimaryPart then
-            return obj.PrimaryPart
+            return obj.PrimaryPart.Position
         end
 
-        return obj:FindFirstChildWhichIsA(
-            "BasePart",
-            true
-        )
+        local part =
+            obj:FindFirstChildWhichIsA(
+                "BasePart",
+                true
+            )
+
+        if part then
+            return part.Position
+        end
     end
 
     return nil
 end
 
 --==============================================================
--- ESP
+-- ENCONTRAR POSICIÓN EN PADRE
 --==============================================================
 
-local ActiveESP = {}
+local function FindParentPosition(obj)
 
-local function DestroyESP(id)
+    local current = obj
 
-    local old = ActiveESP[id]
+    for i = 1, 8 do
 
-    if old then
-        pcall(function()
-            old:Destroy()
-        end)
+        if not current then
+            break
+        end
 
-        ActiveESP[id] = nil
+        local pos =
+            GetPosition(current)
+
+        if pos then
+            return pos
+        end
+
+        current =
+            current.Parent
     end
+
+    return nil
 end
 
-local function CreateESP(
-    id,
-    position,
-    eggName,
-    data,
-    isBest
-)
+--==============================================================
+-- SNAPSHOT REMOTE
+--==============================================================
 
-    if not position or not data then
-        return
+local function FindSnapshotRemote()
+
+    local Packages =
+        ReplicatedStorage:FindFirstChild(
+            "Packages"
+        )
+
+    if not Packages then
+        return nil
     end
 
-    DestroyESP(id)
+    local Networking =
+        Packages:FindFirstChild(
+            "Networking"
+        )
 
-    local anchor = Instance.new("Part")
-    anchor.Name = "KOXTA_EggAnchor"
-    anchor.Size = Vector3.new(1,1,1)
-    anchor.Transparency = 1
-    anchor.Anchored = true
-    anchor.CanCollide = false
-    anchor.CanTouch = false
-    anchor.CanQuery = false
-    anchor.Position = position + Vector3.new(0,3,0)
-    anchor.Parent = Workspace
-
-    local gui = Instance.new("BillboardGui")
-    gui.Name = "KOXTA_EggESP"
-    gui.Size = UDim2.fromOffset(160,82)
-    gui.StudsOffset = Vector3.new(0,2,0)
-    gui.AlwaysOnTop = true
-    gui.MaxDistance = MAX_DISTANCE
-    gui.Adornee = anchor
-    gui.Parent = anchor
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.fromScale(1,1)
-    frame.BackgroundColor3 = Color3.fromRGB(10,12,18)
-    frame.BackgroundTransparency = 0.12
-    frame.BorderSizePixel = 0
-    frame.Parent = gui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0,8)
-    corner.Parent = frame
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = isBest and 2.5 or 1.5
-    stroke.Color = isBest
-        and Color3.fromRGB(255,210,40)
-        or Color3.fromRGB(0,255,140)
-    stroke.Parent = frame
-
-    -- MEJOR
-    if isBest then
-
-        local best = Instance.new("TextLabel")
-        best.Size = UDim2.new(1,0,0,18)
-        best.Position = UDim2.fromOffset(0,-18)
-        best.BackgroundTransparency = 1
-        best.Font = Enum.Font.GothamBold
-        best.Text = "🏆 MEJOR HUEVO"
-        best.TextSize = 11
-        best.TextColor3 = Color3.fromRGB(255,220,50)
-        best.TextXAlignment = Enum.TextXAlignment.Center
-        best.Parent = frame
+    if not Networking then
+        return nil
     end
 
-    -- NOMBRE
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,-8,0,22)
-    title.Position = UDim2.fromOffset(4,2)
-    title.BackgroundTransparency = 1
-    title.Font = Enum.Font.GothamBold
-    title.Text = "🥚 "..eggName
-    title.TextSize = 10
-    title.TextColor3 = Color3.new(1,1,1)
-    title.TextXAlignment = Enum.TextXAlignment.Center
-    title.TextTruncate = Enum.TextTruncate.AtEnd
-    title.Parent = frame
+    local RF =
+        Networking:FindFirstChild(
+            "RF"
+        )
 
-    -- LUCK
-    local lucky = Instance.new("TextLabel")
-    lucky.Size = UDim2.new(1,-8,0,20)
-    lucky.Position = UDim2.fromOffset(4,24)
-    lucky.BackgroundTransparency = 1
-    lucky.Font = Enum.Font.GothamBold
-    lucky.Text = "🍀 Lucky: "..data.LuckText
-    lucky.TextSize = 10
-    lucky.TextColor3 = Color3.fromRGB(80,255,140)
-    lucky.TextXAlignment = Enum.TextXAlignment.Center
-    lucky.Parent = frame
+    if not RF then
+        return nil
+    end
 
-    -- RAREZA
-    local rarity = Instance.new("TextLabel")
-    rarity.Size = UDim2.new(1,-8,0,20)
-    rarity.Position = UDim2.fromOffset(4,44)
-    rarity.BackgroundTransparency = 1
-    rarity.Font = Enum.Font.GothamBold
-    rarity.Text = "⭐ "..data.Rarity
-    rarity.TextSize = 10
-    rarity.TextColor3 = Color3.fromRGB(255,220,80)
-    rarity.TextXAlignment = Enum.TextXAlignment.Center
-    rarity.Parent = frame
+    local EggWorld =
+        RF:FindFirstChild(
+            "EggWorld"
+        )
 
-    ActiveESP[id] = anchor
+    if not EggWorld then
+        return nil
+    end
+
+    return EggWorld:FindFirstChild(
+        "AskFieldEggSnapshot"
+    )
 end
+
+local SnapshotRemote =
+    FindSnapshotRemote()
 
 --==============================================================
 -- CANDIDATOS
@@ -264,47 +367,222 @@ local function AddCandidate(
     id,
     position,
     eggName,
-    data
+    data,
+    source
 )
 
-    if not position or not data then
+    if not position then
+        return
+    end
+
+    if not eggName or not data then
         return
     end
 
     Candidates[id] = {
         Position = position,
         Name = eggName,
-        Data = data
+        Data = data,
+        Source = source
     }
 end
 
 --==============================================================
--- WORKSPACE
+-- ESCANEAR OBJETO Y PADRES
+--==============================================================
+
+local function InspectObject(obj)
+
+    if not obj then
+        return
+    end
+
+    local position =
+        FindParentPosition(obj)
+
+    if not position then
+        return
+    end
+
+    --==========================================================
+    -- NOMBRE
+    --==========================================================
+
+    local eggName, data =
+        FindEggData(obj.Name)
+
+    if eggName and data then
+
+        AddCandidate(
+            "NAME_" ..
+            obj:GetFullName(),
+
+            position,
+
+            eggName,
+            data,
+
+            "Name"
+        )
+    end
+
+    --==========================================================
+    -- ATTRIBUTES
+    --==========================================================
+
+    for attributeName, value in pairs(
+        obj:GetAttributes()
+    ) do
+
+        local foundName, foundData =
+            FindEggData(value)
+
+        if foundName then
+
+            AddCandidate(
+                "ATTR_" ..
+                obj:GetFullName() ..
+                "_" ..
+                tostring(attributeName),
+
+                position,
+
+                foundName,
+                foundData,
+
+                "Attribute"
+            )
+        end
+
+        foundName, foundData =
+            FindEggData(attributeName)
+
+        if foundName then
+
+            AddCandidate(
+                "ATTRNAME_" ..
+                obj:GetFullName() ..
+                "_" ..
+                tostring(attributeName),
+
+                position,
+
+                foundName,
+                foundData,
+
+                "AttributeName"
+            )
+        end
+    end
+
+    --==========================================================
+    -- STRING VALUE
+    --==========================================================
+
+    if obj:IsA("StringValue") then
+
+        local foundName, foundData =
+            FindEggData(obj.Value)
+
+        if foundName then
+
+            AddCandidate(
+                "STRING_" ..
+                obj:GetFullName(),
+
+                position,
+
+                foundName,
+                foundData,
+
+                "StringValue"
+            )
+        end
+    end
+
+    --==========================================================
+    -- PROXIMITY PROMPT
+    --==========================================================
+
+    if obj:IsA("ProximityPrompt") then
+
+        local foundName, foundData =
+            FindEggData(
+                obj.ObjectText
+            )
+
+        if not foundName then
+
+            foundName, foundData =
+                FindEggData(
+                    obj.ActionText
+                )
+        end
+
+        if not foundName then
+
+            foundName, foundData =
+                FindEggData(
+                    obj.Parent and
+                    obj.Parent.Name
+                )
+        end
+
+        if foundName then
+
+            AddCandidate(
+                "PROMPT_" ..
+                obj:GetFullName(),
+
+                position,
+
+                foundName,
+                foundData,
+
+                "Prompt"
+            )
+        end
+    end
+
+    --==========================================================
+    -- TEXT
+    --==========================================================
+
+    if obj:IsA("TextLabel")
+    or obj:IsA("TextButton")
+    or obj:IsA("TextBox") then
+
+        local foundName, foundData =
+            FindEggData(obj.Text)
+
+        if foundName then
+
+            AddCandidate(
+                "TEXT_" ..
+                obj:GetFullName(),
+
+                position,
+
+                foundName,
+                foundData,
+
+                "Text"
+            )
+        end
+    end
+end
+
+--==============================================================
+-- WORKSPACE COMPLETO
 --==============================================================
 
 local function ScanWorkspace()
 
-    for _,obj in ipairs(
+    for _, obj in ipairs(
         Workspace:GetDescendants()
     ) do
 
-        local eggName,data =
-            GetEggData(obj.Name)
-
-        if eggName and data then
-
-            local part = GetPart(obj)
-
-            if part then
-
-                AddCandidate(
-                    "WS_"..obj:GetFullName(),
-                    part.Position,
-                    eggName,
-                    data
-                )
-            end
-        end
+        InspectObject(obj)
     end
 end
 
@@ -318,12 +596,18 @@ local function ScanSnapshot()
         return
     end
 
-    local success,snapshot =
+    local success, snapshot =
         pcall(function()
+
             return SnapshotRemote:InvokeServer()
+
         end)
 
-    if not success or type(snapshot) ~= "table" then
+    if not success then
+        return
+    end
+
+    if type(snapshot) ~= "table" then
         return
     end
 
@@ -334,41 +618,77 @@ local function ScanSnapshot()
         return
     end
 
-    for index,rec in ipairs(records) do
+    for index, rec in ipairs(records) do
 
         if type(rec) == "table" then
 
             local position
 
-            if typeof(rec.BottomCFrame) == "CFrame" then
-                position = rec.BottomCFrame.Position
+            -- BottomCFrame
+            if typeof(
+                rec.BottomCFrame
+            ) == "CFrame" then
 
-            elseif typeof(rec.BottomCFrame) == "Vector3" then
-                position = rec.BottomCFrame
+                position =
+                    rec.BottomCFrame.Position
+
+            elseif typeof(
+                rec.BottomCFrame
+            ) == "Vector3" then
+
+                position =
+                    rec.BottomCFrame
             end
 
             if position then
 
-                local eggName,data =
-                    GetEggData(rec.AssetCategory)
+                local eggName, data
 
-                if not data then
-                    eggName,data =
-                        GetEggData(rec.Name)
+                -- AssetCategory
+                eggName, data =
+                    FindEggData(
+                        rec.AssetCategory
+                    )
+
+                -- Name
+                if not eggName then
+
+                    eggName, data =
+                        FindEggData(
+                            rec.Name
+                        )
                 end
 
-                if not data then
-                    eggName,data =
-                        GetEggData(rec.DisplayName)
+                -- DisplayName
+                if not eggName then
+
+                    eggName, data =
+                        FindEggData(
+                            rec.DisplayName
+                        )
+                end
+
+                -- EggName
+                if not eggName then
+
+                    eggName, data =
+                        FindEggData(
+                            rec.EggName
+                        )
                 end
 
                 if eggName and data then
 
                     AddCandidate(
-                        "SNAP_"..tostring(index),
+                        "SNAPSHOT_" ..
+                        tostring(index),
+
                         position,
+
                         eggName,
-                        data
+                        data,
+
+                        "Snapshot"
                     )
                 end
             end
@@ -377,129 +697,727 @@ local function ScanSnapshot()
 end
 
 --==============================================================
--- REDIBUJAR
+-- ELIMINAR DUPLICADOS POR POSICIÓN
 --==============================================================
 
-local function RefreshESP()
+local function RemoveDuplicates()
 
-    if not ESP_ENABLED then
-        return
-    end
+    local result = {}
 
-    Candidates = {}
+    for id, candidate in pairs(
+        Candidates
+    ) do
 
-    ScanWorkspace()
-    ScanSnapshot()
+        local duplicate = false
 
-    -- Buscar el mayor Lucky
-    local bestId = nil
-    local bestLuck = -1
+        for otherId, other in pairs(
+            result
+        ) do
 
-    for id,info in pairs(Candidates) do
+            local distance =
+                (
+                    candidate.Position -
+                    other.Position
+                ).Magnitude
 
-        if info.Data.Luck > bestLuck then
+            if distance < 3 then
 
-            bestLuck = info.Data.Luck
-            bestId = id
+                -- Conservamos la fuente
+                -- que tenga prioridad.
+
+                local priority = {
+                    Snapshot = 4,
+                    Prompt = 3,
+                    Attribute = 2,
+                    Text = 1,
+                    Name = 1
+                }
+
+                local p1 =
+                    priority[candidate.Source]
+                    or 0
+
+                local p2 =
+                    priority[other.Source]
+                    or 0
+
+                if p1 > p2 then
+                    result[otherId] =
+                        candidate
+                end
+
+                duplicate = true
+                break
+            end
+        end
+
+        if not duplicate then
+            result[id] = candidate
         end
     end
 
-    -- Dibujar
-    for id,info in pairs(Candidates) do
-
-        CreateESP(
-            id,
-            info.Position,
-            info.Name,
-            info.Data,
-            id == bestId
-        )
-    end
+    Candidates = result
 end
 
 --==============================================================
--- LIMPIAR
+-- ESP
 --==============================================================
 
-local function ClearAll()
+local ESPObjects = {}
 
-    for id in pairs(ActiveESP) do
-        DestroyESP(id)
+local function ClearESP()
+
+    for _, object in pairs(
+        ESPObjects
+    ) do
+
+        pcall(function()
+            object:Destroy()
+        end)
     end
+
+    ESPObjects = {}
+end
+
+local function CreateESP(
+    id,
+    candidate,
+    best
+)
+
+    local anchor =
+        Instance.new("Part")
+
+    anchor.Name =
+        "KOXTA_EggESP_Anchor"
+
+    anchor.Size =
+        Vector3.new(1,1,1)
+
+    anchor.Position =
+        candidate.Position +
+        Vector3.new(0,3,0)
+
+    anchor.Anchored = true
+    anchor.CanCollide = false
+    anchor.CanTouch = false
+    anchor.CanQuery = false
+    anchor.Transparency = 1
+
+    anchor.Parent =
+        Workspace
+
+    local gui =
+        Instance.new("BillboardGui")
+
+    gui.Name =
+        "KOXTA_EggESP"
+
+    gui.Size =
+        best
+        and UDim2.fromOffset(175,100)
+        or UDim2.fromOffset(155,78)
+
+    gui.StudsOffset =
+        Vector3.new(0,2,0)
+
+    gui.AlwaysOnTop = true
+
+    gui.MaxDistance =
+        MAX_DISTANCE
+
+    gui.Adornee =
+        anchor
+
+    gui.Parent =
+        anchor
+
+    --==========================================================
+    -- FONDO
+    --==========================================================
+
+    local frame =
+        Instance.new("Frame")
+
+    frame.Size =
+        UDim2.fromScale(1,1)
+
+    frame.BackgroundColor3 =
+        Color3.fromRGB(
+            10,12,18
+        )
+
+    frame.BackgroundTransparency =
+        0.1
+
+    frame.BorderSizePixel = 0
+
+    frame.Parent =
+        gui
+
+    local corner =
+        Instance.new("UICorner")
+
+    corner.CornerRadius =
+        UDim.new(0,9)
+
+    corner.Parent =
+        frame
+
+    local stroke =
+        Instance.new("UIStroke")
+
+    stroke.Thickness =
+        best and 2.5 or 1.5
+
+    stroke.Color =
+        best
+
+        and Color3.fromRGB(
+            255,215,40
+        )
+
+        or Color3.fromRGB(
+            0,255,140
+        )
+
+    stroke.Parent =
+        frame
+
+    --==========================================================
+    -- MEJOR
+    --==========================================================
+
+    if best then
+
+        local bestLabel =
+            Instance.new("TextLabel")
+
+        bestLabel.Size =
+            UDim2.new(
+                1,
+                -4,
+                0,
+                20
+            )
+
+        bestLabel.Position =
+            UDim2.fromOffset(2,-20)
+
+        bestLabel.BackgroundTransparency = 1
+
+        bestLabel.Font =
+            Enum.Font.GothamBold
+
+        bestLabel.Text =
+            "🏆 MEJOR HUEVO"
+
+        bestLabel.TextSize = 12
+
+        bestLabel.TextColor3 =
+            Color3.fromRGB(
+                255,215,40
+            )
+
+        bestLabel.TextXAlignment =
+            Enum.TextXAlignment.Center
+
+        bestLabel.Parent =
+            frame
+    end
+
+    --==========================================================
+    -- NOMBRE
+    --==========================================================
+
+    local title =
+        Instance.new("TextLabel")
+
+    title.Size =
+        UDim2.new(
+            1,
+            -8,
+            0,
+            22
+        )
+
+    title.Position =
+        UDim2.fromOffset(4,3)
+
+    title.BackgroundTransparency = 1
+
+    title.Font =
+        Enum.Font.GothamBold
+
+    title.Text =
+        "🥚 " ..
+        candidate.Name
+
+    title.TextSize = 10
+
+    title.TextColor3 =
+        Color3.fromRGB(
+            255,255,255
+        )
+
+    title.TextXAlignment =
+        Enum.TextXAlignment.Center
+
+    title.TextTruncate =
+        Enum.TextTruncate.AtEnd
+
+    title.Parent =
+        frame
+
+    --==========================================================
+    -- LUCK
+    --==========================================================
+
+    local lucky =
+        Instance.new("TextLabel")
+
+    lucky.Size =
+        UDim2.new(
+            1,
+            -8,
+            0,
+            20
+        )
+
+    lucky.Position =
+        UDim2.fromOffset(4,26)
+
+    lucky.BackgroundTransparency = 1
+
+    lucky.Font =
+        Enum.Font.GothamBold
+
+    lucky.Text =
+        "🍀 Lucky: " ..
+        candidate.Data.LuckText
+
+    lucky.TextSize = 10
+
+    lucky.TextColor3 =
+        Color3.fromRGB(
+            80,255,140
+        )
+
+    lucky.TextXAlignment =
+        Enum.TextXAlignment.Center
+
+    lucky.Parent =
+        frame
+
+    --==========================================================
+    -- RAREZA
+    --==========================================================
+
+    local rarity =
+        Instance.new("TextLabel")
+
+    rarity.Size =
+        UDim2.new(
+            1,
+            -8,
+            0,
+            20
+        )
+
+    rarity.Position =
+        UDim2.fromOffset(4,47)
+
+    rarity.BackgroundTransparency = 1
+
+    rarity.Font =
+        Enum.Font.GothamBold
+
+    rarity.Text =
+        "⭐ " ..
+        candidate.Data.Rarity
+
+    rarity.TextSize = 10
+
+    rarity.TextColor3 =
+        Color3.fromRGB(
+            255,220,80
+        )
+
+    rarity.TextXAlignment =
+        Enum.TextXAlignment.Center
+
+    rarity.Parent =
+        frame
+
+    --==========================================================
+    -- FUENTE
+    --==========================================================
+
+    if best then
+
+        local source =
+            Instance.new("TextLabel")
+
+        source.Size =
+            UDim2.new(
+                1,
+                -8,
+                0,
+                16
+            )
+
+        source.Position =
+            UDim2.fromOffset(4,66)
+
+        source.BackgroundTransparency = 1
+
+        source.Font =
+            Enum.Font.Gotham
+
+        source.Text =
+            "Detectado: " ..
+            tostring(candidate.Source)
+
+        source.TextSize = 8
+
+        source.TextColor3 =
+            Color3.fromRGB(
+                160,170,185
+            )
+
+        source.TextXAlignment =
+            Enum.TextXAlignment.Center
+
+        source.Parent =
+            frame
+    end
+
+    ESPObjects[id] =
+        anchor
+end
+
+--==============================================================
+-- ACTUALIZAR
+--==============================================================
+
+local function Refresh()
+
+    if not ENABLED then
+        return
+    end
+
+    ClearESP()
+
+    Candidates = {}
+
+    -- Workspace
+    pcall(function()
+        ScanWorkspace()
+    end)
+
+    -- Snapshot
+    pcall(function()
+        ScanSnapshot()
+    end)
+
+    RemoveDuplicates()
+
+    --==========================================================
+    -- ENCONTRAR MEJOR
+    --==========================================================
+
+    local bestId = nil
+    local bestLuck = -1
+
+    for id,candidate in pairs(
+        Candidates
+    ) do
+
+        if candidate.Data.Luck >
+            bestLuck then
+
+            bestLuck =
+                candidate.Data.Luck
+
+            bestId =
+                id
+        end
+    end
+
+    --==========================================================
+    -- CREAR CARTEL
+    --==========================================================
+
+    local count = 0
+
+    for id,candidate in pairs(
+        Candidates
+    ) do
+
+        count += 1
+
+        if count <= MAX_ESP then
+
+            CreateESP(
+                id,
+                candidate,
+                id == bestId
+            )
+        end
+    end
+
+    return count,bestId,bestLuck
 end
 
 --==============================================================
 -- GUI
 --==============================================================
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KOXTA_EggESP_GUI"
-ScreenGui.ResetOnSpawn = false
+local ScreenGui =
+    Instance.new("ScreenGui")
+
+ScreenGui.Name =
+    "KOXTA_EggESP_GUI"
+
+ScreenGui.ResetOnSpawn =
+    false
+
 ScreenGui.Parent =
-    LocalPlayer:WaitForChild("PlayerGui")
-
-local Button = Instance.new("TextButton")
-
-Button.Size = UDim2.fromOffset(120,40)
-
-Button.Position =
-    UDim2.new(
-        1,-135,
-        0,100
+    LocalPlayer:WaitForChild(
+        "PlayerGui"
     )
 
-Button.BackgroundColor3 =
-    Color3.fromRGB(12,15,20)
+--==============================================================
+-- PANEL
+--==============================================================
 
-Button.Text = "ESP: ON"
+local Panel =
+    Instance.new("Frame")
 
-Button.TextColor3 =
-    Color3.fromRGB(0,255,140)
+Panel.Size =
+    UDim2.fromOffset(
+        220,
+        125
+    )
 
-Button.TextSize = 12
+Panel.Position =
+    UDim2.new(
+        0,
+        15,
+        0.5,
+        -60
+    )
 
-Button.Font =
+Panel.BackgroundColor3 =
+    Color3.fromRGB(
+        10,12,18
+    )
+
+Panel.BorderSizePixel = 0
+
+Panel.Parent =
+    ScreenGui
+
+local PanelCorner =
+    Instance.new("UICorner")
+
+PanelCorner.CornerRadius =
+    UDim.new(0,12)
+
+PanelCorner.Parent =
+    Panel
+
+local PanelStroke =
+    Instance.new("UIStroke")
+
+PanelStroke.Color =
+    Color3.fromRGB(
+        0,255,140
+    )
+
+PanelStroke.Thickness = 1.5
+
+PanelStroke.Parent =
+    Panel
+
+--==============================================================
+-- TÍTULO
+--==============================================================
+
+local Title =
+    Instance.new("TextLabel")
+
+Title.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        25
+    )
+
+Title.Position =
+    UDim2.fromOffset(
+        10,
+        8
+    )
+
+Title.BackgroundTransparency = 1
+
+Title.Font =
     Enum.Font.GothamBold
 
-Button.BorderSizePixel = 0
+Title.Text =
+    "🥚 KOXTA EGG ESP"
 
-Button.Parent = ScreenGui
+Title.TextSize = 14
 
-local BC = Instance.new("UICorner")
-BC.CornerRadius = UDim.new(0,8)
-BC.Parent = Button
+Title.TextColor3 =
+    Color3.fromRGB(
+        255,255,255
+    )
 
-local BS = Instance.new("UIStroke")
-BS.Color =
-    Color3.fromRGB(0,255,140)
-BS.Thickness = 1.5
-BS.Parent = Button
+Title.Parent =
+    Panel
+
+--==============================================================
+-- STATUS
+--==============================================================
+
+local Status =
+    Instance.new("TextLabel")
+
+Status.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        38
+    )
+
+Status.Position =
+    UDim2.fromOffset(
+        10,
+        35
+    )
+
+Status.BackgroundTransparency = 1
+
+Status.Font =
+    Enum.Font.Gotham
+
+Status.Text =
+    "Buscando huevos..."
+
+Status.TextSize = 10
+
+Status.TextWrapped = true
+
+Status.TextColor3 =
+    Color3.fromRGB(
+        180,190,205
+    )
+
+Status.Parent =
+    Panel
 
 --==============================================================
 -- BOTÓN
 --==============================================================
 
+local Button =
+    Instance.new("TextButton")
+
+Button.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        35
+    )
+
+Button.Position =
+    UDim2.fromOffset(
+        10,
+        80
+    )
+
+Button.BackgroundColor3 =
+    Color3.fromRGB(
+        15,70,50
+    )
+
+Button.BorderSizePixel = 0
+
+Button.Text =
+    "ESP: ON"
+
+Button.Font =
+    Enum.Font.GothamBold
+
+Button.TextSize = 11
+
+Button.TextColor3 =
+    Color3.fromRGB(
+        0,255,140
+    )
+
+Button.Parent =
+    Panel
+
+local ButtonCorner =
+    Instance.new("UICorner")
+
+ButtonCorner.CornerRadius =
+    UDim.new(0,8)
+
+ButtonCorner.Parent =
+    Button
+
+--==============================================================
+-- BOTÓN ON/OFF
+--==============================================================
+
 Button.Activated:Connect(function()
 
-    ESP_ENABLED = not ESP_ENABLED
+    ENABLED =
+        not ENABLED
 
-    if ESP_ENABLED then
+    if ENABLED then
 
-        Button.Text = "ESP: ON"
+        Button.Text =
+            "ESP: ON"
 
         Button.TextColor3 =
-            Color3.fromRGB(0,255,140)
+            Color3.fromRGB(
+                0,255,140
+            )
 
-        RefreshESP()
+        PanelStroke.Color =
+            Color3.fromRGB(
+                0,255,140
+            )
+
+        Refresh()
 
     else
 
-        Button.Text = "ESP: OFF"
+        Button.Text =
+            "ESP: OFF"
 
         Button.TextColor3 =
-            Color3.fromRGB(255,80,80)
+            Color3.fromRGB(
+                255,80,80
+            )
 
-        ClearAll()
+        PanelStroke.Color =
+            Color3.fromRGB(
+                255,80,80
+            )
+
+        ClearESP()
+
+        Status.Text =
+            "ESP desactivado"
     end
 end)
 
@@ -509,14 +1427,45 @@ end)
 
 task.spawn(function()
 
-    while task.wait(UPDATE_TIME) do
+    while task.wait(
+        UPDATE_TIME
+    ) do
 
-        if ESP_ENABLED then
+        if ENABLED then
 
-            pcall(function()
-                RefreshESP()
-            end)
+            local count,
+                bestId,
+                bestLuck =
+                Refresh()
 
+            if count then
+
+                if bestId then
+
+                    local best =
+                        Candidates[bestId]
+
+                    if best then
+
+                        Status.Text =
+                            "🥚 Detectados: " ..
+                            tostring(count) ..
+                            "\n🏆 Mejor: " ..
+                            best.Name ..
+                            " • 🍀 " ..
+                            best.Data.LuckText
+
+                    end
+
+                else
+
+                    Status.Text =
+                        "🥚 Detectados: " ..
+                        tostring(count) ..
+                        "\n❌ No hay huevo identificado"
+
+                end
+            end
         end
     end
 end)
@@ -527,13 +1476,31 @@ end)
 
 task.wait(1)
 
-RefreshESP()
+local count,
+    bestId,
+    bestLuck =
+    Refresh()
 
-print("================================")
-print("KOXTA EGG ESP")
-print("ESP:", ESP_ENABLED)
-print(
-    "SNAPSHOT:",
-    SnapshotRemote and "ENCONTRADO" or "NO ENCONTRADO"
-)
-print("================================")
+if count then
+
+    Status.Text =
+        "🥚 Detectados: " ..
+        tostring(count)
+
+    if bestId and Candidates[bestId] then
+
+        Status.Text =
+            Status.Text ..
+            "\n🏆 Mejor: " ..
+            Candidates[bestId].Name ..
+            " • 🍀 " ..
+            Candidates[bestId].Data.LuckText
+    end
+end
+
+print("======================================")
+print("KOXTA EGG ESP INICIADO")
+print("Snapshot:",
+    SnapshotRemote and "ENCONTRADO"
+    or "NO ENCONTRADO")
+print("======================================")
