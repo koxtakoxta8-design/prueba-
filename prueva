@@ -1,142 +1,135 @@
 --==============================================================
--- KOXTA • RIDE A PET • BEST EGG
--- WORKSPACE + EXCLUSIÓN AUTOMÁTICA DE BASE
+-- KOXTA • ZONA DE EXCLUSIÓN
+-- CÍRCULO 3D + COORDENADAS + SLIDER DE STUDS
 --==============================================================
 
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 
-local LocalPlayer = Players.LocalPlayer
+local Player = Players.LocalPlayer
 
 --==============================================================
 -- CONFIGURACIÓN
 --==============================================================
 
-local BASE_RADIUS = 100       -- zona que se excluye alrededor del spawn
-local TP_HEIGHT = 3           -- altura sobre el huevo
-local FREEZE_TIME = 3         -- segundos congelado en el huevo
+local Radius = 100
+local MinRadius = 25
+local MaxRadius = 500
 
-local Running = false
-local BasePosition = nil
-local ReturnCFrame = nil
-
---==============================================================
--- 22 HUEVOS
---==============================================================
-
-local EggData = {
-    ["White Egg"]      = {Luck="1", Rarity="Common"},
-    ["Brown Egg"]      = {Luck="5", Rarity="Common"},
-    ["Cracked Egg"]    = {Luck="30", Rarity="Rare"},
-    ["Easter Egg"]     = {Luck="50", Rarity="Rare"},
-    ["Stone Egg"]      = {Luck="100", Rarity="Rare"},
-    ["Leaf Egg"]       = {Luck="200", Rarity="Rare"},
-    ["Mushroom Egg"]   = {Luck="500", Rarity="Epic"},
-    ["Flower Egg"]     = {Luck="750", Rarity="Epic"},
-    ["Slime Egg"]      = {Luck="1K", Rarity="Epic"},
-    ["Ice Egg"]        = {Luck="3K", Rarity="Epic"},
-    ["Glass Egg"]      = {Luck="10K", Rarity="Legendary"},
-    ["Golden Egg"]     = {Luck="30K", Rarity="Legendary"},
-    ["Crystal Egg"]    = {Luck="150K", Rarity="Mythic"},
-    ["Skull Egg"]      = {Luck="250K", Rarity="Mythic"},
-    ["Dominus Egg"]    = {Luck="700K", Rarity="Mythic"},
-    ["Flaming Egg"]    = {Luck="1M", Rarity="Mythic"},
-    ["Sinister Egg"]   = {Luck="3M", Rarity="Mythic"},
-    ["Soul Egg"]       = {Luck="7M", Rarity="Mythic"},
-    ["Aurora Egg"]     = {Luck="300M", Rarity="Divine"},
-    ["Galaxy Egg"]     = {Luck="1.5B", Rarity="Divine"},
-    ["Black Hole Egg"] = {Luck="100B", Rarity="Ethereal"},
-    ["Cherub Egg"]     = {Luck="1T", Rarity="Ethereal"}
-}
+local CenterPosition = nil
+local CirclePart = nil
+local CircleConnection = nil
 
 --==============================================================
--- LUCK A NÚMERO
---==============================================================
-
-local function LuckNumber(value)
-
-    local text = tostring(value or "0")
-    local number = tonumber(text:match("[%d%.]+")) or 0
-
-    if text:find("T") then
-        return number * 1e12
-    elseif text:find("B") then
-        return number * 1e9
-    elseif text:find("M") then
-        return number * 1e6
-    elseif text:find("K") then
-        return number * 1e3
-    end
-
-    return number
-end
-
---==============================================================
--- DATOS DEL HUEVO
---==============================================================
-
-local function GetEggData(name)
-
-    if EggData[name] then
-        return EggData[name], name
-    end
-
-    local lower = tostring(name):lower()
-
-    for eggName, data in pairs(EggData) do
-        if lower:find(eggName:lower(), 1, true) then
-            return data, eggName
-        end
-    end
-
-    return nil
-end
-
---==============================================================
--- PARTE DEL HUEVO
---==============================================================
-
-local function GetPart(obj)
-
-    if obj:IsA("BasePart") then
-        return obj
-    end
-
-    if obj:IsA("Model") then
-
-        if obj.PrimaryPart then
-            return obj.PrimaryPart
-        end
-
-        return obj:FindFirstChildWhichIsA(
-            "BasePart",
-            true
-        )
-    end
-
-    return nil
-end
-
---==============================================================
--- ROOT DEL JUGADOR
+-- OBTENER PERSONAJE
 --==============================================================
 
 local function GetRoot()
 
-    local character = LocalPlayer.Character
+    local character = Player.Character
 
     if not character then
         return nil
     end
 
-    return character:FindFirstChild("HumanoidRootPart")
+    return character:FindFirstChild(
+        "HumanoidRootPart"
+    )
 end
 
 --==============================================================
--- CALIBRAR BASE AUTOMÁTICAMENTE
+-- CREAR CÍRCULO
 --==============================================================
 
-local function CalibrateBase()
+local function CreateCircle()
+
+    if CirclePart then
+        CirclePart:Destroy()
+    end
+
+    CirclePart = Instance.new("Part")
+
+    CirclePart.Name =
+        "KOXTA_ExclusionCircle"
+
+    CirclePart.Anchored = true
+    CirclePart.CanCollide = false
+    CirclePart.CanTouch = false
+    CirclePart.CanQuery = false
+
+    CirclePart.Transparency = 0.75
+
+    CirclePart.Color =
+        Color3.fromRGB(
+            255,
+            70,
+            70
+        )
+
+    CirclePart.Material =
+        Enum.Material.ForceField
+
+    CirclePart.Shape =
+        Enum.PartType.Cylinder
+
+    CirclePart.Size =
+        Vector3.new(
+            0.15,
+            Radius * 2,
+            Radius * 2
+        )
+
+    CirclePart.Parent =
+        workspace
+
+    if CenterPosition then
+
+        CirclePart.CFrame =
+            CFrame.new(
+                CenterPosition
+            ) *
+            CFrame.Angles(
+                0,
+                0,
+                math.rad(90)
+            )
+    end
+end
+
+--==============================================================
+-- ACTUALIZAR CÍRCULO
+--==============================================================
+
+local function UpdateCircle()
+
+    if not CirclePart
+    or not CenterPosition then
+        return
+    end
+
+    CirclePart.Size =
+        Vector3.new(
+            0.15,
+            Radius * 2,
+            Radius * 2
+        )
+
+    CirclePart.CFrame =
+        CFrame.new(
+            CenterPosition
+        ) *
+        CFrame.Angles(
+            0,
+            0,
+            math.rad(90)
+        )
+end
+
+--==============================================================
+-- TOMAR COORDENADAS ACTUALES
+--==============================================================
+
+local function SetCenterHere()
 
     local root = GetRoot()
 
@@ -144,193 +137,10 @@ local function CalibrateBase()
         return false
     end
 
-    BasePosition = root.Position
+    CenterPosition =
+        root.Position
 
-    return true
-end
-
---==============================================================
--- DISTANCIA A LA BASE
---==============================================================
-
-local function IsInsideBase(position)
-
-    if not BasePosition then
-        return false
-    end
-
-    local a = Vector3.new(
-        position.X,
-        0,
-        position.Z
-    )
-
-    local b = Vector3.new(
-        BasePosition.X,
-        0,
-        BasePosition.Z
-    )
-
-    return (a - b).Magnitude <= BASE_RADIUS
-end
-
---==============================================================
--- ESCANEAR WORKSPACE
---==============================================================
-
-local function ScanWorkspace()
-
-    local result = {}
-    local seen = {}
-
-    for _, obj in ipairs(
-        Workspace:GetDescendants()
-    ) do
-
-        local data, realName =
-            GetEggData(obj.Name)
-
-        if data then
-
-            local part = GetPart(obj)
-
-            if part and not seen[obj] then
-
-                seen[obj] = true
-
-                -- IGNORAR HUEVOS DE LA ZONA DE BASE
-                if not IsInsideBase(part.Position) then
-
-                    table.insert(
-                        result,
-                        {
-                            Object = obj,
-                            Part = part,
-                            Name = realName,
-                            Luck = data.Luck,
-                            LuckNumber = LuckNumber(data.Luck),
-                            Rarity = data.Rarity,
-                            Position = part.Position
-                        }
-                    )
-                end
-            end
-        end
-    end
-
-    return result
-end
-
---==============================================================
--- BUSCAR MEJOR
---==============================================================
-
-local function FindBestEgg()
-
-    local eggs = ScanWorkspace()
-    local best = nil
-
-    for _, egg in ipairs(eggs) do
-
-        if not best
-        or egg.LuckNumber > best.LuckNumber then
-
-            best = egg
-        end
-    end
-
-    return best, #eggs
-end
-
---==============================================================
--- CONGELAR
---==============================================================
-
-local function Freeze()
-
-    local character = LocalPlayer.Character
-    if not character then return end
-
-    local humanoid =
-        character:FindFirstChildOfClass("Humanoid")
-
-    local root =
-        character:FindFirstChild("HumanoidRootPart")
-
-    if humanoid then
-        humanoid.WalkSpeed = 0
-        humanoid.JumpPower = 0
-        humanoid.AutoRotate = false
-    end
-
-    if root then
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
-    end
-end
-
---==============================================================
--- DESCONGELAR
---==============================================================
-
-local function Unfreeze()
-
-    local character = LocalPlayer.Character
-    if not character then return end
-
-    local humanoid =
-        character:FindFirstChildOfClass("Humanoid")
-
-    if humanoid then
-        humanoid.WalkSpeed = 16
-        humanoid.JumpPower = 50
-        humanoid.AutoRotate = true
-    end
-end
-
---==============================================================
--- TP AL HUEVO
---==============================================================
-
-local function TeleportToEgg(egg)
-
-    local root = GetRoot()
-
-    if not root or not egg then
-        return false
-    end
-
-    root.CFrame =
-        CFrame.new(
-            egg.Position +
-            Vector3.new(0, TP_HEIGHT, 0)
-        )
-
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
-
-    task.wait()
-
-    Freeze()
-
-    return true
-end
-
---==============================================================
--- REGRESAR
---==============================================================
-
-local function ReturnToStart()
-
-    local root = GetRoot()
-
-    if not root or not ReturnCFrame then
-        return false
-    end
-
-    root.CFrame = ReturnCFrame
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
+    CreateCircle()
 
     return true
 end
@@ -339,229 +149,602 @@ end
 -- GUI
 --==============================================================
 
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "KOXTA_BEST_EGG"
-Gui.ResetOnSpawn = false
-Gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local Gui =
+    Instance.new("ScreenGui")
 
-local Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(300, 255)
-Main.Position = UDim2.new(0.5, -150, 0.5, -127)
-Main.BackgroundColor3 = Color3.fromRGB(10,10,13)
+Gui.Name =
+    "KOXTA_ZONE_EDITOR"
+
+Gui.ResetOnSpawn = false
+
+Gui.Parent =
+    Player:WaitForChild(
+        "PlayerGui"
+    )
+
+local Main =
+    Instance.new("Frame")
+
+Main.Size =
+    UDim2.fromOffset(
+        320,
+        285
+    )
+
+Main.Position =
+    UDim2.new(
+        0.5,
+        -160,
+        0.5,
+        -142
+    )
+
+Main.BackgroundColor3 =
+    Color3.fromRGB(
+        12,
+        12,
+        16
+    )
+
 Main.BorderSizePixel = 0
+
 Main.Parent = Gui
 
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0,14)
+local Corner =
+    Instance.new("UICorner")
+
+Corner.CornerRadius =
+    UDim.new(
+        0,
+        14
+    )
+
 Corner.Parent = Main
 
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(0,255,140)
+local Stroke =
+    Instance.new("UIStroke")
+
+Stroke.Color =
+    Color3.fromRGB(
+        0,
+        255,
+        140
+    )
+
 Stroke.Thickness = 1.5
+
 Stroke.Parent = Main
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1,-20,0,30)
-Title.Position = UDim2.fromOffset(10,5)
+--==============================================================
+-- TÍTULO
+--==============================================================
+
+local Title =
+    Instance.new("TextLabel")
+
+Title.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        30
+    )
+
+Title.Position =
+    UDim2.fromOffset(
+        10,
+        7
+    )
+
 Title.BackgroundTransparency = 1
-Title.Text = "KOXTA • BEST EGG"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 17
-Title.TextColor3 = Color3.new(1,1,1)
+
+Title.Text =
+    "KOXTA • ZONA DE BASE"
+
+Title.Font =
+    Enum.Font.GothamBold
+
+Title.TextSize = 16
+
+Title.TextColor3 =
+    Color3.new(
+        1,
+        1,
+        1
+    )
+
 Title.Parent = Main
 
-local Info = Instance.new("TextLabel")
-Info.Size = UDim2.new(1,-20,0,70)
-Info.Position = UDim2.fromOffset(10,40)
-Info.BackgroundTransparency = 1
-Info.Font = Enum.Font.GothamBold
-Info.TextSize = 12
-Info.TextXAlignment = Enum.TextXAlignment.Left
-Info.TextYAlignment = Enum.TextYAlignment.Top
-Info.TextColor3 = Color3.new(1,1,1)
-Info.Text =
-    "🥚 Mejor: ---\n" ..
-    "🍀 Lucky: ---\n" ..
-    "⭐ Rareza: ---"
-Info.Parent = Main
-
-local Count = Instance.new("TextLabel")
-Count.Size = UDim2.new(1,-20,0,20)
-Count.Position = UDim2.fromOffset(10,110)
-Count.BackgroundTransparency = 1
-Count.Font = Enum.Font.Gotham
-Count.TextSize = 11
-Count.TextColor3 = Color3.fromRGB(170,170,170)
-Count.Text = "Huevos encontrados: 0"
-Count.Parent = Main
-
-local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1,-20,0,20)
-Status.Position = UDim2.fromOffset(10,132)
-Status.BackgroundTransparency = 1
-Status.Font = Enum.Font.Gotham
-Status.TextSize = 11
-Status.Text = "Estado: ESPERANDO"
-Status.TextColor3 = Color3.fromRGB(80,255,140)
-Status.Parent = Main
-
 --==============================================================
--- BOTÓN PRINCIPAL
+-- COORDENADAS
 --==============================================================
 
-local Button = Instance.new("TextButton")
-Button.Size = UDim2.new(1,-20,0,40)
-Button.Position = UDim2.fromOffset(10,160)
-Button.BackgroundColor3 = Color3.fromRGB(18,35,27)
-Button.BorderSizePixel = 0
-Button.Font = Enum.Font.GothamBold
-Button.TextSize = 12
-Button.Text = "BUSCAR MEJOR HUEVO"
-Button.TextColor3 = Color3.fromRGB(0,255,140)
-Button.Parent = Main
+local Coordinates =
+    Instance.new("TextLabel")
 
-local ButtonCorner = Instance.new("UICorner")
-ButtonCorner.CornerRadius = UDim.new(0,10)
-ButtonCorner.Parent = Button
+Coordinates.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        55
+    )
+
+Coordinates.Position =
+    UDim2.fromOffset(
+        10,
+        42
+    )
+
+Coordinates.BackgroundTransparency = 1
+
+Coordinates.Font =
+    Enum.Font.Gotham
+
+Coordinates.TextSize = 12
+
+Coordinates.TextColor3 =
+    Color3.fromRGB(
+        220,
+        220,
+        220
+    )
+
+Coordinates.TextXAlignment =
+    Enum.TextXAlignment.Left
+
+Coordinates.TextYAlignment =
+    Enum.TextYAlignment.Top
+
+Coordinates.Text =
+    "X: ---\nY: ---\nZ: ---"
+
+Coordinates.Parent = Main
 
 --==============================================================
--- BOTÓN RECALIBRAR
+-- RADIO
 --==============================================================
 
-local Calibrate = Instance.new("TextButton")
-Calibrate.Size = UDim2.new(1,-20,0,35)
-Calibrate.Position = UDim2.fromOffset(10,207)
-Calibrate.BackgroundColor3 = Color3.fromRGB(25,25,30)
-Calibrate.BorderSizePixel = 0
-Calibrate.Font = Enum.Font.GothamBold
-Calibrate.TextSize = 11
-Calibrate.Text = "RECALIBRAR MI BASE"
-Calibrate.TextColor3 = Color3.fromRGB(255,220,80)
-Calibrate.Parent = Main
+local RadiusLabel =
+    Instance.new("TextLabel")
 
-local CalCorner = Instance.new("UICorner")
-CalCorner.CornerRadius = UDim.new(0,9)
-CalCorner.Parent = Calibrate
+RadiusLabel.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        25
+    )
+
+RadiusLabel.Position =
+    UDim2.fromOffset(
+        10,
+        100
+    )
+
+RadiusLabel.BackgroundTransparency = 1
+
+RadiusLabel.Font =
+    Enum.Font.GothamBold
+
+RadiusLabel.TextSize = 13
+
+RadiusLabel.TextColor3 =
+    Color3.fromRGB(
+        0,
+        255,
+        140
+    )
+
+RadiusLabel.Text =
+    "RADIO: " ..
+    Radius ..
+    " STUDS"
+
+RadiusLabel.Parent = Main
 
 --==============================================================
--- BOTÓN PRINCIPAL
+-- SLIDER
 --==============================================================
 
-Button.Activated:Connect(function()
+local Slider =
+    Instance.new("Frame")
 
-    if Running then
-        return
+Slider.Size =
+    UDim2.new(
+        1,
+        -30,
+        0,
+        8
+    )
+
+Slider.Position =
+    UDim2.fromOffset(
+        15,
+        135
+    )
+
+Slider.BackgroundColor3 =
+    Color3.fromRGB(
+        40,
+        40,
+        45
+    )
+
+Slider.BorderSizePixel = 0
+
+Slider.Parent = Main
+
+local SliderCorner =
+    Instance.new("UICorner")
+
+SliderCorner.CornerRadius =
+    UDim.new(
+        1,
+        0
+    )
+
+SliderCorner.Parent =
+    Slider
+
+local Fill =
+    Instance.new("Frame")
+
+Fill.Size =
+    UDim2.new(
+        0.15,
+        0,
+        1,
+        0
+    )
+
+Fill.BackgroundColor3 =
+    Color3.fromRGB(
+        0,
+        255,
+        140
+    )
+
+Fill.BorderSizePixel = 0
+
+Fill.Parent = Slider
+
+local FillCorner =
+    Instance.new("UICorner")
+
+FillCorner.CornerRadius =
+    UDim.new(
+        1,
+        0
+    )
+
+FillCorner.Parent =
+    Fill
+
+local Knob =
+    Instance.new("TextButton")
+
+Knob.Size =
+    UDim2.fromOffset(
+        20,
+        20
+    )
+
+Knob.AnchorPoint =
+    Vector2.new(
+        0.5,
+        0.5
+    )
+
+Knob.Position =
+    UDim2.new(
+        0.15,
+        0,
+        0.5,
+        0
+    )
+
+Knob.BackgroundColor3 =
+    Color3.fromRGB(
+        255,
+        255,
+        255
+    )
+
+Knob.Text = ""
+
+Knob.BorderSizePixel = 0
+
+Knob.Parent = Slider
+
+local KnobCorner =
+    Instance.new("UICorner")
+
+KnobCorner.CornerRadius =
+    UDim.new(
+        1,
+        0
+    )
+
+KnobCorner.Parent =
+    Knob
+
+--==============================================================
+-- SLIDER CONTROL
+--==============================================================
+
+local dragging = false
+
+local function SetSliderFromX(x)
+
+    local startX =
+        Slider.AbsolutePosition.X
+
+    local width =
+        Slider.AbsoluteSize.X
+
+    local alpha =
+        math.clamp(
+            (x - startX) / width,
+            0,
+            1
+        )
+
+    Radius =
+        math.floor(
+            MinRadius +
+            (
+                MaxRadius -
+                MinRadius
+            ) * alpha
+        )
+
+    Fill.Size =
+        UDim2.new(
+            alpha,
+            0,
+            1,
+            0
+        )
+
+    Knob.Position =
+        UDim2.new(
+            alpha,
+            0,
+            0.5,
+            0
+        )
+
+    RadiusLabel.Text =
+        "RADIO: " ..
+        Radius ..
+        " STUDS"
+
+    UpdateCircle()
+end
+
+Knob.MouseButton1Down:Connect(
+    function()
+        dragging = true
     end
+)
 
-    Running = true
+Slider.InputBegan:Connect(
+    function(input)
 
-    Status.Text =
-        "Estado: ESCANEANDO WORKSPACE..."
+        if input.UserInputType ==
+            Enum.UserInputType.MouseButton1 then
 
-    -- Si por alguna razón todavía no hay
-    -- posición de base, la toma ahora.
-    if not BasePosition then
-        CalibrateBase()
+            dragging = true
+
+            SetSliderFromX(
+                input.Position.X
+            )
+        end
     end
+)
 
-    local root = GetRoot()
+game:GetService("UserInputService")
+    .InputChanged:Connect(
+    function(input)
 
-    if root then
-        ReturnCFrame = root.CFrame
+        if dragging
+        and input.UserInputType ==
+            Enum.UserInputType.MouseMovement then
+
+            SetSliderFromX(
+                input.Position.X
+            )
+        end
     end
+)
 
-    local best, amount =
-        FindBestEgg()
+game:GetService("UserInputService")
+    .InputEnded:Connect(
+    function(input)
 
-    Count.Text =
-        "Huevos del mapa: " ..
-        tostring(amount)
+        if input.UserInputType ==
+            Enum.UserInputType.MouseButton1 then
 
-    if not best then
-
-        Info.Text =
-            "🥚 Mejor: NO ENCONTRADO\n" ..
-            "🍀 Lucky: ---\n" ..
-            "⭐ Rareza: ---"
-
-        Status.Text =
-            "Estado: NO HAY HUEVOS"
-
-        Running = false
-        return
+            dragging = false
+        end
     end
-
-    Info.Text =
-        "🥚 Mejor: " ..
-        best.Name ..
-        "\n🍀 Lucky: " ..
-        best.Luck ..
-        "\n⭐ Rareza: " ..
-        best.Rarity
-
-    Status.Text =
-        "Estado: TP → " ..
-        best.Name
-
-    if not TeleportToEgg(best) then
-
-        Status.Text =
-            "Estado: ERROR DE TP"
-
-        Unfreeze()
-        Running = false
-        return
-    end
-
-    Status.Text =
-        "Estado: CONGELADO EN EL HUEVO"
-
-    task.wait(FREEZE_TIME)
-
-    Status.Text =
-        "Estado: REGRESANDO"
-
-    ReturnToStart()
-
-    task.wait(0.25)
-
-    Unfreeze()
-
-    Status.Text =
-        "Estado: TERMINADO"
-
-    Running = false
-end)
+)
 
 --==============================================================
--- RECALIBRAR
+-- BOTÓN TOMAR POSICIÓN
 --==============================================================
 
-Calibrate.Activated:Connect(function()
+local SetPosition =
+    Instance.new("TextButton")
 
-    if CalibrateBase() then
+SetPosition.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        40
+    )
 
-        Status.Text =
-            "Base recalibrada ✓"
+SetPosition.Position =
+    UDim2.fromOffset(
+        10,
+        160
+    )
 
-        task.wait(1)
+SetPosition.BackgroundColor3 =
+    Color3.fromRGB(
+        20,
+        40,
+        30
+    )
 
-        Status.Text =
-            "Estado: ESPERANDO"
+SetPosition.BorderSizePixel = 0
 
-    else
+SetPosition.Font =
+    Enum.Font.GothamBold
 
-        Status.Text =
-            "No pude detectar tu personaje"
+SetPosition.TextSize = 12
+
+SetPosition.Text =
+    "USAR MI POSICIÓN ACTUAL"
+
+SetPosition.TextColor3 =
+    Color3.fromRGB(
+        0,
+        255,
+        140
+    )
+
+SetPosition.Parent = Main
+
+local SetCorner =
+    Instance.new("UICorner")
+
+SetCorner.CornerRadius =
+    UDim.new(
+        0,
+        9
+    )
+
+SetCorner.Parent =
+    SetPosition
+
+SetPosition.Activated:Connect(
+    function()
+
+        if SetCenterHere() then
+
+            Coordinates.Text =
+                string.format(
+                    "X: %.2f\nY: %.2f\nZ: %.2f",
+                    CenterPosition.X,
+                    CenterPosition.Y,
+                    CenterPosition.Z
+                )
+
+            SetPosition.Text =
+                "✓ CENTRO ESTABLECIDO"
+
+            task.wait(1)
+
+            SetPosition.Text =
+                "USAR MI POSICIÓN ACTUAL"
+        end
     end
-end)
+)
 
 --==============================================================
--- INICIO
+-- CERRAR CÍRCULO
 --==============================================================
 
-CalibrateBase()
+local Hide =
+    Instance.new("TextButton")
+
+Hide.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        35
+    )
+
+Hide.Position =
+    UDim2.fromOffset(
+        10,
+        210
+    )
+
+Hide.BackgroundColor3 =
+    Color3.fromRGB(
+        35,
+        20,
+        20
+    )
+
+Hide.BorderSizePixel = 0
+
+Hide.Font =
+    Enum.Font.GothamBold
+
+Hide.TextSize = 11
+
+Hide.Text =
+    "OCULTAR CÍRCULO"
+
+Hide.TextColor3 =
+    Color3.fromRGB(
+        255,
+        100,
+        100
+    )
+
+Hide.Parent = Main
+
+local HideCorner =
+    Instance.new("UICorner")
+
+HideCorner.CornerRadius =
+    UDim.new(
+        0,
+        9
+    )
+
+HideCorner.Parent =
+    Hide
+
+Hide.Activated:Connect(
+    function()
+
+        if CirclePart then
+
+            CirclePart:Destroy()
+
+            CirclePart = nil
+
+        end
+    end
+)
+
+--==============================================================
+-- INICIO AUTOMÁTICO
+--==============================================================
+
+SetCenterHere()
+
+if CenterPosition then
+
+    Coordinates.Text =
+        string.format(
+            "X: %.2f\nY: %.2f\nZ: %.2f",
+            CenterPosition.X,
+            CenterPosition.Y,
+            CenterPosition.Z
+        )
+end
+
+CreateCircle()
 
 print(
-    "KOXTA BEST EGG • Workspace detector iniciado"
+    "KOXTA ZONE EDITOR iniciado"
 )
