@@ -1,4 +1,4 @@
-local Workspace = game:GetService("Workspace")local Players = game:GetService("Players")local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")local Players = game:GetService("Players")local RunService = game:GetService("RunService")local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayerlocal Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 -- Datos de huevos con su "suerte" numérica para compararlocal EggData = {    ["White Egg"] = { Lucky = 1 },    ["Brown Egg"] = { Lucky = 5 },
     ["Cracked Egg"] = { Lucky = 30 },    ["Easter Egg"] = { Lucky = 50 },    ["Stone Egg"] = { Lucky = 100 },    ["Leaf Egg"] = { Lucky = 200 },
@@ -16,4 +16,6 @@ local LocalPlayer = Players.LocalPlayerlocal Character = LocalPlayer.Character o
     -- Teletransportar al mejor huevo    Teleport(bestEgg.Position)
     -- Esperar un poco para simular que agarra el huevo    wait(0.5)
     -- Volver al spawn    local spawnPos = GetSpawnPosition()    Teleport(spawnPos)end
--- Puedes llamar esta función cuando quieras activar el TP automático-- Por ejemplo, con un botón o evento:GrabBestEggAndReturn()
+-- Crear GUI con botón para activar la funciónlocal ScreenGui = Instance.new("ScreenGui")ScreenGui.Name = "EggTPGui"ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local Button = Instance.new("TextButton")Button.Size = UDim2.new(0, 200, 0, 50)Button.Position = UDim2.new(0.5, -100, 0.9, 0)Button.BackgroundColor3 = Color3.fromRGB(45, 45, 55)Button.TextColor3 = Color3.new(1, 1, 1)Button.Font = Enum.Font.GothamBoldButton.TextSize = 20Button.Text = "Ir al Mejor Huevo"Button.Parent = ScreenGui
+Button.MouseButton1Click:Connect(function()    GrabBestEggAndReturn()end)
