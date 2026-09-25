@@ -1,73 +1,215 @@
---// KOXTA • BEST EGG
---// Detecta huevos -> selecciona mayor Lucky -> TP -> congela
---// La función GrabEgg queda separada para conectar la interacción oficial.
+--==============================================================
+-- KOXTA • RIDE A PET • BEST EGG AUTO
+-- Snapshot -> mejor Lucky -> TP -> congelar -> Prompt -> volver
+-- Para probar en tu propia experiencia Roblox
+--==============================================================
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local UIS = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
-local Running = false
 
---------------------------------------------------
--- HUEVOS
---------------------------------------------------
+local Running = false
+local ReturnCFrame = nil
+
+--==============================================================
+-- 22 HUEVOS
+--==============================================================
 
 local EggData = {
-    ["White Egg"]={Luck="1",Rarity="Common"},
-    ["Brown Egg"]={Luck="5",Rarity="Common"},
-    ["Cracked Egg"]={Luck="30",Rarity="Rare"},
-    ["Easter Egg"]={Luck="50",Rarity="Rare"},
-    ["Stone Egg"]={Luck="100",Rarity="Rare"},
-    ["Leaf Egg"]={Luck="200",Rarity="Rare"},
-    ["Mushroom Egg"]={Luck="500",Rarity="Epic"},
-    ["Flower Egg"]={Luck="750",Rarity="Epic"},
-    ["Slime Egg"]={Luck="1K",Rarity="Epic"},
-    ["Ice Egg"]={Luck="3K",Rarity="Epic"},
-    ["Glass Egg"]={Luck="10K",Rarity="Legendary"},
-    ["Golden Egg"]={Luck="30K",Rarity="Legendary"},
-    ["Crystal Egg"]={Luck="150K",Rarity="Mythic"},
-    ["Skull Egg"]={Luck="250K",Rarity="Mythic"},
-    ["Dominus Egg"]={Luck="700K",Rarity="Mythic"},
-    ["Flaming Egg"]={Luck="1M",Rarity="Mythic"},
-    ["Sinister Egg"]={Luck="3M",Rarity="Mythic"},
-    ["Soul Egg"]={Luck="7M",Rarity="Mythic"},
-    ["Aurora Egg"]={Luck="300M",Rarity="Divine"},
-    ["Galaxy Egg"]={Luck="1.5B",Rarity="Divine"},
-    ["Black Hole Egg"]={Luck="100B",Rarity="Ethereal"},
-    ["Cherub Egg"]={Luck="1T",Rarity="Ethereal"}
+
+    ["White Egg"] = {
+        Luck = "1",
+        Rarity = "Common"
+    },
+
+    ["Brown Egg"] = {
+        Luck = "5",
+        Rarity = "Common"
+    },
+
+    ["Cracked Egg"] = {
+        Luck = "30",
+        Rarity = "Rare"
+    },
+
+    ["Easter Egg"] = {
+        Luck = "50",
+        Rarity = "Rare"
+    },
+
+    ["Stone Egg"] = {
+        Luck = "100",
+        Rarity = "Rare"
+    },
+
+    ["Leaf Egg"] = {
+        Luck = "200",
+        Rarity = "Rare"
+    },
+
+    ["Mushroom Egg"] = {
+        Luck = "500",
+        Rarity = "Epic"
+    },
+
+    ["Flower Egg"] = {
+        Luck = "750",
+        Rarity = "Epic"
+    },
+
+    ["Slime Egg"] = {
+        Luck = "1K",
+        Rarity = "Epic"
+    },
+
+    ["Ice Egg"] = {
+        Luck = "3K",
+        Rarity = "Epic"
+    },
+
+    ["Glass Egg"] = {
+        Luck = "10K",
+        Rarity = "Legendary"
+    },
+
+    ["Golden Egg"] = {
+        Luck = "30K",
+        Rarity = "Legendary"
+    },
+
+    ["Crystal Egg"] = {
+        Luck = "150K",
+        Rarity = "Mythic"
+    },
+
+    ["Skull Egg"] = {
+        Luck = "250K",
+        Rarity = "Mythic"
+    },
+
+    ["Dominus Egg"] = {
+        Luck = "700K",
+        Rarity = "Mythic"
+    },
+
+    ["Flaming Egg"] = {
+        Luck = "1M",
+        Rarity = "Mythic"
+    },
+
+    ["Sinister Egg"] = {
+        Luck = "3M",
+        Rarity = "Mythic"
+    },
+
+    ["Soul Egg"] = {
+        Luck = "7M",
+        Rarity = "Mythic"
+    },
+
+    ["Aurora Egg"] = {
+        Luck = "300M",
+        Rarity = "Divine"
+    },
+
+    ["Galaxy Egg"] = {
+        Luck = "1.5B",
+        Rarity = "Divine"
+    },
+
+    ["Black Hole Egg"] = {
+        Luck = "100B",
+        Rarity = "Ethereal"
+    },
+
+    ["Cherub Egg"] = {
+        Luck = "1T",
+        Rarity = "Ethereal"
+    }
 }
 
---------------------------------------------------
--- LUCK
---------------------------------------------------
+--==============================================================
+-- SNAPSHOT REMOTE
+--==============================================================
+
+local function FindRemote(path)
+
+    local current = ReplicatedStorage
+
+    for part in string.gmatch(path, "[^%.]+") do
+
+        if not current then
+            return nil
+        end
+
+        current = current:FindFirstChild(part)
+    end
+
+    return current
+end
+
+local SnapshotRemote =
+    FindRemote(
+        "Packages.Networking.RF/EggWorld/AskFieldEggSnapshot"
+    )
+
+--==============================================================
+-- LUCK -> NUMERO
+--==============================================================
 
 local function LuckNumber(value)
-    local text = tostring(value or "0")
-    local number = tonumber(text:match("[%d%.]+")) or 0
 
-    if text:find("T") then return number * 1e12 end
-    if text:find("B") then return number * 1e9 end
-    if text:find("M") then return number * 1e6 end
-    if text:find("K") then return number * 1e3 end
+    local text = tostring(value or "0")
+
+    local number =
+        tonumber(text:match("[%d%.]+")) or 0
+
+    if text:find("T") then
+        return number * 1e12
+    end
+
+    if text:find("B") then
+        return number * 1e9
+    end
+
+    if text:find("M") then
+        return number * 1e6
+    end
+
+    if text:find("K") then
+        return number * 1e3
+    end
 
     return number
 end
 
---------------------------------------------------
+--==============================================================
 -- DATOS DEL HUEVO
---------------------------------------------------
+--==============================================================
 
 local function GetEggData(name)
+
+    if not name then
+        return nil
+    end
 
     if EggData[name] then
         return EggData[name], name
     end
 
-    local lower = tostring(name):lower()
+    local lower =
+        tostring(name):lower()
 
     for eggName, data in pairs(EggData) do
-        if lower:find(eggName:lower(), 1, true) then
+
+        if lower:find(
+            eggName:lower(),
+            1,
+            true
+        ) then
+
             return data, eggName
         end
     end
@@ -75,9 +217,9 @@ local function GetEggData(name)
     return nil
 end
 
---------------------------------------------------
--- PARTE
---------------------------------------------------
+--==============================================================
+-- PARTE DE UN MODELO
+--==============================================================
 
 local function GetPart(obj)
 
@@ -86,87 +228,276 @@ local function GetPart(obj)
     end
 
     if obj:IsA("Model") then
-        return obj.PrimaryPart
-            or obj:FindFirstChildWhichIsA("BasePart", true)
+
+        if obj.PrimaryPart then
+            return obj.PrimaryPart
+        end
+
+        return obj:FindFirstChildWhichIsA(
+            "BasePart",
+            true
+        )
     end
 
     return nil
 end
 
---------------------------------------------------
--- BUSCAR MEJOR HUEVO
---------------------------------------------------
+--==============================================================
+-- ROOT
+--==============================================================
 
-local function FindBestEgg()
+local function GetRoot()
 
-    local bestEgg = nil
-    local bestLuck = -1
-    local detected = 0
+    local character =
+        Player.Character
 
-    for _, obj in ipairs(Workspace:GetDescendants()) do
+    if not character then
+        return nil
+    end
 
-        local data, realName = GetEggData(obj.Name)
+    return character:FindFirstChild(
+        "HumanoidRootPart"
+    )
+end
+
+--==============================================================
+-- GUARDAR BASE EXACTA
+--==============================================================
+
+local function SaveReturnPosition()
+
+    local root = GetRoot()
+
+    if not root then
+        return false
+    end
+
+    ReturnCFrame =
+        root.CFrame
+
+    return true
+end
+
+--==============================================================
+-- SNAPSHOT
+--==============================================================
+
+local function GetSnapshot()
+
+    if not SnapshotRemote then
+
+        warn(
+            "AskFieldEggSnapshot no encontrado"
+        )
+
+        return nil
+    end
+
+    local success, snapshot =
+        pcall(function()
+
+            return SnapshotRemote:InvokeServer()
+
+        end)
+
+    if not success then
+
+        warn(
+            "Error obteniendo snapshot"
+        )
+
+        return nil
+    end
+
+    if type(snapshot) ~= "table" then
+        return nil
+    end
+
+    return snapshot
+end
+
+--==============================================================
+-- OBTENER HUEVOS DEL CAMPO
+--==============================================================
+
+local function GetFieldEggs()
+
+    local snapshot =
+        GetSnapshot()
+
+    if not snapshot then
+        return {}
+    end
+
+    local records =
+        snapshot.Records or snapshot
+
+    if type(records) ~= "table" then
+        return {}
+    end
+
+    local eggs = {}
+
+    for _, rec in ipairs(records) do
+
+        if type(rec) == "table"
+        and rec.State == "Slot"
+        and rec.BottomCFrame then
+
+            local position
+
+            if typeof(
+                rec.BottomCFrame
+            ) == "CFrame" then
+
+                position =
+                    rec.BottomCFrame.Position
+
+            elseif typeof(
+                rec.BottomCFrame
+            ) == "Vector3" then
+
+                position =
+                    rec.BottomCFrame
+            end
+
+            if position then
+
+                table.insert(
+                    eggs,
+                    {
+                        Position = position,
+                        AssetCategory =
+                            tostring(
+                                rec.AssetCategory or ""
+                            ),
+                        Record = rec
+                    }
+                )
+            end
+        end
+    end
+
+    return eggs
+end
+
+--==============================================================
+-- ENCONTRAR OBJETO CERCA DE SNAPSHOT
+--==============================================================
+
+local function FindEggObject(position)
+
+    local closest = nil
+    local closestDistance = math.huge
+
+    for _, obj in ipairs(
+        Workspace:GetDescendants()
+    ) do
+
+        local data, realName =
+            GetEggData(obj.Name)
 
         if data then
 
-            local part = GetPart(obj)
+            local part =
+                GetPart(obj)
 
             if part then
 
-                detected += 1
+                local distance =
+                    (
+                        part.Position -
+                        position
+                    ).Magnitude
 
-                local luck = LuckNumber(data.Luck)
+                if distance <= 15
+                and distance < closestDistance then
 
-                if luck > bestLuck then
+                    closestDistance =
+                        distance
 
-                    bestLuck = luck
-
-                    bestEgg = {
+                    closest = {
                         Object = obj,
                         Part = part,
                         Name = realName,
                         Luck = data.Luck,
-                        LuckNumber = luck,
-                        Rarity = data.Rarity
+                        LuckNumber =
+                            LuckNumber(
+                                data.Luck
+                            ),
+                        Rarity = data.Rarity,
+                        Position = position
                     }
                 end
             end
         end
     end
 
-    return bestEgg, detected
+    return closest
 end
 
---------------------------------------------------
--- ROOT
---------------------------------------------------
+--==============================================================
+-- BUSCAR MEJOR
+--==============================================================
 
-local function GetRoot()
+local function FindBestEgg()
 
-    local character = Player.Character
+    local snapshotEggs =
+        GetFieldEggs()
 
-    if not character then
-        return nil
+    local best = nil
+    local bestLuck = -1
+    local detected = 0
+
+    for _, snapshotEgg in ipairs(
+        snapshotEggs
+    ) do
+
+        local egg =
+            FindEggObject(
+                snapshotEgg.Position
+            )
+
+        if egg then
+
+            detected += 1
+
+            if egg.LuckNumber >
+                bestLuck then
+
+                bestLuck =
+                    egg.LuckNumber
+
+                best = egg
+            end
+        end
     end
 
-    return character:FindFirstChild("HumanoidRootPart")
+    return best, detected
 end
 
---------------------------------------------------
+--==============================================================
 -- CONGELAR
---------------------------------------------------
+--==============================================================
 
 local function FreezeCharacter()
 
-    local character = Player.Character
+    local character =
+        Player.Character
+
     local humanoid =
-        character and character:FindFirstChildOfClass("Humanoid")
+        character and
+        character:FindFirstChildOfClass(
+            "Humanoid"
+        )
+
+    local root =
+        character and
+        character:FindFirstChild(
+            "HumanoidRootPart"
+        )
 
     if not humanoid then
-        return
-    end
-
-    if humanoid:GetAttribute("KOXTA_Frozen") then
         return
     end
 
@@ -185,228 +516,534 @@ local function FreezeCharacter()
         humanoid.AutoRotate
     )
 
-    humanoid:SetAttribute(
-        "KOXTA_Frozen",
-        true
-    )
-
     humanoid.WalkSpeed = 0
     humanoid.JumpPower = 0
     humanoid.AutoRotate = false
 
-    -- Evita que una velocidad residual siga moviéndolo.
-    local root = character:FindFirstChild("HumanoidRootPart")
-
     if root then
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
+
+        root.AssemblyLinearVelocity =
+            Vector3.zero
+
+        root.AssemblyAngularVelocity =
+            Vector3.zero
     end
 end
 
---------------------------------------------------
+--==============================================================
 -- DESCONGELAR
---------------------------------------------------
+--==============================================================
 
 local function UnfreezeCharacter()
 
-    local character = Player.Character
+    local character =
+        Player.Character
+
     local humanoid =
-        character and character:FindFirstChildOfClass("Humanoid")
+        character and
+        character:FindFirstChildOfClass(
+            "Humanoid"
+        )
 
     if not humanoid then
         return
     end
 
-    local oldSpeed =
-        humanoid:GetAttribute("KOXTA_OldWalkSpeed")
+    humanoid.WalkSpeed =
+        humanoid:GetAttribute(
+            "KOXTA_OldWalkSpeed"
+        ) or 16
 
-    local oldJump =
-        humanoid:GetAttribute("KOXTA_OldJumpPower")
+    humanoid.JumpPower =
+        humanoid:GetAttribute(
+            "KOXTA_OldJumpPower"
+        ) or 50
 
-    local oldRotate =
-        humanoid:GetAttribute("KOXTA_OldAutoRotate")
+    humanoid.AutoRotate =
+        humanoid:GetAttribute(
+            "KOXTA_OldAutoRotate"
+        )
 
-    humanoid.WalkSpeed = oldSpeed or 16
-    humanoid.JumpPower = oldJump or 50
-
-    if oldRotate == nil then
+    if humanoid.AutoRotate == nil then
         humanoid.AutoRotate = true
-    else
-        humanoid.AutoRotate = oldRotate
     end
-
-    humanoid:SetAttribute("KOXTA_Frozen", false)
 end
 
---------------------------------------------------
+--==============================================================
 -- TP AL HUEVO
---------------------------------------------------
+--==============================================================
 
 local function TeleportToEgg(egg)
 
-    local root = GetRoot()
+    local root =
+        GetRoot()
 
-    if not root or not egg or not egg.Part then
+    if not root or not egg then
         return false
     end
 
-    -- TP ligeramente encima del huevo.
     root.CFrame =
-        egg.Part.CFrame * CFrame.new(0, 3, 0)
+        CFrame.new(
+            egg.Position +
+            Vector3.new(0, 3, 0)
+        )
 
-    -- Congelar inmediatamente.
     task.wait()
 
     FreezeCharacter()
 
-    -- Eliminar cualquier velocidad residual.
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
+    root.AssemblyLinearVelocity =
+        Vector3.zero
+
+    root.AssemblyAngularVelocity =
+        Vector3.zero
 
     return true
 end
 
---------------------------------------------------
--- SPAWN
---------------------------------------------------
+--==============================================================
+-- BUSCAR PROMPT DEL HUEVO
+--==============================================================
 
-local function GetSpawnPosition()
+local function FindEggPrompt(egg)
 
-    local spawn =
-        Workspace:FindFirstChild("SpawnLocation", true)
-
-    if spawn and spawn:IsA("BasePart") then
-        return spawn.Position
+    if not egg then
+        return nil
     end
 
-    for _, obj in ipairs(Workspace:GetDescendants()) do
+    local root =
+        egg.Object
 
-        if obj:IsA("SpawnLocation") then
-            return obj.Position
+    if root then
+
+        for _, obj in ipairs(
+            root:GetDescendants()
+        ) do
+
+            if obj:IsA(
+                "ProximityPrompt"
+            ) then
+
+                return obj
+            end
         end
     end
 
-    return nil
+    -- Segundo intento:
+    -- buscar el prompt físicamente cerca
+    -- de la posición del huevo.
+
+    local closest = nil
+    local distanceBest = math.huge
+
+    for _, obj in ipairs(
+        Workspace:GetDescendants()
+    ) do
+
+        if obj:IsA(
+            "ProximityPrompt"
+        ) then
+
+            local parent =
+                obj.Parent
+
+            local part = nil
+
+            if parent:IsA(
+                "BasePart"
+            ) then
+
+                part = parent
+
+            elseif parent:IsA(
+                "Attachment"
+            ) then
+
+                if parent.Parent:IsA(
+                    "BasePart"
+                ) then
+
+                    part =
+                        parent.Parent
+                end
+            end
+
+            if part then
+
+                local distance =
+                    (
+                        part.Position -
+                        egg.Position
+                    ).Magnitude
+
+                if distance <= 15
+                and distance < distanceBest then
+
+                    distanceBest =
+                        distance
+
+                    closest = obj
+                end
+            end
+        end
+    end
+
+    return closest
 end
 
-local function TeleportToSpawn()
+--==============================================================
+-- AUTO GRAB
+--==============================================================
 
-    local root = GetRoot()
-    local position = GetSpawnPosition()
+local function GrabEgg(egg)
 
-    if not root or not position then
+    local prompt =
+        FindEggPrompt(egg)
+
+    if not prompt then
+
+        warn(
+            "No encontré ProximityPrompt del huevo"
+        )
+
+        return false
+    end
+
+    print(
+        "Prompt encontrado:",
+        prompt:GetFullName()
+    )
+
+    -- Si la experiencia utiliza ProximityPrompt
+    -- y el método está disponible, iniciar la interacción.
+
+    local began, ended =
+        pcall(function()
+
+            if prompt:IsA(
+                "ProximityPrompt"
+            ) then
+
+                prompt:InputHoldBegin()
+
+                task.wait(
+                    math.max(
+                        prompt.HoldDuration,
+                        0.05
+                    )
+                )
+
+                prompt:InputHoldEnd()
+
+                return true
+            end
+
+            return false
+        end)
+
+    return began and ended
+end
+
+--==============================================================
+-- REGRESAR EXACTAMENTE
+--==============================================================
+
+local function ReturnToBase()
+
+    local root =
+        GetRoot()
+
+    if not root
+    or not ReturnCFrame then
+
         return false
     end
 
     root.CFrame =
-        CFrame.new(position + Vector3.new(0, 3, 0))
+        ReturnCFrame
+
+    root.AssemblyLinearVelocity =
+        Vector3.zero
+
+    root.AssemblyAngularVelocity =
+        Vector3.zero
 
     return true
 end
 
---------------------------------------------------
--- GRAB
---------------------------------------------------
-
-local function GrabEgg(egg)
-
-    if not egg then
-        return false
-    end
-
-    -- Aquí debe conectarse el Remote oficial
-    -- que utiliza tu propia experiencia para recoger/montar.
-    print("GRAB:", egg.Name)
-
-    return true
-end
-
---------------------------------------------------
+--==============================================================
 -- GUI
---------------------------------------------------
+--==============================================================
 
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "KOXTA_BEST_EGG"
-Gui.ResetOnSpawn = false
-Gui.Parent = Player:WaitForChild("PlayerGui")
+local Gui =
+    Instance.new("ScreenGui")
 
-local Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(280, 220)
-Main.Position = UDim2.new(.5, -140, .5, -110)
-Main.BackgroundColor3 = Color3.fromRGB(10,10,12)
+Gui.Name =
+    "KOXTA_BEST_EGG"
+
+Gui.ResetOnSpawn =
+    false
+
+Gui.Parent =
+    Player:WaitForChild(
+        "PlayerGui"
+    )
+
+local Main =
+    Instance.new("Frame")
+
+Main.Size =
+    UDim2.fromOffset(
+        285,
+        225
+    )
+
+Main.Position =
+    UDim2.new(
+        .5,
+        -142,
+        .5,
+        -112
+    )
+
+Main.BackgroundColor3 =
+    Color3.fromRGB(
+        10,
+        10,
+        12
+    )
+
 Main.BorderSizePixel = 0
 Main.Parent = Gui
 
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0,14)
-Corner.Parent = Main
+local Corner =
+    Instance.new("UICorner")
 
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(0,255,140)
+Corner.CornerRadius =
+    UDim.new(0, 14)
+
+Corner.Parent =
+    Main
+
+local Stroke =
+    Instance.new("UIStroke")
+
+Stroke.Color =
+    Color3.fromRGB(
+        0,
+        255,
+        140
+    )
+
 Stroke.Thickness = 1.5
 Stroke.Parent = Main
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1,-20,0,32)
-Title.Position = UDim2.fromOffset(10,6)
+local Title =
+    Instance.new("TextLabel")
+
+Title.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        32
+    )
+
+Title.Position =
+    UDim2.fromOffset(
+        10,
+        6
+    )
+
 Title.BackgroundTransparency = 1
-Title.Text = "KOXTA • BEST EGG"
-Title.Font = Enum.Font.GothamBold
+Title.Text =
+    "KOXTA • BEST EGG"
+
+Title.Font =
+    Enum.Font.GothamBold
+
 Title.TextSize = 17
-Title.TextColor3 = Color3.new(1,1,1)
+
+Title.TextColor3 =
+    Color3.new(
+        1,
+        1,
+        1
+    )
+
 Title.Parent = Main
 
-local Info = Instance.new("TextLabel")
-Info.Size = UDim2.new(1,-20,0,65)
-Info.Position = UDim2.fromOffset(10,40)
+local Info =
+    Instance.new("TextLabel")
+
+Info.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        65
+    )
+
+Info.Position =
+    UDim2.fromOffset(
+        10,
+        40
+    )
+
 Info.BackgroundTransparency = 1
-Info.Font = Enum.Font.GothamBold
+
+Info.Font =
+    Enum.Font.GothamBold
+
 Info.TextSize = 12
-Info.TextColor3 = Color3.new(1,1,1)
-Info.TextXAlignment = Enum.TextXAlignment.Left
-Info.TextYAlignment = Enum.TextYAlignment.Top
+
+Info.TextColor3 =
+    Color3.new(
+        1,
+        1,
+        1
+    )
+
+Info.TextXAlignment =
+    Enum.TextXAlignment.Left
+
+Info.TextYAlignment =
+    Enum.TextYAlignment.Top
+
 Info.Text =
-    "🥚 Mejor: ---\n🍀 Lucky: ---\n⭐ Rareza: ---"
+    "🥚 Mejor: ---\n" ..
+    "🍀 Lucky: ---\n" ..
+    "⭐ Rareza: ---"
+
 Info.Parent = Main
 
-local Count = Instance.new("TextLabel")
-Count.Size = UDim2.new(1,-20,0,20)
-Count.Position = UDim2.fromOffset(10,102)
+local Count =
+    Instance.new("TextLabel")
+
+Count.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        20
+    )
+
+Count.Position =
+    UDim2.fromOffset(
+        10,
+        103
+    )
+
 Count.BackgroundTransparency = 1
-Count.Font = Enum.Font.Gotham
+
+Count.Font =
+    Enum.Font.Gotham
+
 Count.TextSize = 11
-Count.TextColor3 = Color3.fromRGB(170,170,170)
-Count.Text = "Huevos detectados: 0"
+
+Count.TextColor3 =
+    Color3.fromRGB(
+        170,
+        170,
+        170
+    )
+
+Count.Text =
+    "Huevos detectados: 0"
+
 Count.Parent = Main
 
-local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1,-20,0,20)
-Status.Position = UDim2.fromOffset(10,123)
+local Status =
+    Instance.new("TextLabel")
+
+Status.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        20
+    )
+
+Status.Position =
+    UDim2.fromOffset(
+        10,
+        125
+    )
+
 Status.BackgroundTransparency = 1
-Status.Font = Enum.Font.Gotham
+
+Status.Font =
+    Enum.Font.Gotham
+
 Status.TextSize = 11
-Status.TextColor3 = Color3.fromRGB(80,255,140)
-Status.Text = "Estado: ESPERANDO"
+
+Status.TextColor3 =
+    Color3.fromRGB(
+        80,
+        255,
+        140
+    )
+
+Status.Text =
+    "Estado: ESPERANDO"
+
 Status.Parent = Main
 
-local Button = Instance.new("TextButton")
-Button.Size = UDim2.new(1,-20,0,42)
-Button.Position = UDim2.fromOffset(10,166)
-Button.BackgroundColor3 = Color3.fromRGB(20,35,28)
+local Button =
+    Instance.new("TextButton")
+
+Button.Size =
+    UDim2.new(
+        1,
+        -20,
+        0,
+        42
+    )
+
+Button.Position =
+    UDim2.fromOffset(
+        10,
+        166
+    )
+
+Button.BackgroundColor3 =
+    Color3.fromRGB(
+        20,
+        35,
+        28
+    )
+
 Button.BorderSizePixel = 0
-Button.Font = Enum.Font.GothamBold
+
+Button.Font =
+    Enum.Font.GothamBold
+
 Button.TextSize = 12
-Button.TextColor3 = Color3.fromRGB(0,255,140)
-Button.Text = "BUSCAR Y TP"
+
+Button.TextColor3 =
+    Color3.fromRGB(
+        0,
+        255,
+        140
+    )
+
+Button.Text =
+    "BUSCAR Y AUTO GRAB"
+
 Button.Parent = Main
 
-local ButtonCorner = Instance.new("UICorner")
-ButtonCorner.CornerRadius = UDim.new(0,10)
-ButtonCorner.Parent = Button
+local ButtonCorner =
+    Instance.new("UICorner")
 
---------------------------------------------------
--- EJECUCIÓN
---------------------------------------------------
+ButtonCorner.CornerRadius =
+    UDim.new(0, 10)
+
+ButtonCorner.Parent =
+    Button
+
+--==============================================================
+-- PROCESO PRINCIPAL
+--==============================================================
 
 local function Run()
 
@@ -416,68 +1053,116 @@ local function Run()
 
     Running = true
 
-    Status.Text = "Estado: BUSCANDO..."
+    ----------------------------------------------------------
+    -- GUARDAR POSICIÓN ORIGINAL
+    ----------------------------------------------------------
+
+    if not SaveReturnPosition() then
+
+        Status.Text =
+            "Estado: ERROR POSICIÓN"
+
+        Running = false
+        return
+    end
+
+    ----------------------------------------------------------
+    -- BUSCAR
+    ----------------------------------------------------------
+
+    Status.Text =
+        "Estado: ESCANEANDO..."
 
     local egg, amount =
         FindBestEgg()
 
     Count.Text =
-        "Huevos detectados: " .. tostring(amount)
+        "Huevos detectados: " ..
+        tostring(amount)
 
     if not egg then
 
-        Info.Text =
-            "🥚 Mejor: NO ENCONTRADO\n" ..
-            "🍀 Lucky: ---\n" ..
-            "⭐ Rareza: ---"
-
         Status.Text =
-            "Estado: SIN HUEVOS"
+            "Estado: NO HAY HUEVOS"
 
         Running = false
         return
     end
 
     Info.Text =
-        "🥚 Mejor: " .. egg.Name ..
-        "\n🍀 Lucky: " .. egg.Luck ..
-        "\n⭐ Rareza: " .. egg.Rarity
+        "🥚 Mejor: " ..
+        egg.Name ..
+        "\n🍀 Lucky: " ..
+        egg.Luck ..
+        "\n⭐ Rareza: " ..
+        egg.Rarity
+
+    ----------------------------------------------------------
+    -- TP
+    ----------------------------------------------------------
 
     Status.Text =
         "Estado: TP AL HUEVO"
 
-    local success =
-        TeleportToEgg(egg)
-
-    if not success then
+    if not TeleportToEgg(
+        egg
+    ) then
 
         Status.Text =
             "Estado: ERROR TP"
 
         UnfreezeCharacter()
+
         Running = false
         return
     end
 
-    Status.Text =
-        "Estado: CONGELADO EN EL HUEVO"
-
-    task.wait(.7)
-
-    -- Interacción preparada.
-    GrabEgg(egg)
-
-    -- Cuando tengas conectado el Remote oficial
-    -- de recogida, aquí se puede esperar su confirmación.
-
-    task.wait(.7)
+    ----------------------------------------------------------
+    -- CONGELADO
+    ----------------------------------------------------------
 
     Status.Text =
-        "Estado: VOLVIENDO AL SPAWN"
+        "Estado: CONGELADO"
 
-    TeleportToSpawn()
+    task.wait(0.5)
 
-    task.wait(.2)
+    ----------------------------------------------------------
+    -- GRAB
+    ----------------------------------------------------------
+
+    Status.Text =
+        "Estado: AUTO GRAB"
+
+    local grabbed =
+        GrabEgg(egg)
+
+    if grabbed then
+
+        Status.Text =
+            "Estado: GRAB EJECUTADO"
+
+    else
+
+        Status.Text =
+            "Estado: PROMPT NO ACTIVADO"
+    end
+
+    task.wait(0.8)
+
+    ----------------------------------------------------------
+    -- REGRESAR
+    ----------------------------------------------------------
+
+    Status.Text =
+        "Estado: VOLVIENDO"
+
+    ReturnToBase()
+
+    task.wait(0.2)
+
+    ----------------------------------------------------------
+    -- DESCONGELAR
+    ----------------------------------------------------------
 
     UnfreezeCharacter()
 
@@ -487,56 +1172,10 @@ local function Run()
     Running = false
 end
 
-Button.Activated:Connect(Run)
+Button.Activated:Connect(
+    Run
+)
 
---------------------------------------------------
--- ARRASTRAR
---------------------------------------------------
-
-local dragging = false
-local dragStart
-local startPos
-
-Title.InputBegan:Connect(function(input)
-
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
-
-        dragging = true
-        dragStart = input.Position
-        startPos = Main.Position
-
-        input.Changed:Connect(function()
-
-            if input.UserInputState ==
-                Enum.UserInputState.End then
-
-                dragging = false
-            end
-        end)
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-
-    if not dragging then
-        return
-    end
-
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-    or input.UserInputType == Enum.UserInputType.Touch then
-
-        local delta =
-            input.Position - dragStart
-
-        Main.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
-print("KOXTA BEST EGG cargado.")
+print(
+    "KOXTA BEST EGG cargado"
+)
