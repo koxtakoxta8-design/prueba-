@@ -1,18 +1,7 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
-local RunService = game:GetService("RunService")
-
-local Player = Players.LocalPlayer
-
-local ESP_ENABLED = true
-local FPS_ENABLED = false
-local AUTO_GRAB = false
-local BUSY = false
-local CURRENT_EGG = nil
-
-local ESP_DISTANCE = 5000
-local AUTO_INTERVAL = 0.15
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EggData = {
     ["White Egg"]={Luck="1",Rarity="Common",Value=1},
@@ -39,26 +28,28 @@ local EggData = {
     ["Cherub Egg"]={Luck="1T",Rarity="Ethereal",Value=1000000000000}
 }
 
-local function GetEggData(name)
+local ESP_DISTANCE = 5000
+local AUTO_DELAY = 0.25
+local AUTO_DISTANCE = 18
+local active = {}
+
+local function eggData(name)
     if EggData[name] then return EggData[name] end
     local n = string.lower(name)
-    for egg,data in pairs(EggData) do
-        if string.find(n,string.lower(egg),1,true) then
-            return data
-        end
+    for k,v in pairs(EggData) do
+        if string.find(n,string.lower(k),1,true) then return v end
     end
 end
 
-local function IsEgg(obj)
+local function isEgg(obj)
     if not obj then return false end
     local n = string.lower(obj.Name)
     return string.find(n,"egg",1,true) ~= nil
         or string.find(n,"huevo",1,true) ~= nil
-        or GetEggData(obj.Name) ~= nil
+        or eggData(obj.Name) ~= nil
 end
 
-local function GetPart(obj)
-    if not obj then return nil end
+local function getPart(obj)
     if obj:IsA("BasePart") then return obj end
     if obj:IsA("Model") then
         if obj.PrimaryPart then return obj.PrimaryPart end
@@ -66,8 +57,7 @@ local function GetPart(obj)
     end
 end
 
-local function GetPrompt(egg)
-    if not egg then return nil end
+local function getPrompt(egg)
     for _,v in ipairs(egg:GetDescendants()) do
         if v:IsA("ProximityPrompt") and v.Enabled then
             return v
@@ -75,96 +65,63 @@ local function GetPrompt(egg)
     end
 end
 
-local function IsPlacedEgg(egg)
-    local names = {
-        "Placed","IsPlaced","Claimed","InBase",
-        "InPlot","Planted","IsPlanted"
-    }
-
-    for _,name in ipairs(names) do
-        if egg:GetAttribute(name) == true then
-            return true
-        end
-        local value = egg:FindFirstChild(name,true)
-        if value and value:IsA("BoolValue") and value.Value then
-            return true
-        end
+local function isPlaced(egg)
+    for _,a in ipairs({"Placed","IsPlaced","Claimed","Owned","InBase","InPlot","Planted","IsPlanted"}) do
+        if egg:GetAttribute(a) == true then return true end
+        local x = egg:FindFirstChild(a,true)
+        if x and x:IsA("BoolValue") and x.Value then return true end
     end
-
     return false
 end
 
-local function GetRoot()
-    local c = Player.Character
+local function getRoot(player)
+    local c = player.Character
     return c and c:FindFirstChild("HumanoidRootPart")
 end
 
-local MySpawnPosition = nil
-
-local function SaveMySpawn()
-    local root = GetRoot()
-    if root then
-        MySpawnPosition = root.Position
-    end
-end
-
-Player.CharacterAdded:Connect(function(character)
-    task.wait(0.5)
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if root then
-        MySpawnPosition = root.Position
-    end
-end)
-
-if Player.Character then
-    task.defer(SaveMySpawn)
-end
-
-local function ReturnToMySpawn()
-    local root = GetRoot()
-    if root and MySpawnPosition then
-        root.CFrame = CFrame.new(MySpawnPosition + Vector3.new(0,3,0))
-        return true
-    end
-    return false
-end
-
-local function TeleportTo(part)
-    local root = GetRoot()
-    if not root or not part then return false end
-    root.CFrame = part.CFrame + Vector3.new(0,2,0)
-    return true
-end
-
-local function GetBestEgg()
-    local best = nil
-    local bestValue = -math.huge
-
-    for _,obj in ipairs(Workspace:GetDescendants()) do
-        if IsEgg(obj) and obj ~= CURRENT_EGG and not IsPlacedEgg(obj) then
-            local data = GetEggData(obj.Name)
-            local part = GetPart(obj)
-            local prompt = GetPrompt(obj)
-
-            if data and part and prompt then
-                if data.Value > bestValue then
-                    bestValue = data.Value
-                    best = obj
+local function basePart(player)
+    for _,folderName in ipairs({"Plots","Bases","BasesFolder","PlayerBases"}) do
+        local folder = Workspace:FindFirstChild(folderName)
+        if folder then
+            for _,base in ipairs(folder:GetChildren()) do
+                if base.Name == player.Name
+                    or base:GetAttribute("Owner") == player.Name
+                    or base:GetAttribute("OwnerUserId") == player.UserId then
+                    return getPart(base)
                 end
             end
         end
     end
 
+    for _,obj in ipairs(Workspace:GetDescendants()) do
+        if obj:GetAttribute("OwnerUserId") == player.UserId
+            or obj:GetAttribute("Owner") == player.Name then
+            local p = getPart(obj)
+            if p then return p end
+        end
+    end
+end
+
+local function bestEgg()
+    local best, value = nil, -math.huge
+    for _,egg in ipairs(Workspace:GetDescendants()) do
+        if isEgg(egg) and not isPlaced(egg) then
+            local d = eggData(egg.Name)
+            local p = getPart(egg)
+            local prompt = getPrompt(egg)
+            if d and p and prompt and d.Value > value then
+                best, value = egg, d.Value
+            end
+        end
+    end
     return best
 end
 
-local function CreateESP(egg)
+local function addESP(egg)
     if egg:FindFirstChild("KOXTA_EggESP") then return end
-    if IsPlacedEgg(egg) then return end
-
-    local part = GetPart(egg)
-    local data = GetEggData(egg.Name)
-    if not part or not data then return end
+    local p = getPart(egg)
+    local d = eggData(egg.Name)
+    if not p or not d then return end
 
     local gui = Instance.new("BillboardGui")
     gui.Name = "KOXTA_EggESP"
@@ -172,395 +129,243 @@ local function CreateESP(egg)
     gui.StudsOffset = Vector3.new(0,2.8,0)
     gui.AlwaysOnTop = true
     gui.MaxDistance = ESP_DISTANCE
-    gui.Adornee = part
+    gui.Adornee = p
     gui.Parent = egg
 
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.fromScale(1,1)
-    frame.BackgroundColor3 = Color3.fromRGB(12,12,17)
-    frame.BackgroundTransparency = 0.15
-    frame.BorderSizePixel = 0
-    frame.Parent = gui
+    local f = Instance.new("Frame")
+    f.Size = UDim2.fromScale(1,1)
+    f.BackgroundColor3 = Color3.fromRGB(12,12,17)
+    f.BackgroundTransparency = .15
+    f.BorderSizePixel = 0
+    f.Parent = gui
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0,7)
+    c.Parent = f
+
+    local s = Instance.new("UIStroke")
+    s.Color = Color3.fromRGB(0,255,140)
+    s.Thickness = 1.5
+    s.Parent = f
+
+    local function label(text,y,size,color)
+        local l = Instance.new("TextLabel")
+        l.Size = UDim2.new(1,-8,0,size)
+        l.Position = UDim2.fromOffset(4,y)
+        l.BackgroundTransparency = 1
+        l.Font = Enum.Font.GothamBold
+        l.Text = text
+        l.TextSize = size <= 18 and 9 or 10
+        l.TextColor3 = color
+        l.TextXAlignment = Enum.TextXAlignment.Center
+        l.TextTruncate = Enum.TextTruncate.AtEnd
+        l.Parent = f
+    end
+
+    label("🥚 "..egg.Name,2,21,Color3.fromRGB(255,255,255))
+    label("🍀 Lucky: "..d.Luck,23,18,Color3.fromRGB(80,255,140))
+    label("⭐ "..d.Rarity,43,17,Color3.fromRGB(255,220,80))
+end
+
+local function grabEgg(player,egg)
+    if not egg or not egg.Parent or not isEgg(egg) or isPlaced(egg) then return false end
+
+    local root = getRoot(player)
+    local part = getPart(egg)
+    local prompt = getPrompt(egg)
+    if not root or not part or not prompt then return false end
+
+    if (root.Position-part.Position).Magnitude > math.max(prompt.MaxActivationDistance+12,AUTO_DISTANCE) then
+        return false
+    end
+
+    if egg:GetAttribute("KOXTA_Collected") then return false end
+
+    egg:SetAttribute("KOXTA_Collected",true)
+
+    local stats = player:FindFirstChild("leaderstats")
+    local d = eggData(egg.Name)
+    if stats and d then
+        local coins = stats:FindFirstChild("Coins") or stats:FindFirstChild("Money")
+        if coins and (coins:IsA("IntValue") or coins:IsA("NumberValue")) then
+            coins.Value += d.Value
+        end
+    end
+
+    local base = basePart(player)
+    if base and root then
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+        root.CFrame = CFrame.new(base.Position + Vector3.new(0,3,0))
+    end
+
+    task.defer(function()
+        if egg and egg.Parent then egg:Destroy() end
+    end)
+
+    return true
+end
+
+local function makeGui(player)
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "KOXTA_EggHub"
+    gui.ResetOnSpawn = false
+    gui.Parent = player:WaitForChild("PlayerGui")
+
+    local main = Instance.new("Frame")
+    main.Size = UDim2.fromOffset(175,125)
+    main.Position = UDim2.new(1,-190,0,100)
+    main.BackgroundColor3 = Color3.fromRGB(10,10,14)
+    main.BorderSizePixel = 0
+    main.Parent = gui
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0,7)
-    corner.Parent = frame
+    corner.CornerRadius = UDim.new(0,12)
+    corner.Parent = main
 
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(0,255,140)
     stroke.Thickness = 1.5
-    stroke.Parent = frame
+    stroke.Parent = main
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,-8,0,21)
-    title.Position = UDim2.fromOffset(4,2)
+    title.Size = UDim2.new(1,-10,0,27)
+    title.Position = UDim2.fromOffset(5,3)
     title.BackgroundTransparency = 1
+    title.Text = "KOXTA HUB"
     title.Font = Enum.Font.GothamBold
-    title.Text = "🥚 "..egg.Name
-    title.TextSize = 10
-    title.TextColor3 = Color3.new(1,1,1)
-    title.TextXAlignment = Enum.TextXAlignment.Center
-    title.TextTruncate = Enum.TextTruncate.AtEnd
-    title.Parent = frame
+    title.TextSize = 13
+    title.TextColor3 = Color3.fromRGB(0,255,140)
+    title.Parent = main
 
-    local luck = Instance.new("TextLabel")
-    luck.Size = UDim2.new(1,-8,0,18)
-    luck.Position = UDim2.fromOffset(4,23)
-    luck.BackgroundTransparency = 1
-    luck.Font = Enum.Font.GothamBold
-    luck.Text = "🍀 Lucky: "..data.Luck
-    luck.TextSize = 9
-    luck.TextColor3 = Color3.fromRGB(80,255,140)
-    luck.TextXAlignment = Enum.TextXAlignment.Center
-    luck.Parent = frame
+    local function button(text,y)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(1,-16,0,35)
+        b.Position = UDim2.fromOffset(8,y)
+        b.BackgroundColor3 = Color3.fromRGB(20,20,25)
+        b.BorderSizePixel = 0
+        b.Text = text
+        b.TextColor3 = Color3.fromRGB(0,255,140)
+        b.TextSize = 11
+        b.Font = Enum.Font.GothamBold
+        b.Parent = main
+        local bc = Instance.new("UICorner")
+        bc.CornerRadius = UDim.new(0,7)
+        bc.Parent = b
+        local bs = Instance.new("UIStroke")
+        bs.Color = Color3.fromRGB(0,255,140)
+        bs.Parent = b
+        return b
+    end
 
-    local rarity = Instance.new("TextLabel")
-    rarity.Size = UDim2.new(1,-8,0,17)
-    rarity.Position = UDim2.fromOffset(4,43)
-    rarity.BackgroundTransparency = 1
-    rarity.Font = Enum.Font.GothamBold
-    rarity.Text = "⭐ "..data.Rarity
-    rarity.TextSize = 9
-    rarity.TextColor3 = Color3.fromRGB(255,220,80)
-    rarity.TextXAlignment = Enum.TextXAlignment.Center
-    rarity.Parent = frame
-end
+    local esp = button("ESP: ON",32)
+    local auto = button("AUTO GRAB: OFF",73)
 
-local function RemoveESP(obj)
-    local esp = obj:FindFirstChild("KOXTA_EggESP")
-    if esp then esp:Destroy() end
-end
+    local state = Instance.new("TextLabel")
+    state.Size = UDim2.new(1,-10,0,14)
+    state.Position = UDim2.fromOffset(5,110)
+    state.BackgroundTransparency = 1
+    state.Text = "READY"
+    state.Font = Enum.Font.GothamBold
+    state.TextSize = 9
+    state.TextColor3 = Color3.fromRGB(170,170,170)
+    state.Parent = main
 
-local function ScanESP()
-    for _,obj in ipairs(Workspace:GetDescendants()) do
-        if IsEgg(obj) then
-            if ESP_ENABLED then
-                CreateESP(obj)
-            else
-                RemoveESP(obj)
+    active[player] = {ESP=true,FPS=false,AUTO=false,State=state}
+
+    esp.Activated:Connect(function()
+        active[player].ESP = not active[player].ESP
+        esp.Text = active[player].ESP and "ESP: ON" or "ESP: OFF"
+        if not active[player].ESP then
+            for _,obj in ipairs(Workspace:GetDescendants()) do
+                local x = obj:FindFirstChild("KOXTA_EggESP")
+                if x then x:Destroy() end
             end
         end
-    end
-end
-
-local function TryGrab(prompt)
-    if not prompt or not prompt.Parent or not prompt.Enabled then
-        return false
-    end
-
-    local root = GetRoot()
-    if not root then
-        return false
-    end
-
-    local lockedPosition = root.Position
-    local finished = false
-
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        if finished or not root.Parent then return end
-        root.CFrame = CFrame.new(lockedPosition)
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
     end)
 
-    local ok = pcall(function()
-        prompt:InputHoldBegin()
-        task.wait(math.max(prompt.HoldDuration,0.05))
-        prompt:InputHoldEnd()
+    auto.Activated:Connect(function()
+        active[player].AUTO = not active[player].AUTO
+        auto.Text = active[player].AUTO and "AUTO GRAB: ON" or "AUTO GRAB: OFF"
+        state.Text = active[player].AUTO and "SEARCHING..." or "READY"
     end)
-
-    finished = true
-    if connection then
-        connection:Disconnect()
-    end
-
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
-
-    return ok
 end
 
-local function WaitForGrab(egg,prompt)
-    local deadline = os.clock() + 4
+Players.PlayerAdded:Connect(function(player)
+    task.spawn(function()
+        makeGui(player)
+    end)
+end)
 
-    while os.clock() < deadline do
-        if not egg or not egg.Parent then
-            return true
-        end
-
-        if not egg:IsDescendantOf(Workspace) then
-            return true
-        end
-
-        if not prompt or not prompt.Parent then
-            return true
-        end
-
-        if not prompt.Enabled then
-            task.wait(0.08)
-            if not prompt.Parent or not prompt.Enabled then
-                return true
-            end
-        end
-
-        task.wait()
-    end
-
-    return false
-end
-
-local function AutoGrabOnce()
-    if BUSY then return end
-    BUSY = true
-
-    local egg = GetBestEgg()
-    if not egg then
-        BUSY = false
-        return
-    end
-
-    CURRENT_EGG = egg
-
-    local part = GetPart(egg)
-    local prompt = GetPrompt(egg)
-
-    if not part or not prompt then
-        CURRENT_EGG = nil
-        BUSY = false
-        return
-    end
-
-    TeleportTo(part)
-    RunService.Heartbeat:Wait()
-
-    local grabbed = false
-
-    for attempt = 1,3 do
-        if not egg.Parent then
-            grabbed = true
-            break
-        end
-
-        prompt = GetPrompt(egg) or prompt
-
-        if not prompt or not prompt.Parent then
-            grabbed = true
-            break
-        end
-
-        TryGrab(prompt)
-        task.wait(0.05)
-
-        if WaitForGrab(egg,prompt) then
-            grabbed = true
-            break
-        end
-
-        task.wait(0.05)
-    end
-
-    if grabbed then
-        ReturnToMySpawn()
-
-        local deliveryStart = os.clock()
-        while os.clock() - deliveryStart < 1.5 do
-            local root = GetRoot()
-            if root and MySpawnPosition then
-                root.CFrame = CFrame.new(MySpawnPosition + Vector3.new(0,3,0))
-                root.AssemblyLinearVelocity = Vector3.zero
-                root.AssemblyAngularVelocity = Vector3.zero
-            end
-            RunService.Heartbeat:Wait()
-        end
-    end
-
-    CURRENT_EGG = nil
-    BUSY = false
+for _,player in ipairs(Players:GetPlayers()) do
+    task.spawn(function()
+        makeGui(player)
+    end)
 end
 
 task.spawn(function()
-    while task.wait(AUTO_INTERVAL) do
-        if AUTO_GRAB then
-            pcall(AutoGrabOnce)
-        end
-    end
-end)
-
-local function EnableFPSBoost()
-    FPS_ENABLED = true
-
-    for _,obj in ipairs(Workspace:GetDescendants()) do
-        pcall(function()
-            if obj:IsA("ParticleEmitter")
-                or obj:IsA("Trail")
-                or obj:IsA("Beam")
-                or obj:IsA("Smoke")
-                or obj:IsA("Fire")
-                or obj:IsA("Sparkles") then
-                obj.Enabled = false
-            elseif obj:IsA("PointLight")
-                or obj:IsA("SpotLight")
-                or obj:IsA("SurfaceLight") then
-                obj.Enabled = false
-            elseif obj:IsA("BasePart") then
-                obj.CastShadow = false
-            end
-        end)
-    end
-
-    pcall(function()
-        Lighting.GlobalShadows = false
-        Lighting.EnvironmentDiffuseScale = 0
-        Lighting.EnvironmentSpecularScale = 0
-    end)
-
-    for _,obj in ipairs(Lighting:GetChildren()) do
-        pcall(function()
-            if obj:IsA("BloomEffect")
-                or obj:IsA("BlurEffect")
-                or obj:IsA("ColorCorrectionEffect")
-                or obj:IsA("DepthOfFieldEffect")
-                or obj:IsA("SunRaysEffect") then
-                obj.Enabled = false
-            end
-        end)
-    end
-end
-
-local function DisableFPSBoost()
-    FPS_ENABLED = false
-    -- El boost está pensado para esta sesión; al apagarlo
-    -- se restaura lo esencial de iluminación.
-    pcall(function()
-        Lighting.GlobalShadows = true
-        Lighting.EnvironmentDiffuseScale = 1
-        Lighting.EnvironmentSpecularScale = 1
-    end)
-end
-
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "KOXTA_EggHub"
-Gui.ResetOnSpawn = false
-Gui.Parent = Player:WaitForChild("PlayerGui")
-
-local Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(170,165)
-Main.Position = UDim2.new(1,-185,0,100)
-Main.BackgroundColor3 = Color3.fromRGB(10,10,14)
-Main.BorderSizePixel = 0
-Main.Parent = Gui
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0,12)
-MainCorner.Parent = Main
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Color3.fromRGB(0,255,140)
-MainStroke.Thickness = 1.5
-MainStroke.Parent = Main
-
-local Gradient = Instance.new("UIGradient")
-Gradient.Rotation = 135
-Gradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(10,10,14)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(18,25,25))
-})
-Gradient.Parent = Main
-
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1,-10,0,25)
-Title.Position = UDim2.fromOffset(5,3)
-Title.BackgroundTransparency = 1
-Title.Text = "KOXTA • EGG HUB"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.TextColor3 = Color3.fromRGB(0,255,140)
-Title.Parent = Main
-
-local function Button(text,y)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1,-16,0,35)
-    b.Position = UDim2.fromOffset(8,y)
-    b.BackgroundColor3 = Color3.fromRGB(20,20,25)
-    b.BorderSizePixel = 0
-    b.Text = text
-    b.TextColor3 = Color3.fromRGB(0,255,140)
-    b.TextSize = 11
-    b.Font = Enum.Font.GothamBold
-    b.Parent = Main
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0,7)
-    c.Parent = b
-
-    local s = Instance.new("UIStroke")
-    s.Color = Color3.fromRGB(0,255,140)
-    s.Thickness = 1
-    s.Parent = b
-
-    return b
-end
-
-local ESPButton = Button("🥚  ESP • ON",32)
-local FPSButton = Button("⚡  FPS BOOST • OFF",73)
-local AutoButton = Button("AUTO GRAB: OFF",114)
-
-ESPButton.Activated:Connect(function()
-    ESP_ENABLED = not ESP_ENABLED
-
-    if ESP_ENABLED then
-        ESPButton.Text = "🥚  ESP • ON"
-        ESPButton.TextColor3 = Color3.fromRGB(0,255,140)
-        ScanESP()
-    else
-        ESPButton.Text = "🥚  ESP • OFF"
-        ESPButton.TextColor3 = Color3.fromRGB(255,80,80)
-
+    while task.wait(2) do
         for _,obj in ipairs(Workspace:GetDescendants()) do
-            RemoveESP(obj)
+            if isEgg(obj) then
+                for player,data in pairs(active) do
+                    if data.ESP then
+                        pcall(function() addESP(obj) end)
+                    end
+                end
+            end
         end
     end
 end)
 
-FPSButton.Activated:Connect(function()
-    if FPS_ENABLED then
-        DisableFPSBoost()
-        FPSButton.Text = "⚡  FPS BOOST • OFF"
-        FPSButton.TextColor3 = Color3.fromRGB(255,80,80)
-    else
-        EnableFPSBoost()
-        FPSButton.Text = "⚡  FPS BOOST • ON"
-        FPSButton.TextColor3 = Color3.fromRGB(0,255,140)
-    end
-end)
+task.spawn(function()
+    while task.wait(AUTO_DELAY) do
+        for player,data in pairs(active) do
+            if data.AUTO then
+                local root = getRoot(player)
+                local egg = bestEgg()
 
-AutoButton.Activated:Connect(function()
-    AUTO_GRAB = not AUTO_GRAB
+                if root and egg and egg.Parent then
+                    local part = getPart(egg)
 
-    if AUTO_GRAB then
-        AutoButton.Text = "AUTO GRAB: ON"
-        AutoButton.TextColor3 = Color3.fromRGB(0,255,140)
-    else
-        AutoButton.Text = "AUTO GRAB: OFF"
-        AutoButton.TextColor3 = Color3.fromRGB(255,80,80)
+                    if part then
+                        data.State.Text = "TP → "..egg.Name
+
+                        root.AssemblyLinearVelocity = Vector3.zero
+                        root.AssemblyAngularVelocity = Vector3.zero
+                        root.CFrame = CFrame.new(part.Position + Vector3.new(0,2.5,0))
+
+                        -- Rapid server-side grab burst.
+                        local grabbed = false
+                        for i = 1,8 do
+                            if not egg.Parent or egg:GetAttribute("KOXTA_Collected") then
+                                grabbed = true
+                                break
+                            end
+
+                            grabbed = grabEgg(player,egg) or grabbed
+                            if grabbed then break end
+                            task.wait(0.02)
+                        end
+
+                        if grabbed then
+                            data.State.Text = "✓ GRABBED → BASE"
+                        else
+                            data.State.Text = "RETRYING..."
+                        end
+                    end
+                else
+                    data.State.Text = "NO EGG"
+                end
+            end
+        end
     end
 end)
 
 Workspace.DescendantAdded:Connect(function(obj)
-    if ESP_ENABLED and IsEgg(obj) then
-        task.wait()
-        pcall(function()
-            CreateESP(obj)
-        end)
+    if isEgg(obj) then
+        task.wait(.1)
+        for _,data in pairs(active) do
+            if data.ESP then pcall(function() addESP(obj) end) end
+        end
     end
 end)
-
-task.spawn(function()
-    while task.wait(2) do
-        pcall(ScanESP)
-    end
-end)
-
-ScanESP()
