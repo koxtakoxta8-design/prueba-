@@ -1,394 +1,457 @@
+--// BEST EGG AUTO GRAB - SNAPSHOT
+--// Para usar en tu propio juego de Roblox Studio
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
-local Player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 
---==================================================
--- REMOTE DEL SNAPSHOT
---==================================================
+--------------------------------------------------
+-- CONFIG
+--------------------------------------------------
 
-local function FindRemote(path)
-    local current = ReplicatedStorage
+local AUTO_START = true
+
+-- Nombre de tu Spawn/Base.
+-- Si tu juego usa otro nombre, cámbialo aquí.
+local SPAWN_NAME = "SpawnLocation"
+
+-- Distancia máxima para buscar el ProximityPrompt
+local GRAB_DISTANCE = 12
+
+--------------------------------------------------
+-- SNAPSHOT REMOTE
+--------------------------------------------------
+
+local function findRemote(path)
+    local cur = ReplicatedStorage
 
     for part in string.gmatch(path, "[^%.]+") do
-        current = current and current:FindFirstChild(part)
+        if cur then
+            cur = cur:FindFirstChild(part)
+        end
     end
 
-    return current
+    return cur
 end
 
 local SnapshotRemote =
-    FindRemote("Packages.Networking.RF/EggWorld/AskFieldEggSnapshot")
+    findRemote("Packages.Networking.RF/EggWorld/AskFieldEggSnapshot")
 
---==================================================
--- 22 HUEVOS
---==================================================
+--------------------------------------------------
+-- LOS 22 HUEVOS
+--------------------------------------------------
 
 local EggLuck = {
-    ["White Egg"]      = 1,
-    ["Brown Egg"]      = 5,
-    ["Cracked Egg"]    = 30,
-    ["Easter Egg"]     = 50,
-    ["Stone Egg"]      = 100,
-    ["Leaf Egg"]       = 200,
-    ["Mushroom Egg"]   = 500,
-    ["Flower Egg"]     = 750,
-    ["Slime Egg"]      = 1000,
-    ["Ice Egg"]        = 3000,
-    ["Glass Egg"]      = 10000,
-    ["Golden Egg"]     = 30000,
-    ["Crystal Egg"]    = 150000,
-    ["Skull Egg"]      = 250000,
-    ["Dominus Egg"]    = 700000,
-    ["Flaming Egg"]    = 1000000,
-    ["Sinister Egg"]   = 3000000,
-    ["Soul Egg"]       = 7000000,
-    ["Aurora Egg"]     = 300000000,
-    ["Galaxy Egg"]     = 1500000000,
+    ["White Egg"] = 1,
+    ["Brown Egg"] = 5,
+    ["Cracked Egg"] = 30,
+    ["Easter Egg"] = 50,
+    ["Stone Egg"] = 100,
+    ["Leaf Egg"] = 200,
+    ["Mushroom Egg"] = 500,
+    ["Flower Egg"] = 750,
+    ["Slime Egg"] = 1000,
+    ["Ice Egg"] = 3000,
+    ["Glass Egg"] = 10000,
+    ["Golden Egg"] = 30000,
+    ["Crystal Egg"] = 150000,
+    ["Skull Egg"] = 250000,
+    ["Dominus Egg"] = 700000,
+    ["Flaming Egg"] = 1000000,
+    ["Sinister Egg"] = 3000000,
+    ["Soul Egg"] = 7000000,
+    ["Aurora Egg"] = 300000000,
+    ["Galaxy Egg"] = 1500000000,
     ["Black Hole Egg"] = 100000000000,
-    ["Cherub Egg"]     = 1000000000000,
+    ["Cherub Egg"] = 1000000000000
 }
 
---==================================================
--- CATALOGO
---==================================================
+--------------------------------------------------
+-- NORMALIZAR NOMBRES
+--------------------------------------------------
 
-local Catalog = {}
-
-pcall(function()
-
-    local Data = ReplicatedStorage:FindFirstChild("Data")
-    local Assets = Data and Data:FindFirstChild("Assets")
-
-    if Assets then
-
-        local module = require(Assets)
-
-        if type(module) == "table"
-        and type(module.Directory) == "table" then
-
-            Catalog = module.Directory
-        end
-    end
-end)
-
---==================================================
--- OBTENER NOMBRE REAL
---==================================================
-
-local function GetAssetName(category)
-
-    local entry = Catalog[tostring(category)]
-
-    if not entry then
-        return nil
+local function NormalizeName(name)
+    if not name then
+        return ""
     end
 
-    return entry.DisplayName
-        or entry._id
-        or entry.Name
+    name = tostring(name)
+
+    name = name:gsub("_", " ")
+    name = name:gsub("%-", " ")
+
+    return name:lower()
 end
 
---==================================================
--- SNAPSHOT → MEJOR HUEVO
---==================================================
+local EggLuckNormalized = {}
 
-local function FindBestEgg()
+for name, luck in pairs(EggLuck) do
+    EggLuckNormalized[NormalizeName(name)] = luck
+end
 
-    if not SnapshotRemote then
-        warn("AskFieldEggSnapshot no encontrado")
+--------------------------------------------------
+-- OBTENER LUCK DEL EGG
+--------------------------------------------------
+
+local function GetEggLuck(assetCategory)
+    if not assetCategory then
+        return 0
+    end
+
+    local normalized = NormalizeName(assetCategory)
+
+    -- Coincidencia exacta
+    if EggLuckNormalized[normalized] then
+        return EggLuckNormalized[normalized]
+    end
+
+    -- Coincidencia parcial
+    for name, luck in pairs(EggLuckNormalized) do
+        if string.find(normalized, name, 1, true)
+        or string.find(name, normalized, 1, true) then
+            return luck
+        end
+    end
+
+    return 0
+end
+
+--------------------------------------------------
+-- OBTENER POSICIÓN
+--------------------------------------------------
+
+local function GetRecordPosition(rec)
+    if not rec then
         return nil
     end
 
-    local ok, snapshot =
-        pcall(function()
-            return SnapshotRemote:InvokeServer()
-        end)
+    local cf = rec.BottomCFrame
+
+    if typeof(cf) == "CFrame" then
+        return cf.Position
+    end
+
+    if typeof(cf) == "Vector3" then
+        return cf
+    end
+
+    return nil
+end
+
+--------------------------------------------------
+-- BUSCAR EL MEJOR HUEVO
+--------------------------------------------------
+
+local function GetBestEgg()
+    if not SnapshotRemote then
+        warn("No se encontró AskFieldEggSnapshot")
+        return nil
+    end
+
+    local ok, snapshot = pcall(function()
+        return SnapshotRemote:InvokeServer()
+    end)
 
     if not ok or type(snapshot) ~= "table" then
+        warn("No se pudo obtener el snapshot")
         return nil
     end
 
-    local records =
-        snapshot.Records or snapshot
+    local records = snapshot.Records or snapshot
 
     if type(records) ~= "table" then
         return nil
     end
 
-    local bestRecord
+    local bestEgg = nil
     local bestLuck = -1
-    local bestName
 
-    for _, record in pairs(records) do
+    for _, rec in ipairs(records) do
 
-        if type(record) == "table"
-        and record.BottomCFrame then
+        if type(rec) == "table"
+        and rec.State == "Slot"
+        and rec.BottomCFrame then
 
-            local name =
-                GetAssetName(record.AssetCategory)
+            local position = GetRecordPosition(rec)
 
-            local luck =
-                name and EggLuck[name]
+            if position then
 
-            if luck and luck > bestLuck then
+                local asset = tostring(rec.AssetCategory or "")
+                local luck = GetEggLuck(asset)
 
-                bestRecord = record
-                bestLuck = luck
-                bestName = name
-            end
-        end
-    end
+                if luck > bestLuck then
 
-    return bestRecord, bestName, bestLuck
-end
+                    bestLuck = luck
 
---==================================================
--- ENCONTRAR HUEVO FÍSICO
---==================================================
-
-local function FindPhysicalEgg(name, position)
-
-    local closest
-    local closestDistance = math.huge
-
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-
-        if obj.Name == name then
-
-            local part
-
-            if obj:IsA("BasePart") then
-                part = obj
-
-            elseif obj:IsA("Model") then
-                part =
-                    obj.PrimaryPart
-                    or obj:FindFirstChildWhichIsA(
-                        "BasePart",
-                        true
-                    )
-            end
-
-            if part then
-
-                local distance =
-                    (part.Position - position).Magnitude
-
-                if distance < closestDistance then
-
-                    closest = obj
-                    closestDistance = distance
+                    bestEgg = {
+                        Record = rec,
+                        AssetCategory = asset,
+                        Luck = luck,
+                        Position = position
+                    }
                 end
             end
         end
     end
 
-    return closest
+    return bestEgg
 end
 
---==================================================
--- PROMPT
---==================================================
+--------------------------------------------------
+-- TP
+--------------------------------------------------
 
-local function FindPrompt(object)
+local function GetCharacter()
+    return LocalPlayer.Character
+        or LocalPlayer.CharacterAdded:Wait()
+end
 
-    if not object then
+local function GetRoot()
+    local character = GetCharacter()
+
+    return character:FindFirstChild("HumanoidRootPart")
+end
+
+local function TeleportTo(position)
+    local root = GetRoot()
+
+    if not root then
+        return false
+    end
+
+    root.CFrame = CFrame.new(position + Vector3.new(0, 3, 0))
+
+    return true
+end
+
+--------------------------------------------------
+-- BUSCAR PROXIMITY PROMPT
+--------------------------------------------------
+
+local function GetPromptPosition(prompt)
+    local parent = prompt.Parent
+
+    if not parent then
         return nil
     end
 
-    return object:FindFirstChildWhichIsA(
-        "ProximityPrompt",
-        true
-    )
+    if parent:IsA("BasePart") then
+        return parent.Position
+    end
+
+    if parent:IsA("Attachment") then
+        if parent.Parent and parent.Parent:IsA("BasePart") then
+            return parent.Parent.Position
+        end
+    end
+
+    return nil
 end
 
---==================================================
--- SPAWN
---==================================================
+local function FindGrabPrompt(eggPosition)
+    local closest = nil
+    local closestDistance = math.huge
 
-local function FindSpawn()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
 
-    return Workspace:FindFirstChildWhichIsA(
-        "SpawnLocation",
-        true
-    )
+        if obj:IsA("ProximityPrompt") then
+
+            local promptPosition = GetPromptPosition(obj)
+
+            if promptPosition then
+
+                local distance =
+                    (promptPosition - eggPosition).Magnitude
+
+                if distance <= GRAB_DISTANCE
+                and distance < closestDistance then
+
+                    closestDistance = distance
+                    closest = obj
+                end
+            end
+        end
+    end
+
+    return closest, closestDistance
 end
 
---==================================================
--- EJECUTAR
---==================================================
+--------------------------------------------------
+-- AUTO GRAB
+--------------------------------------------------
 
-local Busy = false
+local function AutoGrab(eggPosition)
 
-local function Execute()
+    local prompt, distance =
+        FindGrabPrompt(eggPosition)
 
-    if Busy then
-        return
+    if not prompt then
+        warn("No encontré ProximityPrompt para el huevo")
+        return false
     end
 
-    Busy = true
+    print(
+        "Prompt encontrado:",
+        prompt:GetFullName(),
+        "Distancia:",
+        distance
+    )
 
-    local character = Player.Character
-    local root =
-        character
-        and character:FindFirstChild(
-            "HumanoidRootPart"
-        )
+    -- Para tu propio juego:
+    -- dispara la interacción del prompt.
+    if typeof(fireproximityprompt) == "function" then
 
-    if not root then
-        Busy = false
-        return
+        fireproximityprompt(prompt)
+
+        return true
     end
 
-    local record, name, luck =
-        FindBestEgg()
-
-    if not record then
-        warn("No encontré ninguno de los 22 huevos.")
-        Busy = false
-        return
+    -- Alternativa para probar en Studio:
+    if prompt.Enabled then
+        print("Prompt listo para interacción:", prompt.Name)
     end
 
-    local position
+    return false
+end
 
-    if typeof(record.BottomCFrame) == "CFrame" then
-        position = record.BottomCFrame.Position
+--------------------------------------------------
+-- BUSCAR SPAWN
+--------------------------------------------------
 
-    elseif typeof(record.BottomCFrame) == "Vector3" then
-        position = record.BottomCFrame
-    end
+local function GetSpawnPosition()
 
-    if not position then
-        Busy = false
-        return
-    end
-
-    print("🥚 MEJOR:", name)
-    print("🍀 LUCK:", luck)
-
-    -- Buscar objeto físico
-    local egg =
-        FindPhysicalEgg(name, position)
-
-    if not egg then
-        warn("No encontré el objeto físico:", name)
-        Busy = false
-        return
-    end
-
-    local part =
-        egg:IsA("BasePart")
-        and egg
-        or egg.PrimaryPart
-        or egg:FindFirstChildWhichIsA(
-            "BasePart",
-            true
-        )
-
-    if not part then
-        Busy = false
-        return
-    end
-
-    -- TP
-    root.CFrame =
-        part.CFrame + Vector3.new(0, 3, 0)
-
-    task.wait(0.15)
-
-    -- Prompt
-    local prompt =
-        FindPrompt(egg)
-
-    if prompt then
-        print("🟢 PROMPT:", prompt:GetFullName())
-
-        pcall(function()
-            prompt:InputHoldBegin()
-        end)
-
-        task.wait(
-            math.max(
-                prompt.HoldDuration,
-                0.05
-            )
-        )
-
-        pcall(function()
-            prompt:InputHoldEnd()
-        end)
-    else
-        warn("El huevo no tiene ProximityPrompt.")
-    end
-
-    task.wait(0.25)
-
-    -- Spawn
-    local spawn = FindSpawn()
+    local spawn = Workspace:FindFirstChild(
+        SPAWN_NAME,
+        true
+    )
 
     if spawn then
-        root.CFrame =
-            spawn.CFrame + Vector3.new(0, 3, 0)
+
+        if spawn:IsA("SpawnLocation") then
+            return spawn.Position
+        end
+
+        if spawn:IsA("BasePart") then
+            return spawn.Position
+        end
     end
 
-    Busy = false
+    -- Buscar cualquier SpawnLocation
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+
+        if obj:IsA("SpawnLocation") then
+            return obj.Position
+        end
+    end
+
+    return nil
 end
 
---==================================================
--- BOTÓN
---==================================================
+--------------------------------------------------
+-- REGRESAR AL SPAWN
+--------------------------------------------------
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "BestEggTP"
-gui.ResetOnSpawn = false
-gui.Parent = Player:WaitForChild("PlayerGui")
+local function ReturnToSpawn()
 
-local button = Instance.new("TextButton")
-button.Size = UDim2.fromOffset(175, 42)
-button.Position = UDim2.new(1, -190, 0, 110)
+    local spawnPosition = GetSpawnPosition()
 
-button.BackgroundColor3 =
-    Color3.fromRGB(12,12,16)
+    if not spawnPosition then
+        warn("No encontré el Spawn")
+        return false
+    end
 
-button.TextColor3 =
-    Color3.fromRGB(0,255,140)
+    task.wait(0.4)
 
-button.Text =
-    "🥚 TP AL MEJOR HUEVO"
+    TeleportTo(spawnPosition)
 
-button.Font =
-    Enum.Font.GothamBold
+    print("Regresando al Spawn")
 
-button.TextSize = 11
-button.BorderSizePixel = 0
-button.Parent = gui
+    return true
+end
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0,8)
-corner.Parent = button
+--------------------------------------------------
+-- CICLO PRINCIPAL
+--------------------------------------------------
 
-local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(0,255,140)
-stroke.Thickness = 1.5
-stroke.Parent = button
+local Running = false
 
-button.Activated:Connect(function()
+local function StartBestEgg()
 
-    if Busy then
+    if Running then
         return
     end
 
-    button.Text = "🔎 BUSCANDO..."
+    Running = true
 
+    print("================================")
+    print("BUSCANDO MEJOR HUEVO...")
+    print("================================")
+
+    local bestEgg = GetBestEgg()
+
+    if not bestEgg then
+
+        warn("No encontré ningún huevo válido")
+
+        Running = false
+        return
+    end
+
+    print("MEJOR HUEVO:")
+    print("Nombre:", bestEgg.AssetCategory)
+    print("Lucky:", bestEgg.Luck)
+    print("Posición:", bestEgg.Position)
+
+    --------------------------------------------------
+    -- TP AL MEJOR HUEVO
+    --------------------------------------------------
+
+    local teleported =
+        TeleportTo(bestEgg.Position)
+
+    if not teleported then
+        Running = false
+        return
+    end
+
+    task.wait(0.5)
+
+    --------------------------------------------------
+    -- AUTO GRAB
+    --------------------------------------------------
+
+    local grabbed =
+        AutoGrab(bestEgg.Position)
+
+    if grabbed then
+
+        print("AUTO GRAB EJECUTADO")
+
+        task.wait(0.8)
+
+        --------------------------------------------------
+        -- VOLVER AL SPAWN
+        --------------------------------------------------
+
+        ReturnToSpawn()
+
+    else
+
+        warn("No se pudo ejecutar el grab")
+    end
+
+    Running = false
+end
+
+--------------------------------------------------
+-- INICIAR
+--------------------------------------------------
+
+if AUTO_START then
     task.spawn(function()
-
-        Execute()
-
-        task.wait(0.5)
-
-        button.Text =
-            "🥚 TP AL MEJOR HUEVO"
+        task.wait(2)
+        StartBestEgg()
     end)
-end)
+end
