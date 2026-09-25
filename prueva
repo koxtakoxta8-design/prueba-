@@ -1,496 +1,308 @@
 --==============================================================
--- KOXTA • ZONA DE EXCLUSIÓN
--- CÍRCULO AZUL + COORDENADAS + RADIO 10 EN 10 + GUARDAR
+-- KOXTA • RIDE A PET
+-- TEST: TP AL MEJOR HUEVO
+-- SIN AUTO GRAB
+-- SIN REGRESO
 --==============================================================
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local Player = Players.LocalPlayer
 
 --==============================================================
--- CONFIGURACIÓN
+-- 22 HUEVOS + LUCKY
 --==============================================================
 
-local MIN_RADIUS = 10
-local MAX_RADIUS = 500
+local EggData = {
 
-local Radius = 100
-local CenterPosition = nil
-local Locked = false
-local SavedZone = nil
+    ["White Egg"]      = 1,
+    ["Brown Egg"]      = 5,
+    ["Cracked Egg"]    = 30,
+    ["Easter Egg"]     = 50,
+    ["Stone Egg"]      = 100,
+    ["Leaf Egg"]       = 200,
+    ["Mushroom Egg"]   = 500,
+    ["Flower Egg"]     = 750,
+    ["Slime Egg"]      = 1000,
+    ["Ice Egg"]        = 3000,
+    ["Glass Egg"]      = 10000,
+    ["Golden Egg"]     = 30000,
+    ["Crystal Egg"]    = 150000,
+    ["Skull Egg"]      = 250000,
+    ["Dominus Egg"]    = 700000,
+    ["Flaming Egg"]    = 1000000,
+    ["Sinister Egg"]   = 3000000,
+    ["Soul Egg"]       = 7000000,
+    ["Aurora Egg"]     = 300000000,
+    ["Galaxy Egg"]     = 1500000000,
+    ["Black Hole Egg"]= 100000000000,
+    ["Cherub Egg"]     = 1000000000000
+}
+
+--==============================================================
+-- ENCONTRAR DATOS DEL HUEVO
+--==============================================================
+
+local function GetEggData(name)
+
+    local lower = string.lower(name)
+
+    -- Coincidencia exacta
+    for eggName, lucky in pairs(EggData) do
+
+        if lower == string.lower(eggName) then
+            return eggName, lucky
+        end
+    end
+
+    -- Coincidencia parcial
+    for eggName, lucky in pairs(EggData) do
+
+        if string.find(
+            lower,
+            string.lower(eggName),
+            1,
+            true
+        ) then
+
+            return eggName, lucky
+        end
+    end
+
+    return nil
+end
+
+--==============================================================
+-- OBTENER PARTE DEL HUEVO
+--==============================================================
+
+local function GetPart(obj)
+
+    if obj:IsA("BasePart") then
+        return obj
+    end
+
+    if obj:IsA("Model") then
+
+        if obj.PrimaryPart then
+            return obj.PrimaryPart
+        end
+
+        return obj:FindFirstChildWhichIsA(
+            "BasePart",
+            true
+        )
+    end
+
+    return nil
+end
+
+--==============================================================
+-- BUSCAR MEJOR HUEVO
+--==============================================================
+
+local function FindBestEgg()
+
+    local BestEgg = nil
+    local BestPart = nil
+    local BestName = nil
+    local BestLucky = -1
+
+    for _, obj in ipairs(
+        Workspace:GetDescendants()
+    ) do
+
+        local eggName, lucky =
+            GetEggData(obj.Name)
+
+        if eggName and lucky then
+
+            local part = GetPart(obj)
+
+            if part then
+
+                if lucky > BestLucky then
+
+                    BestLucky = lucky
+                    BestEgg = obj
+                    BestPart = part
+                    BestName = eggName
+
+                end
+            end
+        end
+    end
+
+    return BestEgg, BestPart, BestName, BestLucky
+end
+
+--==============================================================
+-- FORMATO LUCKY
+--==============================================================
+
+local function FormatLucky(n)
+
+    if n >= 1e12 then
+        return string.format(
+            "%.2fT",
+            n / 1e12
+        )
+    end
+
+    if n >= 1e9 then
+        return string.format(
+            "%.2fB",
+            n / 1e9
+        )
+    end
+
+    if n >= 1e6 then
+        return string.format(
+            "%.2fM",
+            n / 1e6
+        )
+    end
+
+    if n >= 1e3 then
+        return string.format(
+            "%.2fK",
+            n / 1e3
+        )
+    end
+
+    return tostring(n)
+end
 
 --==============================================================
 -- GUI
 --==============================================================
 
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "KOXTA_ZONE_EDITOR"
+Gui.Name = "KOXTA_BEST_EGG_TEST"
 Gui.ResetOnSpawn = false
-Gui.IgnoreGuiInset = true
 Gui.Parent = Player:WaitForChild("PlayerGui")
 
-local Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(340, 355)
-Main.Position = UDim2.new(0.5, -170, 0.5, -177)
-Main.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
-Main.BorderSizePixel = 0
-Main.Parent = Gui
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.fromOffset(270, 150)
+Frame.Position = UDim2.new(
+    0.5,
+    -135,
+    0.5,
+    -75
+)
+Frame.BackgroundColor3 =
+    Color3.fromRGB(12,14,20)
+Frame.BorderSizePixel = 0
+Frame.Parent = Gui
 
 local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 14)
-Corner.Parent = Main
+Corner.CornerRadius = UDim.new(0,12)
+Corner.Parent = Frame
 
 local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(0, 170, 255)
+Stroke.Color =
+    Color3.fromRGB(0,170,255)
 Stroke.Thickness = 2
-Stroke.Parent = Main
+Stroke.Parent = Frame
 
 --==============================================================
 -- TÍTULO
 --==============================================================
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 30)
-Title.Position = UDim2.fromOffset(10, 7)
+Title.Size =
+    UDim2.new(1,-20,0,30)
+Title.Position =
+    UDim2.fromOffset(10,8)
 Title.BackgroundTransparency = 1
-Title.Text = "KOXTA • ZONA DE EXCLUSIÓN"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 15
-Title.TextColor3 = Color3.new(1,1,1)
-Title.Parent = Main
+Title.Text =
+    "🥚 MEJOR HUEVO — TEST TP"
+Title.Font =
+    Enum.Font.GothamBold
+Title.TextSize = 14
+Title.TextColor3 =
+    Color3.fromRGB(255,255,255)
+Title.Parent = Frame
 
 --==============================================================
--- ESTADO
+-- RESULTADO
 --==============================================================
 
-local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1, -20, 0, 22)
-Status.Position = UDim2.fromOffset(10, 38)
-Status.BackgroundTransparency = 1
-Status.Text = "● MOVIENDO CENTRO"
-Status.Font = Enum.Font.GothamBold
-Status.TextSize = 11
-Status.TextColor3 = Color3.fromRGB(0,170,255)
-Status.Parent = Main
+local Result = Instance.new("TextLabel")
+Result.Size =
+    UDim2.new(1,-20,0,42)
+Result.Position =
+    UDim2.fromOffset(10,42)
+Result.BackgroundTransparency = 1
+Result.Text =
+    "Pulsa TP AL MEJOR"
+Result.Font =
+    Enum.Font.Gotham
+Result.TextSize = 11
+Result.TextWrapped = true
+Result.TextColor3 =
+    Color3.fromRGB(180,190,210)
+Result.Parent = Frame
 
 --==============================================================
--- COORDENADAS
+-- BOTÓN
 --==============================================================
 
-local Coords = Instance.new("TextLabel")
-Coords.Size = UDim2.new(1, -20, 0, 65)
-Coords.Position = UDim2.fromOffset(10, 65)
-Coords.BackgroundColor3 = Color3.fromRGB(18,20,28)
-Coords.BorderSizePixel = 0
-Coords.Font = Enum.Font.Code
-Coords.TextSize = 13
-Coords.TextColor3 = Color3.fromRGB(220,230,255)
-Coords.TextXAlignment = Enum.TextXAlignment.Left
-Coords.TextYAlignment = Enum.TextYAlignment.Center
-Coords.Text = "X: 0\nY: 0\nZ: 0"
-Coords.Parent = Main
+local Button = Instance.new("TextButton")
+Button.Size =
+    UDim2.new(1,-20,0,42)
+Button.Position =
+    UDim2.fromOffset(10,95)
+Button.BackgroundColor3 =
+    Color3.fromRGB(0,85,130)
+Button.BorderSizePixel = 0
+Button.Text =
+    "⚡ TP AL MEJOR HUEVO"
+Button.Font =
+    Enum.Font.GothamBold
+Button.TextSize = 12
+Button.TextColor3 =
+    Color3.fromRGB(255,255,255)
+Button.Parent = Frame
 
-local CoordCorner = Instance.new("UICorner")
-CoordCorner.CornerRadius = UDim.new(0,8)
-CoordCorner.Parent = Coords
-
---==============================================================
--- RADIO
---==============================================================
-
-local RadiusText = Instance.new("TextLabel")
-RadiusText.Size = UDim2.new(1, -100, 0, 25)
-RadiusText.Position = UDim2.fromOffset(10, 137)
-RadiusText.BackgroundTransparency = 1
-RadiusText.Text = "RADIO: 100 STUDS"
-RadiusText.Font = Enum.Font.GothamBold
-RadiusText.TextSize = 13
-RadiusText.TextColor3 = Color3.fromRGB(0,170,255)
-RadiusText.TextXAlignment = Enum.TextXAlignment.Left
-RadiusText.Parent = Main
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius =
+    UDim.new(0,9)
+ButtonCorner.Parent = Button
 
 --==============================================================
--- BOTÓN DEL VALOR
+-- TP
 --==============================================================
 
-local StudButton = Instance.new("TextButton")
-StudButton.Size = UDim2.fromOffset(70, 28)
-StudButton.Position = UDim2.new(1, -80, 0, 136)
-StudButton.BackgroundColor3 = Color3.fromRGB(0,65,100)
-StudButton.BorderSizePixel = 0
-StudButton.Text = tostring(Radius)
-StudButton.Font = Enum.Font.GothamBold
-StudButton.TextSize = 12
-StudButton.TextColor3 = Color3.new(1,1,1)
-StudButton.Parent = Main
+Button.Activated:Connect(function()
 
-local StudCorner = Instance.new("UICorner")
-StudCorner.CornerRadius = UDim.new(0,8)
-StudCorner.Parent = StudButton
+    Button.Text = "🔎 BUSCANDO..."
 
---==============================================================
--- SLIDER
---==============================================================
+    local egg, part, name, lucky =
+        FindBestEgg()
 
-local Slider = Instance.new("Frame")
-Slider.Size = UDim2.new(1,-40,0,10)
-Slider.Position = UDim2.fromOffset(20,175)
-Slider.BackgroundColor3 = Color3.fromRGB(45,48,58)
-Slider.BorderSizePixel = 0
-Slider.Parent = Main
+    if not egg or not part then
 
-local SliderCorner = Instance.new("UICorner")
-SliderCorner.CornerRadius = UDim.new(1,0)
-SliderCorner.Parent = Slider
+        Result.Text =
+            "❌ No encontré ningún huevo"
 
-local Fill = Instance.new("Frame")
-Fill.Size = UDim2.new(
-    (Radius-MIN_RADIUS)/(MAX_RADIUS-MIN_RADIUS),
-    0,1,0
-)
-Fill.BackgroundColor3 = Color3.fromRGB(0,170,255)
-Fill.BorderSizePixel = 0
-Fill.Parent = Slider
+        Button.Text =
+            "⚡ TP AL MEJOR HUEVO"
 
-local FillCorner = Instance.new("UICorner")
-FillCorner.CornerRadius = UDim.new(1,0)
-FillCorner.Parent = Fill
-
-local Knob = Instance.new("TextButton")
-Knob.Size = UDim2.fromOffset(22,22)
-Knob.AnchorPoint = Vector2.new(0.5,0.5)
-Knob.Position = UDim2.new(
-    (Radius-MIN_RADIUS)/(MAX_RADIUS-MIN_RADIUS),
-    0,0.5,0
-)
-Knob.BackgroundColor3 = Color3.new(1,1,1)
-Knob.Text = ""
-Knob.BorderSizePixel = 0
-Knob.Parent = Slider
-
-local KnobCorner = Instance.new("UICorner")
-KnobCorner.CornerRadius = UDim.new(1,0)
-KnobCorner.Parent = Knob
-
---==============================================================
--- CÍRCULO AZUL
---==============================================================
-
-local Circle = Instance.new("Part")
-Circle.Name = "KOXTA_BLUE_ZONE"
-Circle.Anchored = true
-Circle.CanCollide = false
-Circle.CanTouch = false
-Circle.CanQuery = false
-Circle.Material = Enum.Material.Neon
-Circle.Color = Color3.fromRGB(0,170,255)
-Circle.Transparency = 0.78
-Circle.Shape = Enum.PartType.Cylinder
-Circle.Parent = workspace
-
-local Ring = Instance.new("Part")
-Ring.Name = "KOXTA_BLUE_RING"
-Ring.Anchored = true
-Ring.CanCollide = false
-Ring.CanTouch = false
-Ring.CanQuery = false
-Ring.Material = Enum.Material.Neon
-Ring.Color = Color3.fromRGB(0,210,255)
-Ring.Transparency = 0.05
-Ring.Shape = Enum.PartType.Cylinder
-Ring.Parent = workspace
-
---==============================================================
--- ACTUALIZAR CÍRCULO
---==============================================================
-
-local function UpdateCircle()
-
-    if not CenterPosition then
         return
     end
 
-    Circle.Size = Vector3.new(
-        0.12,
-        Radius * 2,
-        Radius * 2
-    )
-
-    Circle.CFrame =
-        CFrame.new(
-            CenterPosition.X,
-            CenterPosition.Y,
-            CenterPosition.Z
-        ) *
-        CFrame.Angles(
-            0,
-            0,
-            math.rad(90)
-        )
-
-    Ring.Size = Vector3.new(
-        0.18,
-        Radius * 2 + 1,
-        Radius * 2 + 1
-    )
-
-    Ring.CFrame =
-        CFrame.new(
-            CenterPosition.X,
-            CenterPosition.Y + 0.1,
-            CenterPosition.Z
-        ) *
-        CFrame.Angles(
-            0,
-            0,
-            math.rad(90)
-        )
-end
-
---==============================================================
--- SLIDER
---==============================================================
-
-local Dragging = false
-
-local function UpdateSlider(x)
-
-    local sliderX = Slider.AbsolutePosition.X
-    local sliderWidth = Slider.AbsoluteSize.X
-
-    local alpha = math.clamp(
-        (x - sliderX) / sliderWidth,
-        0,
-        1
-    )
-
-    Radius = math.floor(
-        (
-            MIN_RADIUS +
-            ((MAX_RADIUS - MIN_RADIUS) * alpha)
-        ) / 10
-    ) * 10
-
-    Radius = math.clamp(
-        Radius,
-        MIN_RADIUS,
-        MAX_RADIUS
-    )
-
-    local visualAlpha =
-        (Radius - MIN_RADIUS) /
-        (MAX_RADIUS - MIN_RADIUS)
-
-    Fill.Size = UDim2.new(
-        visualAlpha,0,1,0
-    )
-
-    Knob.Position = UDim2.new(
-        visualAlpha,0,0.5,0
-    )
-
-    RadiusText.Text =
-        "RADIO: " ..
-        Radius ..
-        " STUDS"
-
-    StudButton.Text =
-        tostring(Radius)
-
-    UpdateCircle()
-end
-
-Slider.InputBegan:Connect(function(input)
-
-    if input.UserInputType ==
-        Enum.UserInputType.MouseButton1 then
-
-        Dragging = true
-
-        UpdateSlider(
-            input.Position.X
-        )
-    end
-
-    if input.UserInputType ==
-        Enum.UserInputType.Touch then
-
-        Dragging = true
-
-        UpdateSlider(
-            input.Position.X
-        )
-    end
-end)
-
-Knob.InputBegan:Connect(function(input)
-
-    if input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or input.UserInputType ==
-        Enum.UserInputType.Touch then
-
-        Dragging = true
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-
-    if not Dragging then
-        return
-    end
-
-    if input.UserInputType ==
-        Enum.UserInputType.MouseMovement
-        or input.UserInputType ==
-        Enum.UserInputType.Touch then
-
-        UpdateSlider(
-            input.Position.X
-        )
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-
-    if input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or input.UserInputType ==
-        Enum.UserInputType.Touch then
-
-        Dragging = false
-    end
-end)
-
---==============================================================
--- FIJAR CENTRO
---==============================================================
-
-local FixButton = Instance.new("TextButton")
-FixButton.Size = UDim2.new(1,-20,0,40)
-FixButton.Position = UDim2.fromOffset(10,200)
-FixButton.BackgroundColor3 = Color3.fromRGB(0,65,100)
-FixButton.BorderSizePixel = 0
-FixButton.Text = "🔵 FIJAR CENTRO"
-FixButton.Font = Enum.Font.GothamBold
-FixButton.TextSize = 12
-FixButton.TextColor3 = Color3.new(1,1,1)
-FixButton.Parent = Main
-
-local FixCorner = Instance.new("UICorner")
-FixCorner.CornerRadius = UDim.new(0,9)
-FixCorner.Parent = FixButton
-
-FixButton.Activated:Connect(function()
-
-    local Character = Player.Character
-    if not Character then return end
-
-    local Root =
-        Character:FindFirstChild(
-            "HumanoidRootPart"
-        )
-
-    if not Root then return end
-
-    CenterPosition = Root.Position
-    Locked = true
-
-    Status.Text = "● CENTRO FIJADO"
-    Status.TextColor3 =
-        Color3.fromRGB(0,255,140)
-
-    FixButton.Text =
-        "✓ CENTRO FIJADO"
-
-    UpdateCircle()
-end)
-
---==============================================================
--- GUARDAR ZONA
---==============================================================
-
-local SaveButton = Instance.new("TextButton")
-SaveButton.Size = UDim2.new(1,-20,0,40)
-SaveButton.Position = UDim2.fromOffset(10,248)
-SaveButton.BackgroundColor3 = Color3.fromRGB(15,80,45)
-SaveButton.BorderSizePixel = 0
-SaveButton.Text = "💾 GUARDAR ZONA"
-SaveButton.Font = Enum.Font.GothamBold
-SaveButton.TextSize = 12
-SaveButton.TextColor3 =
-    Color3.fromRGB(120,255,170)
-SaveButton.Parent = Main
-
-local SaveCorner = Instance.new("UICorner")
-SaveCorner.CornerRadius = UDim.new(0,9)
-SaveCorner.Parent = SaveButton
-
-SaveButton.Activated:Connect(function()
-
-    if not CenterPosition then
-        return
-    end
-
-    SavedZone = {
-        Position = CenterPosition,
-        Radius = Radius
-    }
-
-    SaveButton.Text =
-        "✓ ZONA GUARDADA: " ..
-        Radius .. " STUDS"
-
-    Status.Text =
-        "● ZONA LISTA"
-
-    Status.TextColor3 =
-        Color3.fromRGB(0,255,140)
-end)
-
---==============================================================
--- LIBERAR CENTRO
---==============================================================
-
-local UnlockButton = Instance.new("TextButton")
-UnlockButton.Size = UDim2.new(1,-20,0,35)
-UnlockButton.Position = UDim2.fromOffset(10,298)
-UnlockButton.BackgroundColor3 = Color3.fromRGB(35,35,42)
-UnlockButton.BorderSizePixel = 0
-UnlockButton.Text = "LIBERAR CENTRO"
-UnlockButton.Font = Enum.Font.GothamBold
-UnlockButton.TextSize = 11
-UnlockButton.TextColor3 =
-    Color3.fromRGB(190,200,215)
-UnlockButton.Parent = Main
-
-local UnlockCorner = Instance.new("UICorner")
-UnlockCorner.CornerRadius = UDim.new(0,9)
-UnlockCorner.Parent = UnlockButton
-
-UnlockButton.Activated:Connect(function()
-
-    Locked = false
-
-    Status.Text =
-        "● MOVIENDO CENTRO"
-
-    Status.TextColor3 =
-        Color3.fromRGB(0,170,255)
-
-    FixButton.Text =
-        "🔵 FIJAR CENTRO"
-end)
-
---==============================================================
--- ACTUALIZACIÓN EN TIEMPO REAL
---==============================================================
-
-RunService.RenderStepped:Connect(function()
-
-    local Character = Player.Character
+    Result.Text =
+        "🥚 " ..
+        name ..
+        "\n🍀 Lucky: " ..
+        FormatLucky(lucky)
+
+    task.wait(0.15)
+
+    local Character =
+        Player.Character
 
     if not Character then
         return
@@ -505,41 +317,16 @@ RunService.RenderStepped:Connect(function()
         return
     end
 
-    if not Locked then
-        CenterPosition = Root.Position
-    end
+    -- TP ÚNICAMENTE AL HUEVO
+    Root.CFrame =
+        part.CFrame +
+        Vector3.new(0,3,0)
 
-    if CenterPosition then
+    Button.Text =
+        "✓ TP REALIZADO"
 
-        Coords.Text =
-            string.format(
-                "X: %.2f\nY: %.2f\nZ: %.2f",
-                CenterPosition.X,
-                CenterPosition.Y,
-                CenterPosition.Z
-            )
+    task.wait(1)
 
-        UpdateCircle()
-    end
+    Button.Text =
+        "⚡ TP AL MEJOR HUEVO"
 end)
-
---==============================================================
--- INICIO
---==============================================================
-
-local Character =
-    Player.Character or
-    Player.CharacterAdded:Wait()
-
-local Root =
-    Character:WaitForChild(
-        "HumanoidRootPart"
-    )
-
-CenterPosition = Root.Position
-
-UpdateCircle()
-
-print(
-    "KOXTA ZONE EDITOR • READY"
-)
