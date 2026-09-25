@@ -79,7 +79,7 @@ local function getRoot(player)
     return c and c:FindFirstChild("HumanoidRootPart")
 end
 
-local function basePart(player)
+local function getPlayerBase(player)
     for _,folderName in ipairs({"Plots","Bases","BasesFolder","PlayerBases"}) do
         local folder = Workspace:FindFirstChild(folderName)
         if folder then
@@ -87,7 +87,7 @@ local function basePart(player)
                 if base.Name == player.Name
                     or base:GetAttribute("Owner") == player.Name
                     or base:GetAttribute("OwnerUserId") == player.UserId then
-                    return getPart(base)
+                    return base
                 end
             end
         end
@@ -96,16 +96,51 @@ local function basePart(player)
     for _,obj in ipairs(Workspace:GetDescendants()) do
         if obj:GetAttribute("OwnerUserId") == player.UserId
             or obj:GetAttribute("Owner") == player.Name then
-            local p = getPart(obj)
-            if p then return p end
+            return obj
         end
     end
 end
 
-local function bestEgg()
+local function basePart(player)
+    local base = getPlayerBase(player)
+    return base and getPart(base)
+end
+
+local function isInsideMyBase(player, obj)
+    local base = getPlayerBase(player)
+    if not base or not obj then return false end
+    return obj == base or obj:IsDescendantOf(base)
+end
+
+local function isOwnedObject(player, obj)
+    if not obj then return false end
+
+    -- Anything physically inside the player's base is ignored.
+    if isInsideMyBase(player, obj) then
+        return true
+    end
+
+    -- Also respect common ownership attributes on eggs, pets and containers.
+    local ownerUserId = obj:GetAttribute("OwnerUserId")
+    local owner = obj:GetAttribute("Owner")
+
+    if ownerUserId == player.UserId then
+        return true
+    end
+
+    if owner == player.Name or owner == tostring(player.UserId) then
+        return true
+    end
+
+    return false
+end
+
+local function bestEgg(player)
     local best, value = nil, -math.huge
     for _,egg in ipairs(Workspace:GetDescendants()) do
-        if isEgg(egg) and not isPlaced(egg) then
+        if isEgg(egg)
+            and not isPlaced(egg)
+            and not isOwnedObject(player,egg) then
             local d = eggData(egg.Name)
             local p = getPart(egg)
             local prompt = getPrompt(egg)
@@ -307,10 +342,24 @@ task.spawn(function()
     while task.wait(2) do
         for _,obj in ipairs(Workspace:GetDescendants()) do
             if isEgg(obj) then
+                -- Only display ESP for eggs that are not inside a player's own base.
+                local belongsToSomeone = false
                 for player,data in pairs(active) do
-                    if data.ESP then
-                        pcall(function() addESP(obj) end)
+                    if isInsideMyBase(player,obj) then
+                        belongsToSomeone = true
+                        break
                     end
+                end
+
+                if not belongsToSomeone then
+                    for player,data in pairs(active) do
+                        if data.ESP then
+                            pcall(function() addESP(obj) end)
+                        end
+                    end
+                else
+                    local x = obj:FindFirstChild("KOXTA_EggESP")
+                    if x then x:Destroy() end
                 end
             end
         end
@@ -322,7 +371,7 @@ task.spawn(function()
         for player,data in pairs(active) do
             if data.AUTO then
                 local root = getRoot(player)
-                local egg = bestEgg()
+                local egg = bestEgg(player)
 
                 if root and egg and egg.Parent then
                     local part = getPart(egg)
@@ -364,8 +413,18 @@ end)
 Workspace.DescendantAdded:Connect(function(obj)
     if isEgg(obj) then
         task.wait(.1)
-        for _,data in pairs(active) do
-            if data.ESP then pcall(function() addESP(obj) end) end
+        local ignored = false
+        for player,data in pairs(active) do
+            if isInsideMyBase(player,obj) then
+                ignored = true
+                break
+            end
+        end
+
+        if not ignored then
+            for _,data in pairs(active) do
+                if data.ESP then pcall(function() addESP(obj) end) end
+            end
         end
     end
 end)
