@@ -466,229 +466,117 @@ local function AutoGrab(egg)
 end
 
 --==============================================================
---==============================================================
--- GUI • MISMA MECÁNICA / INTERFAZ SIMPLE
+-- GUI
 --==============================================================
 
 local ScreenGui =
     Instance.new("ScreenGui")
 
 ScreenGui.Name =
-    "INSTA_TP_BLACK_EDITION"
+    "INSTA_STEAL_BLACK_EDITION"
 
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
 ScreenGui.Parent =
     LocalPlayer:WaitForChild("PlayerGui")
 
 --==============================================================
--- BOTÓN K: ABRIR / CERRAR
---==============================================================
-
-local OpenButton =
-    Instance.new("TextButton")
-
-OpenButton.Name =
-    "OpenButton"
-
-OpenButton.Size =
-    UDim2.fromOffset(42, 42)
-
-OpenButton.Position =
-    UDim2.new(1, -55, 0, 18)
-
-OpenButton.BackgroundColor3 =
-    Color3.fromRGB(8, 8, 10)
-
-OpenButton.BackgroundTransparency = 0.12
-OpenButton.BorderSizePixel = 0
-OpenButton.AutoButtonColor = false
-OpenButton.Text = "K"
-OpenButton.Font = Enum.Font.GothamBlack
-OpenButton.TextSize = 17
-
-OpenButton.TextColor3 =
-    Color3.fromRGB(220, 220, 225)
-
-OpenButton.TextStrokeTransparency = 1
-OpenButton.Visible = false
-OpenButton.ZIndex = 100
-OpenButton.Parent = ScreenGui
-
-local OpenCorner =
-    Instance.new("UICorner")
-
-OpenCorner.CornerRadius =
-    UDim.new(1, 0)
-
-OpenCorner.Parent = OpenButton
-
-local OpenStroke =
-    Instance.new("UIStroke")
-
-OpenStroke.Thickness = 1
-OpenStroke.Color =
-    Color3.fromRGB(85, 85, 92)
-
-OpenStroke.Parent = OpenButton
-
---==============================================================
--- PANEL
+-- PANEL ESTILO LENNON HUB
 --==============================================================
 
 local Main =
     Instance.new("Frame")
 
-Main.Name = "Main"
-
 Main.Size =
-    UDim2.fromOffset(290, 195)
+    UDim2.fromOffset(305, 190)
 
 Main.Position =
-    UDim2.new(1, -310, 0, 120)
+    UDim2.new(1, -325, 0, 120)
 
 Main.BackgroundColor3 =
-    Color3.fromRGB(5, 5, 7)
+    Color3.fromRGB(7, 8, 9)
 
-Main.BackgroundTransparency = 0.16
+Main.BackgroundTransparency = 0.08
 Main.BorderSizePixel = 0
-Main.ZIndex = 10
 Main.Parent = ScreenGui
 
-local Corner =
+local MainCorner =
     Instance.new("UICorner")
 
-Corner.CornerRadius =
-    UDim.new(0, 12)
+MainCorner.CornerRadius =
+    UDim.new(0, 16)
 
-Corner.Parent = Main
+MainCorner.Parent = Main
 
 local Stroke =
     Instance.new("UIStroke")
 
-Stroke.Thickness = 1
-Stroke.Color =
-    Color3.fromRGB(72, 72, 78)
-
+Stroke.Thickness = 1.5
+Stroke.Color = Color3.fromRGB(55, 57, 61)
+Stroke.Transparency = 0.15
 Stroke.Parent = Main
 
+-- sombra
+local Shadow =
+    Instance.new("ImageLabel")
+
+Shadow.Name = "Shadow"
+Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+Shadow.Position = UDim2.new(0.5, 0, 0.5, 4)
+Shadow.Size = UDim2.new(1, 24, 1, 24)
+Shadow.BackgroundTransparency = 1
+Shadow.Image = "rbxassetid://1316045217"
+Shadow.ImageTransparency = 0.45
+Shadow.ScaleType = Enum.ScaleType.Slice
+Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+Shadow.ZIndex = 0
+Shadow.Parent = Main
+
 --==============================================================
--- BARRA SUPERIOR / ARRASTRE
+-- BARRA SUPERIOR
 --==============================================================
 
 local Top =
     Instance.new("Frame")
 
-Top.Name = "Top"
-
 Top.Size =
-    UDim2.new(1, -12, 0, 40)
+    UDim2.new(1, -12, 0, 43)
 
 Top.Position =
-    UDim2.fromOffset(6, 5)
+    UDim2.fromOffset(6, 6)
 
 Top.BackgroundColor3 =
-    Color3.fromRGB(12, 12, 15)
+    Color3.fromRGB(12, 13, 15)
 
-Top.BackgroundTransparency = 0.18
+Top.BackgroundTransparency = 0.12
 Top.BorderSizePixel = 0
-Top.Active = true
-Top.ZIndex = 20
 Top.Parent = Main
 
 local TopCorner =
     Instance.new("UICorner")
 
 TopCorner.CornerRadius =
-    UDim.new(0, 10)
+    UDim.new(0, 12)
 
 TopCorner.Parent = Top
 
-local Title =
-    Instance.new("TextLabel")
-
-Title.Size =
-    UDim2.new(1, -105, 1, 0)
-
-Title.Position =
-    UDim2.fromOffset(46, 0)
-
-Title.BackgroundTransparency = 1
-
-Title.Text =
-    "INSTA TP"
-
-Title.Font =
-    Enum.Font.GothamBold
-
-Title.TextSize = 12
-
-Title.TextColor3 =
-    Color3.fromRGB(235, 235, 240)
-
-Title.TextStrokeTransparency = 1
-
-Title.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-Title.ZIndex = 22
-Title.Parent = Top
-
-local SubTitle =
-    Instance.new("TextLabel")
-
-SubTitle.Size =
-    UDim2.new(1, -105, 0, 13)
-
-SubTitle.Position =
-    UDim2.fromOffset(47, 21)
-
-SubTitle.BackgroundTransparency = 1
-
-SubTitle.Text =
-    "RIDE A PET  /  KAITUN"
-
-SubTitle.Font =
-    Enum.Font.GothamMedium
-
-SubTitle.TextSize = 7
-
-SubTitle.TextColor3 =
-    Color3.fromRGB(140, 140, 147)
-
-SubTitle.TextStrokeTransparency = 1
-
-SubTitle.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-SubTitle.ZIndex = 22
-SubTitle.Parent = Top
-
---==============================================================
--- FOTO 1
---==============================================================
-
 local Logo =
-    Instance.new("ImageLabel")
-
-Logo.Name = "Logo"
+    Instance.new("TextLabel")
 
 Logo.Size =
-    UDim2.fromOffset(32, 32)
+    UDim2.fromOffset(31, 31)
 
 Logo.Position =
-    UDim2.fromOffset(7, 4)
+    UDim2.fromOffset(6, 6)
 
-Logo.BackgroundTransparency = 1
+Logo.BackgroundColor3 =
+    Color3.fromRGB(32, 34, 37)
 
-Logo.Image =
-    "rbxassetid://103645600156879"
-
-Logo.ScaleType =
-    Enum.ScaleType.Fit
-
-Logo.ZIndex = 23
+Logo.BorderSizePixel = 0
+Logo.Text = "⚡"
+Logo.TextSize = 17
+Logo.Font = Enum.Font.GothamBold
+Logo.TextColor3 = Color3.fromRGB(255, 255, 255)
 Logo.Parent = Top
 
 local LogoCorner =
@@ -699,76 +587,95 @@ LogoCorner.CornerRadius =
 
 LogoCorner.Parent = Logo
 
---==============================================================
--- FOTO 2
---==============================================================
+local Title =
+    Instance.new("TextLabel")
 
-local CornerImage =
-    Instance.new("ImageLabel")
+Title.Size =
+    UDim2.new(1, -105, 0, 18)
 
-CornerImage.Name = "CornerImage"
+Title.Position =
+    UDim2.fromOffset(44, 5)
 
-CornerImage.Size =
-    UDim2.fromOffset(25, 25)
+Title.BackgroundTransparency = 1
+Title.Text = "INSTA HUB"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 13
+Title.TextColor3 = Color3.fromRGB(245, 245, 245)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Top
 
-CornerImage.Position =
-    UDim2.new(1, -59, 0, 7)
+local Subtitle =
+    Instance.new("TextLabel")
 
-CornerImage.BackgroundTransparency = 1
+Subtitle.Size =
+    UDim2.new(1, -105, 0, 14)
 
-CornerImage.Image =
-    "rbxassetid://81940639078484"
+Subtitle.Position =
+    UDim2.fromOffset(44, 22)
 
-CornerImage.ScaleType =
-    Enum.ScaleType.Fit
+Subtitle.BackgroundTransparency = 1
+Subtitle.Text = "INSTA STEAL / BLACK EDITION"
+Subtitle.Font = Enum.Font.Gotham
+Subtitle.TextSize = 7
+Subtitle.TextColor3 = Color3.fromRGB(145, 148, 153)
+Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+Subtitle.Parent = Top
 
-CornerImage.ZIndex = 23
-CornerImage.Parent = Top
-
---==============================================================
--- X CERRAR
---==============================================================
-
-local CloseButton =
+local DiscordButton =
     Instance.new("TextButton")
 
-CloseButton.Name = "CloseButton"
+DiscordButton.Size =
+    UDim2.fromOffset(27, 27)
 
-CloseButton.Size =
-    UDim2.fromOffset(25, 25)
+DiscordButton.Position =
+    UDim2.new(1, -63, 0, 8)
 
-CloseButton.Position =
-    UDim2.new(1, -30, 0, 7)
+DiscordButton.BackgroundColor3 =
+    Color3.fromRGB(27, 29, 33)
 
-CloseButton.BackgroundColor3 =
-    Color3.fromRGB(28, 28, 32)
+DiscordButton.BorderSizePixel = 0
+DiscordButton.Text = "◉"
+DiscordButton.Font = Enum.Font.GothamBold
+DiscordButton.TextSize = 13
+DiscordButton.TextColor3 = Color3.fromRGB(220, 222, 225)
+DiscordButton.AutoButtonColor = false
+DiscordButton.Parent = Top
 
-CloseButton.BackgroundTransparency = 0.1
-CloseButton.BorderSizePixel = 0
-CloseButton.AutoButtonColor = false
-
-CloseButton.Text = "×"
-
-CloseButton.Font =
-    Enum.Font.GothamBold
-
-CloseButton.TextSize = 16
-
-CloseButton.TextColor3 =
-    Color3.fromRGB(195, 195, 200)
-
-CloseButton.TextStrokeTransparency = 1
-
-CloseButton.ZIndex = 30
-CloseButton.Parent = Top
-
-local CloseCorner =
+local DiscordCorner =
     Instance.new("UICorner")
 
-CloseCorner.CornerRadius =
-    UDim.new(1, 0)
+DiscordCorner.CornerRadius =
+    UDim.new(0, 8)
 
-CloseCorner.Parent = CloseButton
+DiscordCorner.Parent = DiscordButton
+
+local PlusButton =
+    Instance.new("TextButton")
+
+PlusButton.Size =
+    UDim2.fromOffset(27, 27)
+
+PlusButton.Position =
+    UDim2.new(1, -31, 0, 8)
+
+PlusButton.BackgroundColor3 =
+    Color3.fromRGB(27, 29, 33)
+
+PlusButton.BorderSizePixel = 0
+PlusButton.Text = "+"
+PlusButton.Font = Enum.Font.GothamBold
+PlusButton.TextSize = 15
+PlusButton.TextColor3 = Color3.fromRGB(225, 225, 225)
+PlusButton.AutoButtonColor = false
+PlusButton.Parent = Top
+
+local PlusCorner =
+    Instance.new("UICorner")
+
+PlusCorner.CornerRadius =
+    UDim.new(0, 8)
+
+PlusCorner.Parent = PlusButton
 
 --==============================================================
 -- INDICADOR
@@ -778,47 +685,70 @@ local Status =
     Instance.new("TextLabel")
 
 Status.Size =
-    UDim2.fromOffset(80, 20)
+    UDim2.fromOffset(75, 15)
 
 Status.Position =
-    UDim2.new(1, -88, 0, 13)
+    UDim2.new(1, -87, 0, 53)
 
 Status.BackgroundTransparency = 1
-
-Status.Text =
-    "● READY"
-
-Status.Font =
-    Enum.Font.GothamBold
-
-Status.TextSize = 8
-
-Status.TextColor3 =
-    Color3.fromRGB(130, 130, 135)
-
-Status.TextStrokeTransparency = 1
-Status.ZIndex = 25
+Status.Text = "● READY"
+Status.Font = Enum.Font.GothamBold
+Status.TextSize = 7
+Status.TextColor3 = Color3.fromRGB(135, 138, 143)
+Status.TextXAlignment = Enum.TextXAlignment.Right
 Status.Parent = Main
 
 --==============================================================
--- MEJOR HUEVO
+-- CURRENT TARGET
 --==============================================================
+
+local TargetLabel =
+    Instance.new("TextLabel")
+
+TargetLabel.Size =
+    UDim2.new(1, -30, 0, 14)
+
+TargetLabel.Position =
+    UDim2.fromOffset(15, 50)
+
+TargetLabel.BackgroundTransparency = 1
+TargetLabel.Text = "CURRENT TARGET"
+TargetLabel.Font = Enum.Font.GothamBold
+TargetLabel.TextSize = 8
+TargetLabel.TextColor3 = Color3.fromRGB(150, 153, 158)
+TargetLabel.TextXAlignment = Enum.TextXAlignment.Left
+TargetLabel.Parent = Main
+
+local Arrow =
+    Instance.new("TextLabel")
+
+Arrow.Size =
+    UDim2.fromOffset(20, 16)
+
+Arrow.Position =
+    UDim2.new(1, -27, 0, 49)
+
+Arrow.BackgroundTransparency = 1
+Arrow.Text = "⌄"
+Arrow.Font = Enum.Font.GothamBold
+Arrow.TextSize = 15
+Arrow.TextColor3 = Color3.fromRGB(190, 193, 198)
+Arrow.Parent = Main
 
 local EggCard =
     Instance.new("Frame")
 
 EggCard.Size =
-    UDim2.new(1, -20, 0, 66)
+    UDim2.new(1, -20, 0, 45)
 
 EggCard.Position =
-    UDim2.fromOffset(10, 48)
+    UDim2.fromOffset(10, 67)
 
 EggCard.BackgroundColor3 =
-    Color3.fromRGB(11, 11, 14)
+    Color3.fromRGB(13, 14, 16)
 
-EggCard.BackgroundTransparency = 0.18
+EggCard.BackgroundTransparency = 0.15
 EggCard.BorderSizePixel = 0
-EggCard.ZIndex = 21
 EggCard.Parent = Main
 
 local EggCorner =
@@ -833,75 +763,80 @@ local EggStroke =
     Instance.new("UIStroke")
 
 EggStroke.Color =
-    Color3.fromRGB(40, 40, 45)
+    Color3.fromRGB(42, 44, 48)
 
 EggStroke.Thickness = 1
-
+EggStroke.Transparency = 0.25
 EggStroke.Parent = EggCard
 
 local EggText =
     Instance.new("TextLabel")
 
 EggText.Size =
-    UDim2.new(1, -18, 1, -8)
+    UDim2.new(1, -18, 1, -4)
 
 EggText.Position =
-    UDim2.fromOffset(9, 4)
+    UDim2.fromOffset(9, 2)
 
 EggText.BackgroundTransparency = 1
-
 EggText.Text =
     "🥚  MEJOR HUEVO\nBuscando..."
 
 EggText.Font =
     Enum.Font.GothamBold
 
-EggText.TextSize = 11
-
-EggText.TextColor3 =
-    Color3.fromRGB(235, 235, 240)
-
-EggText.TextStrokeTransparency = 1
-
-EggText.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-EggText.ZIndex = 23
+EggText.TextSize = 10
+EggText.TextColor3 = Color3.fromRGB(240, 240, 243)
+EggText.TextXAlignment = Enum.TextXAlignment.Left
+EggText.TextYAlignment = Enum.TextYAlignment.Center
 EggText.Parent = EggCard
 
 --==============================================================
--- BOTONES — MISMA MECÁNICA ORIGINAL
+-- SEPARADOR
+--==============================================================
+
+local Divider =
+    Instance.new("Frame")
+
+Divider.Size =
+    UDim2.new(1, -22, 0, 1)
+
+Divider.Position =
+    UDim2.fromOffset(11, 116)
+
+Divider.BackgroundColor3 =
+    Color3.fromRGB(39, 40, 43)
+
+Divider.BorderSizePixel = 0
+Divider.Parent = Main
+
+--==============================================================
+-- INSTA STEAL
 --==============================================================
 
 local TPButton =
     Instance.new("TextButton")
 
 TPButton.Size =
-    UDim2.fromOffset(130, 42)
+    UDim2.fromOffset(154, 42)
 
 TPButton.Position =
-    UDim2.fromOffset(10, 122)
+    UDim2.fromOffset(10, 128)
 
 TPButton.BackgroundColor3 =
-    Color3.fromRGB(15, 15, 18)
+    Color3.fromRGB(20, 21, 23)
 
-TPButton.BackgroundTransparency = 0.12
+TPButton.BackgroundTransparency = 0.08
 TPButton.BorderSizePixel = 0
-
 TPButton.Text =
-    "INSTA TP  OFF"
+    "INSTA STEAL  OFF"
 
 TPButton.Font =
     Enum.Font.GothamBold
 
-TPButton.TextSize = 10
-
-TPButton.TextColor3 =
-    Color3.fromRGB(255, 70, 70)
-
-TPButton.TextStrokeTransparency = 1
+TPButton.TextSize = 9
+TPButton.TextColor3 = Color3.fromRGB(255, 70, 70)
 TPButton.AutoButtonColor = false
-TPButton.ZIndex = 25
 TPButton.Parent = Main
 
 local TPCorner =
@@ -918,39 +853,36 @@ local TPStroke =
 TPStroke.Color =
     Color3.fromRGB(255, 70, 70)
 
-TPStroke.Thickness = 1.3
-
+TPStroke.Thickness = 1.2
 TPStroke.Parent = TPButton
+
+--==============================================================
+-- LOOP
+--==============================================================
 
 local LOPButton =
     Instance.new("TextButton")
 
 LOPButton.Size =
-    UDim2.fromOffset(130, 42)
+    UDim2.fromOffset(120, 42)
 
 LOPButton.Position =
-    UDim2.fromOffset(150, 122)
+    UDim2.fromOffset(175, 128)
 
 LOPButton.BackgroundColor3 =
-    Color3.fromRGB(15, 15, 18)
+    Color3.fromRGB(20, 21, 23)
 
-LOPButton.BackgroundTransparency = 0.12
+LOPButton.BackgroundTransparency = 0.08
 LOPButton.BorderSizePixel = 0
-
 LOPButton.Text =
-    "LOP  OFF"
+    "LOOP  OFF"
 
 LOPButton.Font =
     Enum.Font.GothamBold
 
-LOPButton.TextSize = 10
-
-LOPButton.TextColor3 =
-    Color3.fromRGB(150, 150, 155)
-
-LOPButton.TextStrokeTransparency = 1
+LOPButton.TextSize = 9
+LOPButton.TextColor3 = Color3.fromRGB(150, 153, 158)
 LOPButton.AutoButtonColor = false
-LOPButton.ZIndex = 25
 LOPButton.Parent = Main
 
 local LOPCorner =
@@ -965,32 +897,145 @@ local LOPStroke =
     Instance.new("UIStroke")
 
 LOPStroke.Color =
-    Color3.fromRGB(65, 65, 70)
+    Color3.fromRGB(65, 67, 72)
 
-LOPStroke.Thickness = 1.3
-
+LOPStroke.Thickness = 1.2
 LOPStroke.Parent = LOPButton
 
 --==============================================================
--- ABRIR / CERRAR — SOLO INTERFAZ
+-- ANIMACIÓN DEL BORDE
 --==============================================================
 
-local InterfaceOpen = true
+task.spawn(function()
 
-CloseButton.Activated:Connect(function()
-    InterfaceOpen = false
-    Main.Visible = false
-    OpenButton.Visible = true
-end)
+    local t = 0
 
-OpenButton.Activated:Connect(function()
-    InterfaceOpen = true
-    Main.Visible = true
-    OpenButton.Visible = false
+    while Main.Parent do
+
+        t += 0.035
+
+        local pulse =
+            0.5 +
+            math.sin(t) * 0.5
+
+        Stroke.Transparency =
+            0.05 + (pulse * 0.18)
+
+        task.wait(0.03)
+
+    end
+
 end)
 
 --==============================================================
--- FIN DE GUI
+-- ANIMACIÓN DE BOTONES
+--==============================================================
+
+local function ButtonPulse(button)
+
+    local original = button.Size
+
+    TweenService:Create(
+        button,
+        TweenInfo.new(
+            0.08,
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
+        ),
+        {
+            Size = UDim2.fromOffset(
+                original.X.Offset - 5,
+                original.Y.Offset - 3
+            )
+        }
+    ):Play()
+
+    task.delay(0.08, function()
+
+        if button.Parent then
+
+            TweenService:Create(
+                button,
+                TweenInfo.new(
+                    0.14,
+                    Enum.EasingStyle.Back,
+                    Enum.EasingDirection.Out
+                ),
+                {
+                    Size = original
+                }
+            ):Play()
+
+        end
+
+    end)
+
+end
+
+--==============================================================
+-- EFECTO HOVER / TOUCH
+--==============================================================
+
+local function AddButtonEffect(button, strokeObject)
+
+    button.MouseEnter:Connect(function()
+
+        TweenService:Create(
+            strokeObject,
+            TweenInfo.new(0.12),
+            {
+                Transparency = 0
+            }
+        ):Play()
+
+    end)
+
+    button.MouseLeave:Connect(function()
+
+        TweenService:Create(
+            strokeObject,
+            TweenInfo.new(0.12),
+            {
+                Transparency = 0.05
+            }
+        ):Play()
+
+    end)
+
+end
+
+AddButtonEffect(TPButton, TPStroke)
+AddButtonEffect(LOPButton, LOPStroke)
+
+-- ACTUALIZAR PANEL
+--==============================================================
+
+local function UpdateUI()
+
+    if BestEgg and BestEgg.Parent then
+
+        local data =
+            GetEggData(BestEgg.Name)
+
+        if data then
+
+            EggText.Text =
+                "🥚  MEJOR HUEVO\n"
+                .. BestEgg.Name
+                .. "   •   🍀 Lucky: "
+                .. data.Luck
+
+        end
+
+    else
+
+        EggText.Text =
+            "🥚  MEJOR HUEVO\nBuscando..."
+
+    end
+
+end
+
 --==============================================================
 -- CICLO
 --==============================================================
@@ -1104,7 +1149,7 @@ TPButton.Activated:Connect(function()
         SaveSpawn()
 
         TPButton.Text =
-            "INSTA TP  ON"
+            "INSTA STEAL  ON"
 
         TPButton.TextColor3 =
             Color3.fromRGB(0, 255, 150)
@@ -1158,7 +1203,7 @@ TPButton.Activated:Connect(function()
                 InstaTP = false
 
                 TPButton.Text =
-                    "INSTA TP  OFF"
+                    "INSTA STEAL  OFF"
 
                 TPButton.TextColor3 =
                     Color3.fromRGB(255, 70, 70)
@@ -1178,7 +1223,7 @@ TPButton.Activated:Connect(function()
         InstaTP = false
 
         TPButton.Text =
-            "INSTA TP  OFF"
+            "INSTA STEAL  OFF"
 
         TPButton.TextColor3 =
             Color3.fromRGB(255, 70, 70)
@@ -1213,20 +1258,14 @@ task.spawn(function()
 end)
 
 --==============================================================
---==============================================================
--- PANEL MOVIBLE — MÓVIL / PC
--- SOLO MUEVE LA INTERFAZ, NO CAMBIA LA MECÁNICA
+-- PANEL MOVIBLE
 --==============================================================
 
 local dragging = false
-local dragStart = nil
-local startPosition = nil
-local dragInput = nil
+local dragStart
+local startPosition
 
 local function UpdateDrag(input)
-    if not dragging or not dragStart or not startPosition then
-        return
-    end
 
     local delta =
         input.Position - dragStart
@@ -1238,61 +1277,91 @@ local function UpdateDrag(input)
             startPosition.Y.Scale,
             startPosition.Y.Offset + delta.Y
         )
+
 end
 
-local function BeginDrag(input)
-    if input.UserInputType ~= Enum.UserInputType.MouseButton1
-        and input.UserInputType ~= Enum.UserInputType.Touch then
-        return
+Top.InputBegan:Connect(function(input)
+
+    if
+        input.UserInputType ==
+        Enum.UserInputType.MouseButton1
+        or
+        input.UserInputType ==
+        Enum.UserInputType.Touch
+    then
+
+        dragging = true
+        dragStart = input.Position
+        startPosition = Main.Position
+
     end
 
-    dragging = true
-    dragStart = input.Position
-    startPosition = Main.Position
-
-    if dragInput then
-        dragInput:Disconnect()
-        dragInput = nil
-    end
-
-    dragInput = UserInputService.InputChanged:Connect(function(changedInput)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if changedInput.UserInputType == Enum.UserInputType.MouseMovement then
-                UpdateDrag(changedInput)
-            end
-        elseif input.UserInputType == Enum.UserInputType.Touch then
-            if changedInput.UserInputType == Enum.UserInputType.Touch then
-                UpdateDrag(changedInput)
-            end
-        end
-    end)
-end
-
--- Se puede agarrar desde toda la barra superior, el título o las fotos.
-Top.InputBegan:Connect(BeginDrag)
-Title.InputBegan:Connect(BeginDrag)
-SubTitle.InputBegan:Connect(BeginDrag)
-Logo.InputBegan:Connect(BeginDrag)
-CornerImage.InputBegan:Connect(BeginDrag)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-        dragging = false
-        dragStart = nil
-        startPosition = nil
-
-        if dragInput then
-            dragInput:Disconnect()
-            dragInput = nil
-        end
-    end
 end)
 
--- ANIMACIÓN DE ENTRADA
--- Desactivada para no alterar la interfaz ni su transparencia.
+Top.InputChanged:Connect(function(input)
 
+    if
+        input.UserInputType ==
+        Enum.UserInputType.MouseMovement
+        or
+        input.UserInputType ==
+        Enum.UserInputType.Touch
+    then
+
+        if dragging then
+            UpdateDrag(input)
+        end
+
+    end
+
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+
+    if
+        input.UserInputType ==
+        Enum.UserInputType.MouseButton1
+        or
+        input.UserInputType ==
+        Enum.UserInputType.Touch
+    then
+
+        dragging = false
+
+    end
+
+end)
+
+--==============================================================
+-- ANIMACIÓN DE ENTRADA
+--==============================================================
+
+local originalPosition = Main.Position
+
+Main.Position =
+    UDim2.new(
+        1,
+        -300,
+        0,
+        80
+    )
+
+Main.BackgroundTransparency = 1
+
+TweenService:Create(
+    Main,
+    TweenInfo.new(
+        0.45,
+        Enum.EasingStyle.Back,
+        Enum.EasingDirection.Out
+    ),
+    {
+        Position = originalPosition,
+        BackgroundTransparency = 0
+    }
+):Play()
+
+--==============================================================
 -- INICIO
 --==============================================================
 
