@@ -1408,115 +1408,106 @@ TweenService:Create(
 RefreshBestEgg()
 UpdateUI()
 
+
 --==============================================================
--- CERRAR / ABRIR INTERFAZ - FIX V4
+-- GUARDAR INTERFAZ / FOTO PARA ABRIR - V5
 --==============================================================
 
-local MainVisible = true
+local InterfaceSaved = false
 
-local OpenButton = Instance.new("TextButton")
-OpenButton.Name = "OpenButton"
-OpenButton.Parent = ScreenGui
-OpenButton.Size = UDim2.fromOffset(48, 48)
-OpenButton.Position = UDim2.new(1, -62, 0, 85)
-OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-OpenButton.BackgroundTransparency = 0.20
-OpenButton.Text = "K"
-OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenButton.TextSize = 22
-OpenButton.Font = Enum.Font.GothamBold
-OpenButton.AutoButtonColor = true
-OpenButton.Visible = false
-OpenButton.Active = true
-OpenButton.ZIndex = 100
+-- El botón que antes era X ahora es GUARDAR INTERFAZ.
+local SaveInterfaceButton = Instance.new("TextButton")
+SaveInterfaceButton.Name = "SaveInterfaceButton"
+SaveInterfaceButton.Parent = Top
+SaveInterfaceButton.Size = UDim2.fromOffset(125, 28)
+SaveInterfaceButton.Position = UDim2.new(1, -135, 0.5, -14)
+SaveInterfaceButton.BackgroundTransparency = 1
+SaveInterfaceButton.Text = "GUARDAR INTERFAZ"
+SaveInterfaceButton.TextColor3 = Color3.fromRGB(190, 190, 195)
+SaveInterfaceButton.TextSize = 11
+SaveInterfaceButton.Font = Enum.Font.GothamMedium
+SaveInterfaceButton.AutoButtonColor = false
+SaveInterfaceButton.Active = true
+SaveInterfaceButton.ZIndex = 100
 
-local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(1, 0)
-OpenCorner.Parent = OpenButton
+-- Botón de reapertura usando la imagen solicitada.
+local ReopenButton = Instance.new("ImageButton")
+ReopenButton.Name = "ReopenButton"
+ReopenButton.Parent = ScreenGui
+ReopenButton.Size = UDim2.fromOffset(58, 58)
+ReopenButton.Position = UDim2.new(1, -72, 0, 82)
+ReopenButton.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
+ReopenButton.BackgroundTransparency = 0.20
+ReopenButton.Image = "rbxassetid://103645600156879"
+ReopenButton.ScaleType = Enum.ScaleType.Crop
+ReopenButton.Visible = false
+ReopenButton.Active = true
+ReopenButton.AutoButtonColor = true
+ReopenButton.ZIndex = 200
 
-local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Color = Color3.fromRGB(145, 145, 150)
-OpenStroke.Thickness = 1
-OpenStroke.Transparency = 0
-OpenStroke.Parent = OpenButton
+local ReopenCorner = Instance.new("UICorner")
+ReopenCorner.CornerRadius = UDim.new(1, 0)
+ReopenCorner.Parent = ReopenButton
 
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
-CloseButton.Parent = Top
-CloseButton.Size = UDim2.fromOffset(30, 30)
-CloseButton.Position = UDim2.new(1, -38, 0.5, -15)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "×"
-CloseButton.TextColor3 = Color3.fromRGB(190, 190, 195)
-CloseButton.TextSize = 25
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.AutoButtonColor = false
-CloseButton.Active = true
-CloseButton.ZIndex = 100
+local ReopenStroke = Instance.new("UIStroke")
+ReopenStroke.Color = Color3.fromRGB(105, 105, 110)
+ReopenStroke.Thickness = 1
+ReopenStroke.Parent = ReopenButton
 
-local function SetPanelVisible(state)
-    MainVisible = state
-    Main.Visible = state
-    OpenButton.Visible = not state
+local function SaveAndHideInterface()
+    InterfaceSaved = true
 
-    if state then
-        Main.Active = true
-        Top.Active = true
-    end
+    -- Guarda la posición actual antes de ocultar.
+    local savedPosition = Main.Position
+
+    Main.Visible = false
+    ReopenButton.Visible = true
+
+    -- Al reabrir conserva exactamente la posición.
+    ReopenButton:SetAttribute("SavedXScale", savedPosition.X.Scale)
+    ReopenButton:SetAttribute("SavedXOffset", savedPosition.X.Offset)
+    ReopenButton:SetAttribute("SavedYScale", savedPosition.Y.Scale)
+    ReopenButton:SetAttribute("SavedYOffset", savedPosition.Y.Offset)
 end
 
-CloseButton.MouseButton1Click:Connect(function()
-    SetPanelVisible(false)
-end)
+local function ReopenInterface()
+    if not InterfaceSaved then
+        return
+    end
 
-OpenButton.MouseButton1Click:Connect(function()
-    SetPanelVisible(true)
-end)
+    local xs = ReopenButton:GetAttribute("SavedXScale") or 0
+    local xo = ReopenButton:GetAttribute("SavedXOffset") or 0
+    local ys = ReopenButton:GetAttribute("SavedYScale") or 0
+    local yo = ReopenButton:GetAttribute("SavedYOffset") or 0
 
-CloseButton.Activated:Connect(function()
-    SetPanelVisible(false)
-end)
+    Main.Position = UDim2.new(xs, xo, ys, yo)
+    Main.Visible = true
+    ReopenButton.Visible = false
+end
 
-OpenButton.Activated:Connect(function()
-    SetPanelVisible(true)
-end)
+SaveInterfaceButton.Activated:Connect(SaveAndHideInterface)
+ReopenButton.Activated:Connect(ReopenInterface)
 
--- Touch fallback: detect taps directly.
-CloseButton.TouchTap:Connect(function()
-    SetPanelVisible(false)
-end)
+SaveInterfaceButton.MouseButton1Click:Connect(SaveAndHideInterface)
+ReopenButton.MouseButton1Click:Connect(ReopenInterface)
 
-OpenButton.TouchTap:Connect(function()
-    SetPanelVisible(true)
-end)
-
---==============================================================
--- BORDE GRIS FINO
---==============================================================
-
+-- Borde gris fino de la interfaz.
 local MainBorder = Main:FindFirstChild("MainBorder")
 if not MainBorder then
     MainBorder = Instance.new("UIStroke")
     MainBorder.Name = "MainBorder"
     MainBorder.Parent = Main
 end
-
 MainBorder.Color = Color3.fromRGB(105, 105, 110)
 MainBorder.Thickness = 1
 MainBorder.Transparency = 0
 
--- Transparencia media
+-- Transparencia media.
 Main.BackgroundTransparency = 0.38
 
--- Imagen solicitada
-local HeaderImage = Main:FindFirstChild("HeaderImage")
-if HeaderImage and HeaderImage:IsA("ImageLabel") then
-    HeaderImage.Image = "rbxassetid://103645600156879"
-end
-
--- Asegurar que los controles estén por encima del resto.
+-- Asegurar prioridad de interacción.
 Main.ZIndex = 10
 Top.ZIndex = 20
-CloseButton.ZIndex = 100
-OpenButton.ZIndex = 100
+SaveInterfaceButton.ZIndex = 100
+ReopenButton.ZIndex = 200
 
