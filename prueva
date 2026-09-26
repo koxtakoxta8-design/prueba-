@@ -686,10 +686,9 @@ end
 
 --==============================================================
 --==============================================================
---==============================================================
---==============================================================
--- GUI • SCREENSHOT STYLE
--- Panel oscuro semitransparente + líneas finas + fotos
+-- GUI • SCREENSHOT STYLE + MECÁNICA ORIGINAL
+-- Panel semitransparente, líneas finas, 2 fotos
+-- Incluye botón flotante para ABRIR / CERRAR
 --==============================================================
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -699,16 +698,48 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 --==============================================================
+-- BOTÓN FLOTANTE ABRIR / CERRAR
+--==============================================================
+
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "OpenButton"
+OpenButton.Size = UDim2.fromOffset(42, 42)
+OpenButton.Position = UDim2.new(1, -55, 0, 18)
+OpenButton.BackgroundColor3 = Color3.fromRGB(10, 11, 12)
+OpenButton.BackgroundTransparency = 0.18
+OpenButton.BorderSizePixel = 0
+OpenButton.AutoButtonColor = false
+OpenButton.Text = "K"
+OpenButton.Font = Enum.Font.GothamBlack
+OpenButton.TextSize = 17
+OpenButton.TextColor3 = Color3.fromRGB(225, 226, 230)
+OpenButton.TextStrokeTransparency = 1
+OpenButton.Visible = false
+OpenButton.ZIndex = 50
+OpenButton.Parent = ScreenGui
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(1, 0)
+OpenCorner.Parent = OpenButton
+
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Thickness = 1
+OpenStroke.Color = Color3.fromRGB(95, 97, 102)
+OpenStroke.Transparency = 0.05
+OpenStroke.Parent = OpenButton
+
+--==============================================================
 -- PANEL
 --==============================================================
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
-Main.Size = UDim2.fromOffset(285, 176)
+Main.Size = UDim2.fromOffset(285, 190)
 Main.Position = UDim2.new(1, -300, 0, 115)
-Main.BackgroundColor3 = Color3.fromRGB(12, 13, 14)
-Main.BackgroundTransparency = 0.16
+Main.BackgroundColor3 = Color3.fromRGB(8, 9, 10)
+Main.BackgroundTransparency = 0.18
 Main.BorderSizePixel = 0
+Main.ClipsDescendants = false
 Main.ZIndex = 10
 Main.Parent = ScreenGui
 
@@ -718,21 +749,22 @@ MainCorner.Parent = Main
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Thickness = 1
-MainStroke.Color = Color3.fromRGB(75, 78, 82)
-MainStroke.Transparency = 0.18
+MainStroke.Color = Color3.fromRGB(70, 72, 76)
+MainStroke.Transparency = 0.12
 MainStroke.Parent = Main
 
 --==============================================================
 -- BARRA SUPERIOR / ARRASTRE
 --==============================================================
 
-local DragArea = Instance.new("Frame")
-DragArea.Name = "DragArea"
-DragArea.Size = UDim2.new(1, 0, 0, 43)
-DragArea.BackgroundTransparency = 1
-DragArea.BorderSizePixel = 0
-DragArea.ZIndex = 11
-DragArea.Parent = Main
+local Top = Instance.new("Frame")
+Top.Name = "Top"
+Top.Size = UDim2.new(1, -2, 0, 43)
+Top.Position = UDim2.fromOffset(1, 1)
+Top.BackgroundTransparency = 1
+Top.BorderSizePixel = 0
+Top.ZIndex = 11
+Top.Parent = Main
 
 --==============================================================
 -- FOTO 1
@@ -740,15 +772,13 @@ DragArea.Parent = Main
 
 local Logo = Instance.new("ImageLabel")
 Logo.Name = "Logo"
-Logo.Size = UDim2.fromOffset(31, 31)
-Logo.Position = UDim2.fromOffset(9, 6)
-Logo.BackgroundColor3 = Color3.fromRGB(20, 20, 22)
-Logo.BackgroundTransparency = 0.15
-Logo.BorderSizePixel = 0
+Logo.Size = UDim2.fromOffset(32, 32)
+Logo.Position = UDim2.fromOffset(8, 5)
+Logo.BackgroundTransparency = 1
 Logo.Image = "rbxassetid://103645600156879"
 Logo.ScaleType = Enum.ScaleType.Fit
-Logo.ZIndex = 13
-Logo.Parent = Main
+Logo.ZIndex = 14
+Logo.Parent = Top
 
 local LogoCorner = Instance.new("UICorner")
 LogoCorner.CornerRadius = UDim.new(1, 0)
@@ -756,8 +786,8 @@ LogoCorner.Parent = Logo
 
 local LogoStroke = Instance.new("UIStroke")
 LogoStroke.Thickness = 1
-LogoStroke.Color = Color3.fromRGB(95, 98, 103)
-LogoStroke.Transparency = 0.2
+LogoStroke.Color = Color3.fromRGB(92, 94, 99)
+LogoStroke.Transparency = 0.18
 LogoStroke.Parent = Logo
 
 --==============================================================
@@ -765,210 +795,201 @@ LogoStroke.Parent = Logo
 --==============================================================
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -100, 0, 19)
+Title.Size = UDim2.new(1, -110, 0, 18)
 Title.Position = UDim2.fromOffset(48, 5)
 Title.BackgroundTransparency = 1
 Title.Text = "INSTA TP"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 12
-Title.TextColor3 = Color3.fromRGB(235, 235, 238)
+Title.TextColor3 = Color3.fromRGB(230, 231, 234)
 Title.TextStrokeTransparency = 1
 Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.ZIndex = 13
-Title.Parent = Main
+Title.ZIndex = 14
+Title.Parent = Top
 
 local SubTitle = Instance.new("TextLabel")
-SubTitle.Size = UDim2.new(1, -100, 0, 14)
+SubTitle.Size = UDim2.new(1, -110, 0, 13)
 SubTitle.Position = UDim2.fromOffset(49, 22)
 SubTitle.BackgroundTransparency = 1
 SubTitle.Text = "RIDE A PET  /  KAITUN"
 SubTitle.Font = Enum.Font.GothamMedium
 SubTitle.TextSize = 7
-SubTitle.TextColor3 = Color3.fromRGB(145, 148, 153)
+SubTitle.TextColor3 = Color3.fromRGB(145, 147, 152)
 SubTitle.TextStrokeTransparency = 1
 SubTitle.TextXAlignment = Enum.TextXAlignment.Left
-SubTitle.ZIndex = 13
-SubTitle.Parent = Main
+SubTitle.ZIndex = 14
+SubTitle.Parent = Top
 
 --==============================================================
--- FOTO 2 PEQUEÑA
+-- FOTO 2
 --==============================================================
 
 local CornerImage = Instance.new("ImageLabel")
 CornerImage.Name = "CornerImage"
-CornerImage.Size = UDim2.fromOffset(24, 24)
-CornerImage.Position = UDim2.new(1, -55, 0, 9)
+CornerImage.Size = UDim2.fromOffset(25, 25)
+CornerImage.Position = UDim2.new(1, -61, 0, 8)
 CornerImage.BackgroundTransparency = 1
 CornerImage.Image = "rbxassetid://81940639078484"
 CornerImage.ScaleType = Enum.ScaleType.Fit
-CornerImage.ZIndex = 13
-CornerImage.Parent = Main
+CornerImage.ZIndex = 14
+CornerImage.Parent = Top
 
 --==============================================================
--- MINIMIZAR
+-- BOTÓN CERRAR
 --==============================================================
 
-local MinButton = Instance.new("TextButton")
-MinButton.Name = "MinButton"
-MinButton.Size = UDim2.fromOffset(25, 25)
-MinButton.Position = UDim2.new(1, -30, 0, 8)
-MinButton.BackgroundColor3 = Color3.fromRGB(28, 29, 31)
-MinButton.BackgroundTransparency = 0.12
-MinButton.BorderSizePixel = 0
-MinButton.Text = "—"
-MinButton.Font = Enum.Font.GothamBold
-MinButton.TextSize = 12
-MinButton.TextColor3 = Color3.fromRGB(205, 207, 210)
-MinButton.TextStrokeTransparency = 1
-MinButton.AutoButtonColor = false
-MinButton.ZIndex = 14
-MinButton.Parent = Main
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.fromOffset(25, 25)
+CloseButton.Position = UDim2.new(1, -31, 0, 8)
+CloseButton.BackgroundColor3 = Color3.fromRGB(25, 26, 28)
+CloseButton.BackgroundTransparency = 0.08
+CloseButton.BorderSizePixel = 0
+CloseButton.AutoButtonColor = false
+CloseButton.Text = "×"
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 16
+CloseButton.TextColor3 = Color3.fromRGB(190, 191, 195)
+CloseButton.TextStrokeTransparency = 1
+CloseButton.ZIndex = 15
+CloseButton.Parent = Top
 
-local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(1, 0)
-MinCorner.Parent = MinButton
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(1, 0)
+CloseCorner.Parent = CloseButton
 
-local MinStroke = Instance.new("UIStroke")
-MinStroke.Thickness = 1
-MinStroke.Color = Color3.fromRGB(70, 72, 76)
-MinStroke.Transparency = 0.2
-MinStroke.Parent = MinButton
+local CloseStroke = Instance.new("UIStroke")
+CloseStroke.Thickness = 1
+CloseStroke.Color = Color3.fromRGB(65, 67, 71)
+CloseStroke.Transparency = 0.12
+CloseStroke.Parent = CloseButton
 
 --==============================================================
--- CURRENT TARGET
+-- CURRENT TARGET / MEJOR HUEVO
 --==============================================================
 
-local TargetFrame = Instance.new("Frame")
-TargetFrame.Name = "TargetFrame"
-TargetFrame.Size = UDim2.new(1, -18, 0, 65)
-TargetFrame.Position = UDim2.fromOffset(9, 46)
-TargetFrame.BackgroundColor3 = Color3.fromRGB(7, 8, 9)
-TargetFrame.BackgroundTransparency = 0.28
-TargetFrame.BorderSizePixel = 0
-TargetFrame.ZIndex = 11
-TargetFrame.Parent = Main
+local EggCard = Instance.new("Frame")
+EggCard.Name = "EggCard"
+EggCard.Size = UDim2.new(1, -18, 0, 65)
+EggCard.Position = UDim2.fromOffset(9, 47)
+EggCard.BackgroundColor3 = Color3.fromRGB(6, 7, 8)
+EggCard.BackgroundTransparency = 0.25
+EggCard.BorderSizePixel = 0
+EggCard.ZIndex = 11
+EggCard.Parent = Main
 
-local TargetCorner = Instance.new("UICorner")
-TargetCorner.CornerRadius = UDim.new(0, 8)
-TargetCorner.Parent = TargetFrame
+local EggCorner = Instance.new("UICorner")
+EggCorner.CornerRadius = UDim.new(0, 8)
+EggCorner.Parent = EggCard
 
-local TargetStroke = Instance.new("UIStroke")
-TargetStroke.Thickness = 1
-TargetStroke.Color = Color3.fromRGB(53, 55, 59)
-TargetStroke.Transparency = 0.15
-TargetStroke.Parent = TargetFrame
+local EggStroke = Instance.new("UIStroke")
+EggStroke.Thickness = 1
+EggStroke.Color = Color3.fromRGB(52, 54, 58)
+EggStroke.Transparency = 0.12
+EggStroke.Parent = EggCard
 
-local TargetLabel = Instance.new("TextLabel")
-TargetLabel.Size = UDim2.new(1, -52, 0, 12)
-TargetLabel.Position = UDim2.fromOffset(39, 7)
-TargetLabel.BackgroundTransparency = 1
-TargetLabel.Text = "CURRENT TARGET"
-TargetLabel.Font = Enum.Font.GothamMedium
-TargetLabel.TextSize = 7
-TargetLabel.TextColor3 = Color3.fromRGB(125, 128, 133)
-TargetLabel.TextStrokeTransparency = 1
-TargetLabel.TextXAlignment = Enum.TextXAlignment.Left
-TargetLabel.ZIndex = 13
-TargetLabel.Parent = TargetFrame
+local EggIcon = Instance.new("TextLabel")
+EggIcon.Size = UDim2.fromOffset(40, 55)
+EggIcon.Position = UDim2.fromOffset(5, 5)
+EggIcon.BackgroundTransparency = 1
+EggIcon.Text = "🥚"
+EggIcon.TextSize = 23
+EggIcon.TextStrokeTransparency = 1
+EggIcon.ZIndex = 13
+EggIcon.Parent = EggCard
 
-local EggImage = Instance.new("ImageLabel")
-EggImage.Name = "EggImage"
-EggImage.Size = UDim2.fromOffset(31, 31)
-EggImage.Position = UDim2.fromOffset(6, 16)
-EggImage.BackgroundTransparency = 1
-EggImage.ScaleType = Enum.ScaleType.Fit
-EggImage.ZIndex = 14
-EggImage.Parent = TargetFrame
-
-local EggFallback = Instance.new("TextLabel")
-EggFallback.Size = UDim2.fromScale(1, 1)
-EggFallback.BackgroundTransparency = 1
-EggFallback.Text = "🥚"
-EggFallback.TextSize = 19
-EggFallback.TextStrokeTransparency = 1
-EggFallback.Visible = true
-EggFallback.ZIndex = 13
-EggFallback.Parent = EggImage
+local BestTitle = Instance.new("TextLabel")
+BestTitle.Size = UDim2.new(1, -58, 0, 13)
+BestTitle.Position = UDim2.fromOffset(49, 6)
+BestTitle.BackgroundTransparency = 1
+BestTitle.Text = "CURRENT TARGET"
+BestTitle.Font = Enum.Font.GothamMedium
+BestTitle.TextSize = 7
+BestTitle.TextColor3 = Color3.fromRGB(125, 127, 132)
+BestTitle.TextStrokeTransparency = 1
+BestTitle.TextXAlignment = Enum.TextXAlignment.Left
+BestTitle.ZIndex = 13
+BestTitle.Parent = EggCard
 
 local EggName = Instance.new("TextLabel")
-EggName.Size = UDim2.new(1, -130, 0, 19)
-EggName.Position = UDim2.fromOffset(39, 19)
+EggName.Size = UDim2.new(1, -130, 0, 20)
+EggName.Position = UDim2.fromOffset(49, 20)
 EggName.BackgroundTransparency = 1
 EggName.Text = "Buscando..."
 EggName.Font = Enum.Font.GothamBold
-EggName.TextSize = 10
-EggName.TextColor3 = Color3.fromRGB(225, 226, 229)
+EggName.TextSize = 11
+EggName.TextColor3 = Color3.fromRGB(225, 226, 230)
 EggName.TextStrokeTransparency = 1
 EggName.TextXAlignment = Enum.TextXAlignment.Left
 EggName.TextTruncate = Enum.TextTruncate.AtEnd
 EggName.ZIndex = 13
-EggName.Parent = TargetFrame
+EggName.Parent = EggCard
 
 local LuckyText = Instance.new("TextLabel")
-LuckyText.Size = UDim2.new(1, -130, 0, 13)
-LuckyText.Position = UDim2.fromOffset(39, 39)
+LuckyText.Size = UDim2.new(1, -60, 0, 15)
+LuckyText.Position = UDim2.fromOffset(49, 41)
 LuckyText.BackgroundTransparency = 1
 LuckyText.Text = "🍀 Lucky: --"
 LuckyText.Font = Enum.Font.GothamMedium
-LuckyText.TextSize = 7
-LuckyText.TextColor3 = Color3.fromRGB(158, 160, 165)
+LuckyText.TextSize = 8
+LuckyText.TextColor3 = Color3.fromRGB(150, 152, 157)
 LuckyText.TextStrokeTransparency = 1
 LuckyText.TextXAlignment = Enum.TextXAlignment.Left
 LuckyText.ZIndex = 13
-LuckyText.Parent = TargetFrame
+LuckyText.Parent = EggCard
+
+--==============================================================
+-- RAREZA A LA DERECHA
+--==============================================================
 
 local RarityText = Instance.new("TextLabel")
-RarityText.Size = UDim2.fromOffset(74, 14)
-RarityText.Position = UDim2.new(1, -82, 0, 21)
+RarityText.Size = UDim2.fromOffset(72, 15)
+RarityText.Position = UDim2.new(1, -80, 0, 24)
 RarityText.BackgroundTransparency = 1
 RarityText.Text = "--"
 RarityText.Font = Enum.Font.GothamBold
 RarityText.TextSize = 8
-RarityText.TextColor3 = Color3.fromRGB(180, 180, 186)
+RarityText.TextColor3 = Color3.fromRGB(175, 176, 181)
 RarityText.TextStrokeTransparency = 1
 RarityText.TextXAlignment = Enum.TextXAlignment.Right
 RarityText.ZIndex = 13
-RarityText.Parent = TargetFrame
+RarityText.Parent = EggCard
 
 --==============================================================
--- TELEGUIADO
+-- TELEGUIADO / LOOP
 --==============================================================
 
 local TeleLabel = Instance.new("TextLabel")
-TeleLabel.Size = UDim2.fromOffset(100, 16)
-TeleLabel.Position = UDim2.fromOffset(11, 116)
+TeleLabel.Size = UDim2.fromOffset(105, 16)
+TeleLabel.Position = UDim2.fromOffset(10, 116)
 TeleLabel.BackgroundTransparency = 1
 TeleLabel.Text = "TELEGUIADO"
 TeleLabel.Font = Enum.Font.GothamBold
 TeleLabel.TextSize = 9
-TeleLabel.TextColor3 = Color3.fromRGB(225, 226, 229)
+TeleLabel.TextColor3 = Color3.fromRGB(225, 226, 230)
 TeleLabel.TextStrokeTransparency = 1
 TeleLabel.TextXAlignment = Enum.TextXAlignment.Left
 TeleLabel.ZIndex = 13
 TeleLabel.Parent = Main
 
 local TeleSub = Instance.new("TextLabel")
-TeleSub.Size = UDim2.fromOffset(125, 13)
-TeleSub.Position = UDim2.fromOffset(11, 131)
+TeleSub.Size = UDim2.fromOffset(115, 12)
+TeleSub.Position = UDim2.fromOffset(10, 131)
 TeleSub.BackgroundTransparency = 1
 TeleSub.Text = "LOOP ACTIVO"
 TeleSub.Font = Enum.Font.GothamMedium
 TeleSub.TextSize = 6
-TeleSub.TextColor3 = Color3.fromRGB(120, 123, 128)
+TeleSub.TextColor3 = Color3.fromRGB(115, 117, 122)
 TeleSub.TextStrokeTransparency = 1
 TeleSub.TextXAlignment = Enum.TextXAlignment.Left
 TeleSub.ZIndex = 13
 TeleSub.Parent = Main
 
---==============================================================
--- SWITCH LOOP
---==============================================================
-
 local LoopSwitch = Instance.new("TextButton")
 LoopSwitch.Name = "LoopSwitch"
 LoopSwitch.Size = UDim2.fromOffset(43, 22)
 LoopSwitch.Position = UDim2.new(1, -56, 0, 118)
-LoopSwitch.BackgroundColor3 = Color3.fromRGB(48, 49, 52)
+LoopSwitch.BackgroundColor3 = Color3.fromRGB(49, 50, 53)
 LoopSwitch.BorderSizePixel = 0
 LoopSwitch.Text = ""
 LoopSwitch.AutoButtonColor = false
@@ -980,7 +1001,6 @@ LoopCorner.CornerRadius = UDim.new(1, 0)
 LoopCorner.Parent = LoopSwitch
 
 local LoopKnob = Instance.new("Frame")
-LoopKnob.Name = "Knob"
 LoopKnob.Size = UDim2.fromOffset(18, 18)
 LoopKnob.Position = UDim2.fromOffset(2, 2)
 LoopKnob.BackgroundColor3 = Color3.fromRGB(205, 206, 210)
@@ -988,90 +1008,85 @@ LoopKnob.BorderSizePixel = 0
 LoopKnob.ZIndex = 15
 LoopKnob.Parent = LoopSwitch
 
-local KnobCorner = Instance.new("UICorner")
-KnobCorner.CornerRadius = UDim.new(1, 0)
-KnobCorner.Parent = LoopKnob
+local LoopKnobCorner = Instance.new("UICorner")
+LoopKnobCorner.CornerRadius = UDim.new(1, 0)
+LoopKnobCorner.Parent = LoopKnob
 
 --==============================================================
--- BOTÓN INSTA TP
+-- BOTONES
 --==============================================================
 
 local TPButton = Instance.new("TextButton")
 TPButton.Name = "TPButton"
-TPButton.Size = UDim2.fromOffset(118, 28)
-TPButton.Position = UDim2.fromOffset(154, 145)
-TPButton.BackgroundColor3 = Color3.fromRGB(24, 25, 27)
-TPButton.BackgroundTransparency = 0.18
+TPButton.Size = UDim2.fromOffset(126, 29)
+TPButton.Position = UDim2.fromOffset(10, 145)
+TPButton.BackgroundColor3 = Color3.fromRGB(18, 19, 21)
+TPButton.BackgroundTransparency = 0.15
 TPButton.BorderSizePixel = 0
 TPButton.AutoButtonColor = false
 TPButton.Text = "INSTA TP   OFF"
 TPButton.Font = Enum.Font.GothamBold
 TPButton.TextSize = 8
-TPButton.TextColor3 = Color3.fromRGB(225, 226, 229)
+TPButton.TextColor3 = Color3.fromRGB(215, 216, 220)
 TPButton.TextStrokeTransparency = 1
 TPButton.ZIndex = 14
 TPButton.Parent = Main
 
-local TPStroke = Instance.new("UIStroke")
-TPStroke.Thickness = 1
-TPStroke.Color = Color3.fromRGB(72, 74, 78)
-TPStroke.Transparency = 0.15
-TPStroke.Parent = TPButton
-
 local TPCorner = Instance.new("UICorner")
 TPCorner.CornerRadius = UDim.new(0, 7)
 TPCorner.Parent = TPButton
+
+local TPStroke = Instance.new("UIStroke")
+TPStroke.Thickness = 1
+TPStroke.Color = Color3.fromRGB(65, 66, 70)
+TPStroke.Transparency = 0.12
+TPStroke.Parent = TPButton
+
+local LOPButton = Instance.new("TextButton")
+LOPButton.Name = "LOPButton"
+LOPButton.Size = UDim2.fromOffset(126, 29)
+LOPButton.Position = UDim2.fromOffset(149, 145)
+LOPButton.BackgroundColor3 = Color3.fromRGB(18, 19, 21)
+LOPButton.BackgroundTransparency = 0.15
+LOPButton.BorderSizePixel = 0
+LOPButton.AutoButtonColor = false
+LOPButton.Text = "LOP   OFF"
+LOPButton.Font = Enum.Font.GothamBold
+LOPButton.TextSize = 8
+LOPButton.TextColor3 = Color3.fromRGB(215, 216, 220)
+LOPButton.TextStrokeTransparency = 1
+LOPButton.ZIndex = 14
+LOPButton.Parent = Main
+
+local LOPCorner = Instance.new("UICorner")
+LOPCorner.CornerRadius = UDim.new(0, 7)
+LOPCorner.Parent = LOPButton
+
+local LOPStroke = Instance.new("UIStroke")
+LOPStroke.Thickness = 1
+LOPStroke.Color = Color3.fromRGB(65, 66, 70)
+LOPStroke.Transparency = 0.12
+LOPStroke.Parent = LOPButton
 
 --==============================================================
 -- STATUS
 --==============================================================
 
 local Status = Instance.new("TextLabel")
-Status.Size = UDim2.fromOffset(130, 17)
-Status.Position = UDim2.fromOffset(11, 145)
+Status.Size = UDim2.new(1, -20, 0, 12)
+Status.Position = UDim2.fromOffset(10, 177)
 Status.BackgroundTransparency = 1
 Status.Text = "● READY"
 Status.Font = Enum.Font.GothamMedium
 Status.TextSize = 7
-Status.TextColor3 = Color3.fromRGB(130, 133, 138)
+Status.TextColor3 = Color3.fromRGB(105, 107, 112)
 Status.TextStrokeTransparency = 1
-Status.TextXAlignment = Enum.TextXAlignment.Left
+Status.TextXAlignment = Enum.TextXAlignment.Center
 Status.ZIndex = 13
 Status.Parent = Main
 
 --==============================================================
--- UTILIDAD: FOTO DEL HUEVO
--- Busca ImageLabel, Decal o Texture dentro del huevo.
---==============================================================
-
-local function FindEggImage(obj)
-    if not obj then
-        return nil
-    end
-
-    for _, d in ipairs(obj:GetDescendants()) do
-        if d:IsA("ImageLabel") or d:IsA("ImageButton") then
-            if d.Image and d.Image ~= "" then
-                return d.Image
-            end
-        end
-
-        if d:IsA("Decal") or d:IsA("Texture") then
-            if d.Texture and d.Texture ~= "" then
-                return d.Texture
-            end
-        end
-    end
-
-    if obj:IsA("Decal") or obj:IsA("Texture") then
-        return obj.Texture
-    end
-
-    return nil
-end
-
---==============================================================
--- ACTUALIZAR HUEVO
+-- ACTUALIZAR INTERFAZ
 --==============================================================
 
 local function UpdateUI()
@@ -1082,40 +1097,28 @@ local function UpdateUI()
             EggName.Text = BestEgg.Name
             LuckyText.Text = "🍀 Lucky: " .. tostring(data.Luck)
             RarityText.Text = tostring(data.Rarity)
-
-            local image = FindEggImage(BestEgg)
-
-            if image then
-                EggImage.Image = image
-                EggFallback.Visible = false
-            else
-                EggImage.Image = ""
-                EggFallback.Visible = true
-            end
         end
     else
         EggName.Text = "Buscando..."
         LuckyText.Text = "🍀 Lucky: --"
         RarityText.Text = "--"
-        EggImage.Image = ""
-        EggFallback.Visible = true
     end
 end
 
 --==============================================================
--- ANIMACIÓN SIMPLE DE CLICK
+-- ANIMACIÓN DE CLICK MUY LIGERA
 --==============================================================
 
 local function ClickAnimation(button)
-    local oldSize = button.Size
+    local originalSize = button.Size
 
     TweenService:Create(
         button,
         TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
             Size = UDim2.fromOffset(
-                oldSize.X.Offset - 3,
-                oldSize.Y.Offset - 2
+                originalSize.X.Offset - 3,
+                originalSize.Y.Offset - 2
             )
         }
     ):Play()
@@ -1125,7 +1128,7 @@ local function ClickAnimation(button)
             TweenService:Create(
                 button,
                 TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-                {Size = oldSize}
+                {Size = originalSize}
             ):Play()
         end
     end)
@@ -1138,33 +1141,41 @@ end
 local function UpdateTPButton()
     if InstaTP then
         TPButton.Text = "INSTA TP   ON"
-        TPStroke.Color = Color3.fromRGB(160, 162, 166)
-        TPStroke.Thickness = 1.5
+        TPButton.TextColor3 = Color3.fromRGB(225, 226, 230)
+        TPStroke.Color = Color3.fromRGB(125, 126, 131)
     else
         TPButton.Text = "INSTA TP   OFF"
-        TPStroke.Color = Color3.fromRGB(72, 74, 78)
-        TPStroke.Thickness = 1
+        TPButton.TextColor3 = Color3.fromRGB(215, 216, 220)
+        TPStroke.Color = Color3.fromRGB(65, 66, 70)
     end
 end
 
 --==============================================================
--- ESTADO LOOP
+-- ESTADO LOP
 --==============================================================
 
 local function UpdateLOPButton()
     if LOP then
-        LoopSwitch.BackgroundColor3 = Color3.fromRGB(190, 192, 196)
+        LOPButton.Text = "LOP   ON"
+        LOPButton.TextColor3 = Color3.fromRGB(225, 226, 230)
+        LOPStroke.Color = Color3.fromRGB(120, 121, 126)
+
+        LoopSwitch.BackgroundColor3 = Color3.fromRGB(185, 187, 191)
 
         TweenService:Create(
             LoopKnob,
             TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {
                 Position = UDim2.new(1, -20, 0, 2),
-                BackgroundColor3 = Color3.fromRGB(30, 31, 33)
+                BackgroundColor3 = Color3.fromRGB(25, 26, 28)
             }
         ):Play()
     else
-        LoopSwitch.BackgroundColor3 = Color3.fromRGB(48, 49, 52)
+        LOPButton.Text = "LOP   OFF"
+        LOPButton.TextColor3 = Color3.fromRGB(215, 216, 220)
+        LOPStroke.Color = Color3.fromRGB(65, 66, 70)
+
+        LoopSwitch.BackgroundColor3 = Color3.fromRGB(49, 50, 53)
 
         TweenService:Create(
             LoopKnob,
@@ -1177,7 +1188,10 @@ local function UpdateLOPButton()
     end
 end
 
--- El switch y el botón usan la misma mecánica LOP.
+--==============================================================
+-- SWITCH LOP: MISMA VARIABLE Y MECÁNICA ORIGINAL
+--==============================================================
+
 LoopSwitch.Activated:Connect(function()
     ClickAnimation(LoopSwitch)
 
@@ -1192,6 +1206,26 @@ LoopSwitch.Activated:Connect(function()
 end)
 
 --==============================================================
+-- ABRIR / CERRAR
+--==============================================================
+
+local interfaceOpen = true
+
+local function SetInterfaceVisible(state)
+    interfaceOpen = state
+    Main.Visible = state
+    OpenButton.Visible = not state
+end
+
+CloseButton.Activated:Connect(function()
+    SetInterfaceVisible(false)
+end)
+
+OpenButton.Activated:Connect(function()
+    SetInterfaceVisible(true)
+end)
+
+--==============================================================
 -- ARRASTRE MÓVIL / PC
 --==============================================================
 
@@ -1199,7 +1233,7 @@ local dragging = false
 local dragStart
 local startPosition
 
-DragArea.InputBegan:Connect(function(input)
+Top.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
 
@@ -1209,67 +1243,68 @@ DragArea.InputBegan:Connect(function(input)
     end
 end)
 
-DragArea.InputChanged:Connect(function(input)
-    if not dragging then
-        return
-    end
-
+Top.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch then
 
-        local delta = input.Position - dragStart
+        if dragging then
+            local delta = input.Position - dragStart
 
-        Main.Position = UDim2.new(
-            startPosition.X.Scale,
-            startPosition.X.Offset + delta.X,
-            startPosition.Y.Scale,
-            startPosition.Y.Offset + delta.Y
-        )
+            Main.Position = UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
+            )
+        end
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
+
         dragging = false
     end
 end)
 
 --==============================================================
--- MINIMIZAR
+-- POSICIÓN INICIAL SUAVE
 --==============================================================
 
-local minimized = false
+local FinalPosition = Main.Position
 
-MinButton.Activated:Connect(function()
-    minimized = not minimized
+Main.Position = UDim2.new(
+    1,
+    -300,
+    0,
+    80
+)
 
-    if minimized then
-        MinButton.Text = "+"
-        TargetFrame.Visible = false
-        TeleLabel.Visible = false
-        TeleSub.Visible = false
-        LoopSwitch.Visible = false
-        TPButton.Visible = false
-        Status.Visible = false
+TweenService:Create(
+    Main,
+    TweenInfo.new(
+        0.35,
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.Out
+    ),
+    {
+        Position = FinalPosition
+    }
+):Play()
 
-        Main.Size = UDim2.fromOffset(285, 43)
-    else
-        MinButton.Text = "—"
-        Main.Size = UDim2.fromOffset(285, 176)
+--==============================================================
+-- INICIALIZAR ESTADOS
+--==============================================================
 
-        TargetFrame.Visible = true
-        TeleLabel.Visible = true
-        TeleSub.Visible = true
-        LoopSwitch.Visible = true
-        TPButton.Visible = true
-        Status.Visible = true
-    end
-end)
+UpdateTPButton()
+UpdateLOPButton()
+UpdateUI()
 
 --==============================================================
 -- FIN GUI
 --==============================================================
+
 -- CICLO
 --==============================================================
 
@@ -1589,6 +1624,89 @@ UserInputService.InputEnded:Connect(
 
     end
 )
+
+--==============================================================
+-- ANIMACIÓN DE ENTRADA
+--==============================================================
+
+local FinalPosition =
+    Main.Position
+
+Main.Position =
+    UDim2.new(
+        1,
+        -300,
+        0,
+        70
+    )
+
+Main.BackgroundTransparency = 1
+
+TweenService:Create(
+    Main,
+    TweenInfo.new(
+        0.55,
+        Enum.EasingStyle.Back,
+        Enum.EasingDirection.Out
+    ),
+    {
+        Position =
+            FinalPosition,
+
+        BackgroundTransparency = 0
+    }
+):Play()
+
+--==============================================================
+-- ANIMACIÓN DEL CARD CUANDO CAMBIA EL HUEVO
+--==============================================================
+
+local LastEggName = ""
+
+task.spawn(function()
+
+    while ScreenGui.Parent do
+
+        if BestEgg and
+            BestEgg.Parent and
+            BestEgg.Name ~= LastEggName then
+
+            LastEggName =
+                BestEgg.Name
+
+            EggCard.Size =
+                UDim2.new(
+                    1,
+                    -24,
+                    0,
+                    68
+                )
+
+            TweenService:Create(
+                EggCard,
+                TweenInfo.new(
+                    0.25,
+                    Enum.EasingStyle.Back,
+                    Enum.EasingDirection.Out
+                ),
+                {
+                    Size =
+                        UDim2.new(
+                            1,
+                            -20,
+                            0,
+                            72
+                        )
+                }
+            ):Play()
+
+        end
+
+        task.wait(0.15)
+
+    end
+
+end)
 
 --==============================================================
 -- INICIO
