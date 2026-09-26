@@ -496,7 +496,7 @@ Main.Position =
 Main.BackgroundColor3 =
     Color3.fromRGB(7, 8, 9)
 
-Main.BackgroundTransparency = 0.08
+Main.BackgroundTransparency = 0.40
 Main.BorderSizePixel = 0
 Main.Parent = ScreenGui
 
@@ -548,7 +548,7 @@ Top.Position =
 Top.BackgroundColor3 =
     Color3.fromRGB(12, 13, 15)
 
-Top.BackgroundTransparency = 0.12
+Top.BackgroundTransparency = 0.28
 Top.BorderSizePixel = 0
 Top.Parent = Main
 
@@ -561,7 +561,7 @@ TopCorner.CornerRadius =
 TopCorner.Parent = Top
 
 local Logo =
-    Instance.new("TextLabel")
+    Instance.new("ImageLabel")
 
 Logo.Size =
     UDim2.fromOffset(31, 31)
@@ -570,13 +570,13 @@ Logo.Position =
     UDim2.fromOffset(6, 6)
 
 Logo.BackgroundColor3 =
-    Color3.fromRGB(32, 34, 37)
+    Color3.fromRGB(25, 27, 30)
 
+Logo.BackgroundTransparency = 0.15
 Logo.BorderSizePixel = 0
-Logo.Text = "⚡"
-Logo.TextSize = 17
-Logo.Font = Enum.Font.GothamBold
-Logo.TextColor3 = Color3.fromRGB(255, 255, 255)
+Logo.Image = "rbxassetid://103645600156879"
+Logo.ImageTransparency = 0
+Logo.ScaleType = Enum.ScaleType.Crop
 Logo.Parent = Top
 
 local LogoCorner =
@@ -747,7 +747,7 @@ EggCard.Position =
 EggCard.BackgroundColor3 =
     Color3.fromRGB(13, 14, 16)
 
-EggCard.BackgroundTransparency = 0.15
+EggCard.BackgroundTransparency = 0.30
 EggCard.BorderSizePixel = 0
 EggCard.Parent = Main
 
@@ -826,7 +826,7 @@ TPButton.Position =
 TPButton.BackgroundColor3 =
     Color3.fromRGB(20, 21, 23)
 
-TPButton.BackgroundTransparency = 0.08
+TPButton.BackgroundTransparency = 0.28
 TPButton.BorderSizePixel = 0
 TPButton.Text =
     "INSTA STEAL  OFF"
@@ -872,7 +872,7 @@ LOPButton.Position =
 LOPButton.BackgroundColor3 =
     Color3.fromRGB(20, 21, 23)
 
-LOPButton.BackgroundTransparency = 0.08
+LOPButton.BackgroundTransparency = 0.28
 LOPButton.BorderSizePixel = 0
 LOPButton.Text =
     "LOOP  OFF"
