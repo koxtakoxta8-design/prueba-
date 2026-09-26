@@ -685,324 +685,204 @@ local function AutoGrab(egg)
 end
 
 --==============================================================
--- GUI
+--==============================================================
+-- GUI • BLACK MOTION V2
+-- SIN BRILLO EN LAS LETRAS
+-- GLOW SOLO EN BORDES / BOTONES / FONDO
 --==============================================================
 
-local ScreenGui =
-    Instance.new("ScreenGui")
-
-ScreenGui.Name =
-    "INSTA_TP_BLACK_MOTION"
-
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "INSTA_TP_BLACK_MOTION"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior =
-    Enum.ZIndexBehavior.Sibling
-
-ScreenGui.Parent =
-    LocalPlayer:WaitForChild(
-        "PlayerGui"
-    )
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 --==============================================================
--- CAPA DE ANIMACIÓN
+-- CONFIG VISUAL
 --==============================================================
 
-local MotionLayer =
-    Instance.new("Frame")
+local PANEL_W = 320
+local PANEL_H = 235
 
-MotionLayer.Size =
-    UDim2.new(
-        1,
-        0,
-        1,
-        0
-    )
+local WHITE = Color3.fromRGB(235, 235, 240)
+local SOFT_WHITE = Color3.fromRGB(185, 185, 195)
+local DARK = Color3.fromRGB(5, 5, 8)
+local DARK2 = Color3.fromRGB(10, 10, 14)
+local DARK3 = Color3.fromRGB(15, 15, 20)
+local EDGE = Color3.fromRGB(85, 85, 95)
+local ACTIVE = Color3.fromRGB(150, 150, 160)
 
+--==============================================================
+-- CAPA DE FONDO / BURBUJAS
+--==============================================================
+
+local MotionLayer = Instance.new("Frame")
+MotionLayer.Name = "MotionLayer"
+MotionLayer.Size = UDim2.fromScale(1, 1)
 MotionLayer.BackgroundTransparency = 1
 MotionLayer.BorderSizePixel = 0
+MotionLayer.ZIndex = 0
 MotionLayer.Parent = ScreenGui
+
+local Bubbles = {}
+
+local function CreateBubble()
+    local bubble = Instance.new("Frame")
+    local size = math.random(4, 11)
+
+    bubble.Name = "Bubble"
+    bubble.Size = UDim2.fromOffset(size, size)
+    bubble.Position = UDim2.new(
+        math.random(3, 97) / 100,
+        0,
+        1,
+        math.random(20, 100)
+    )
+    bubble.BackgroundColor3 = Color3.fromRGB(
+        math.random(80, 150),
+        math.random(80, 150),
+        math.random(85, 155)
+    )
+    bubble.BackgroundTransparency = math.random(72, 91) / 100
+    bubble.BorderSizePixel = 0
+    bubble.ZIndex = 0
+    bubble.Parent = MotionLayer
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = bubble
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1
+    stroke.Transparency = 0.75
+    stroke.Color = Color3.fromRGB(125, 125, 135)
+    stroke.Parent = bubble
+
+    table.insert(Bubbles, {
+        Object = bubble,
+        Speed = math.random(12, 28),
+        Drift = math.random(-8, 8)
+    })
+end
+
+for i = 1, 18 do
+    CreateBubble()
+end
+
+local BubbleConnection
+BubbleConnection = RunService.RenderStepped:Connect(function(delta)
+    if not ScreenGui.Parent then
+        BubbleConnection:Disconnect()
+        return
+    end
+
+    for _, info in ipairs(Bubbles) do
+        local b = info.Object
+
+        if b and b.Parent then
+            local pos = b.Position
+
+            b.Position = UDim2.new(
+                pos.X.Scale,
+                pos.X.Offset + info.Drift * delta * 0.08,
+                pos.Y.Scale,
+                pos.Y.Offset - info.Speed * delta
+            )
+
+            if pos.Y.Offset < -120 then
+                b.Position = UDim2.new(
+                    math.random(3, 97) / 100,
+                    0,
+                    1,
+                    math.random(20, 100)
+                )
+            end
+        end
+    end
+end)
 
 --==============================================================
 -- PANEL PRINCIPAL
 --==============================================================
 
-local Main =
-    Instance.new("Frame")
-
-Main.Size =
-    UDim2.fromOffset(
-        300,
-        205
-    )
-
-Main.Position =
-    UDim2.new(
-        1,
-        -320,
-        0,
-        120
-    )
-
-Main.BackgroundColor3 =
-    Color3.fromRGB(
-        5,
-        5,
-        7
-    )
-
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.fromOffset(PANEL_W, PANEL_H)
+Main.Position = UDim2.new(1, -340, 0, 105)
+Main.BackgroundColor3 = DARK
 Main.BorderSizePixel = 0
-
 Main.ClipsDescendants = false
+Main.ZIndex = 5
+Main.Parent = ScreenGui
 
-Main.Parent =
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 18)
+MainCorner.Parent = Main
 
+-- Halo externo: el brillo está en el borde, NO en el texto.
+local OuterGlow = Instance.new("Frame")
+OuterGlow.Name = "OuterGlow"
+OuterGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+OuterGlow.Position = UDim2.fromScale(0.5, 0.5)
+OuterGlow.Size = UDim2.new(1, 12, 1, 12)
+OuterGlow.BackgroundTransparency = 1
+OuterGlow.BorderSizePixel = 0
+OuterGlow.ZIndex = 4
+OuterGlow.Parent = Main
 
+local OuterCorner = Instance.new("UICorner")
+OuterCorner.CornerRadius = UDim.new(0, 21)
+OuterCorner.Parent = OuterGlow
 
---==============================================================
--- BLACK MOTION • BURBUJAS / PARTICULAS / DESTELLOS
---==============================================================
+local OuterStroke = Instance.new("UIStroke")
+OuterStroke.Thickness = 2
+OuterStroke.Color = EDGE
+OuterStroke.Transparency = 0.45
+OuterStroke.Parent = OuterGlow
 
-local BubbleLayer = Instance.new("Frame")
-BubbleLayer.Name = "BubbleLayer"
-BubbleLayer.Size = UDim2.fromScale(1,1)
-BubbleLayer.Position = UDim2.fromScale(0,0)
-BubbleLayer.BackgroundTransparency = 1
-BubbleLayer.BorderSizePixel = 0
-BubbleLayer.ZIndex = 2
-BubbleLayer.Parent = ScreenGui
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Name = "MainStroke"
+MainStroke.Thickness = 1.6
+MainStroke.Color = ACTIVE
+MainStroke.Transparency = 0.15
+MainStroke.Parent = Main
 
-for i = 1, 35 do
-    local bubble = Instance.new("Frame")
-    local d = math.random(4,14)
-
-    bubble.Size = UDim2.fromOffset(d,d)
-    bubble.Position = UDim2.new(
-        math.random(2,98)/100,0,
-        math.random(5,105)/100,0
-    )
-    bubble.BackgroundColor3 = Color3.fromRGB(
-        math.random(90,180),
-        math.random(90,180),
-        math.random(90,180)
-    )
-    bubble.BackgroundTransparency = math.random(35,75)/100
-    bubble.BorderSizePixel = 0
-    bubble.ZIndex = 2
-    bubble.Parent = BubbleLayer
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1,0)
-    corner.Parent = bubble
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 1
-    stroke.Color = Color3.fromRGB(150,150,155)
-    stroke.Transparency = .55
-    stroke.Parent = bubble
-
-    task.spawn(function()
-        while bubble.Parent do
-            local x = math.clamp(
-                bubble.Position.X.Scale + math.random(-20,20)/1000,
-                .01,.99
-            )
-            local y = bubble.Position.Y.Scale - math.random(5,16)/1000
-
-            if y < -.08 then
-                y = 1.08
-                x = math.random(1,99)/100
-            end
-
-            TweenService:Create(
-                bubble,
-                TweenInfo.new(.18,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),
-                {
-                    Position = UDim2.new(x,0,y,0),
-                    BackgroundTransparency = math.random(30,78)/100
-                }
-            ):Play()
-
-            task.wait(.18)
-        end
-    end)
-end
-
--- Destellos
-for i = 1, 25 do
-    local sparkle = Instance.new("Frame")
-    sparkle.Size = UDim2.fromOffset(math.random(1,3),math.random(1,3))
-    sparkle.Position = UDim2.new(
-        math.random(3,97)/100,0,
-        math.random(3,97)/100,0
-    )
-    sparkle.BackgroundColor3 = Color3.fromRGB(220,220,225)
-    sparkle.BackgroundTransparency = 1
-    sparkle.BorderSizePixel = 0
-    sparkle.ZIndex = 3
-    sparkle.Parent = BubbleLayer
-
-    local sc = Instance.new("UICorner")
-    sc.CornerRadius = UDim.new(1,0)
-    sc.Parent = sparkle
-
-    task.spawn(function()
-        while sparkle.Parent do
-            TweenService:Create(
-                sparkle,
-                TweenInfo.new(math.random(4,9)/10,Enum.EasingStyle.Sine),
-                {BackgroundTransparency = .15}
-            ):Play()
-            task.wait(math.random(4,9)/10)
-
-            TweenService:Create(
-                sparkle,
-                TweenInfo.new(math.random(4,9)/10,Enum.EasingStyle.Sine),
-                {BackgroundTransparency = 1}
-            ):Play()
-            task.wait(math.random(4,9)/10)
-        end
-    end)
-end
+-- Segundo borde fino
+local InnerStroke = Instance.new("UIStroke")
+InnerStroke.Thickness = 1
+InnerStroke.Color = Color3.fromRGB(35, 35, 42)
+InnerStroke.Transparency = 0.15
+InnerStroke.Parent = Main
 
 --==============================================================
--- LOGO DENTRO DEL PANEL • MISMO ID
+-- ANIMACIÓN DEL BORDE
 --==============================================================
-local PanelLogo = Instance.new("ImageLabel")
-PanelLogo.Name = "PanelLogo"
-PanelLogo.Size = UDim2.fromOffset(42,42)
-PanelLogo.Position = UDim2.fromOffset(238,8)
-PanelLogo.BackgroundTransparency = 1
-PanelLogo.Image = "rbxassetid://103645600156879"
-PanelLogo.ScaleType = Enum.ScaleType.Crop
-PanelLogo.ZIndex = 50
-PanelLogo.Parent = Main
-
-local PanelLogoCorner = Instance.new("UICorner")
-PanelLogoCorner.CornerRadius = UDim.new(1,0)
-PanelLogoCorner.Parent = PanelLogo
-
-local PanelLogoStroke = Instance.new("UIStroke")
-PanelLogoStroke.Thickness = 2
-PanelLogoStroke.Color = Color3.fromRGB(125,125,130)
-PanelLogoStroke.Transparency = .15
-PanelLogoStroke.Parent = PanelLogo
 
 task.spawn(function()
-    local t=0
-    while PanelLogo.Parent do
-        t += .05
-        PanelLogo.Rotation = math.sin(t)*4
-        PanelLogoStroke.Transparency = .12 + (math.sin(t*2)+1)*.12
-        task.wait(.05)
-    end
-end)
-    ScreenGui
-
-local MainCorner =
-    Instance.new("UICorner")
-
-MainCorner.CornerRadius =
-    UDim.new(
-        0,
-        16
-    )
-
-MainCorner.Parent =
-    Main
-
-local MainStroke =
-    Instance.new("UIStroke")
-
-MainStroke.Thickness = 1.5
-
-MainStroke.Color =
-    Color3.fromRGB(
-        75,
-        75,
-        80
-    )
-
-MainStroke.Parent =
-    Main
-
---==============================================================
--- BOTÓN FLOTANTE PARA ABRIR / CERRAR
---==============================================================
-
-local ToggleButton =
-    Instance.new("ImageButton")
-
-ToggleButton.Name =
-    "OpenCloseButton"
-
-ToggleButton.Size =
-    UDim2.fromOffset(52, 52)
-
-ToggleButton.Position =
-    UDim2.new(1, -68, 0, 18)
-
-ToggleButton.BackgroundColor3 =
-    Color3.fromRGB(5, 5, 7)
-
-ToggleButton.BorderSizePixel = 0
-ToggleButton.AutoButtonColor = false
-ToggleButton.Image =
-    "rbxassetid://103645600156879"
-
-ToggleButton.ScaleType =
-    Enum.ScaleType.Crop
-
-ToggleButton.ZIndex = 100
-ToggleButton.Parent = ScreenGui
-
-local ToggleCorner =
-    Instance.new("UICorner")
-
-ToggleCorner.CornerRadius =
-    UDim.new(1, 0)
-
-ToggleCorner.Parent =
-    ToggleButton
-
-local ToggleStroke =
-    Instance.new("UIStroke")
-
-ToggleStroke.Thickness = 1.5
-ToggleStroke.Color =
-    Color3.fromRGB(130, 130, 135)
-
-ToggleStroke.Parent =
-    ToggleButton
-
-local ToggleScale =
-    Instance.new("UIScale")
-
-ToggleScale.Scale = 1
-ToggleScale.Parent = ToggleButton
-
--- brillo muy suave del borde
-task.spawn(function()
+    local pulse = false
 
     while ScreenGui.Parent do
+        pulse = not pulse
 
         TweenService:Create(
-            ToggleStroke,
-            TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Transparency = 0.55}
+            OuterStroke,
+            TweenInfo.new(1.15, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {
+                Transparency = pulse and 0.18 or 0.55,
+                Thickness = pulse and 2.5 or 1.5
+            }
         ):Play()
-
-        task.wait(1.1)
 
         TweenService:Create(
-            ToggleStroke,
-            TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Transparency = 0.05}
+            MainStroke,
+            TweenInfo.new(1.15, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {
+                Transparency = pulse and 0 or 0.28
+            }
         ):Play()
 
-        task.wait(1.1)
-
+        task.wait(1.15)
     end
-
 end)
 
 --==============================================================
@@ -1011,1073 +891,561 @@ end)
 
 local Lines = {}
 
-local function CreateMotionLine(
-    angle,
-    radius,
-    length
-)
-
-    local line =
-        Instance.new("Frame")
-
-    line.AnchorPoint =
-        Vector2.new(
-            0.5,
-            0.5
-        )
-
-    line.Size =
-        UDim2.fromOffset(
-            length,
-            2
-        )
-
-    line.Position =
-        UDim2.new(
-            0.5,
-            math.cos(angle) * radius,
-            0.5,
-            math.sin(angle) * radius
-        )
-
-    line.Rotation =
-        math.deg(angle)
-
-    line.BackgroundColor3 =
-        Color3.fromRGB(
-            150,
-            150,
-            155
-        )
-
-    line.BackgroundTransparency =
-        0.25
-
+local function CreateMotionLine(angle, radius, length)
+    local line = Instance.new("Frame")
+    line.AnchorPoint = Vector2.new(0.5, 0.5)
+    line.Size = UDim2.fromOffset(length, 2)
+    line.Position = UDim2.new(
+        0.5,
+        math.cos(angle) * radius,
+        0.5,
+        math.sin(angle) * radius
+    )
+    line.Rotation = math.deg(angle)
+    line.BackgroundColor3 = Color3.fromRGB(135, 135, 145)
+    line.BackgroundTransparency = 0.35
     line.BorderSizePixel = 0
+    line.ZIndex = 1
+    line.Parent = MotionLayer
 
-    line.ZIndex = 0
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = line
 
-    line.Parent =
-        MotionLayer
-
-    local corner =
-        Instance.new("UICorner")
-
-    corner.CornerRadius =
-        UDim.new(
-            1,
-            0
-        )
-
-    corner.Parent =
-        line
-
-    table.insert(
-        Lines,
-        {
-            Object = line,
-            Angle = angle,
-            Radius = radius,
-            Speed = math.random(
-                20,
-                55
-            ) / 100,
-            Alpha = math.random(
-                10,
-                45
-            ) / 100
-        }
-    )
-
+    table.insert(Lines, {
+        Object = line,
+        Angle = angle,
+        Radius = radius,
+        Speed = math.random(20, 55) / 100
+    })
 end
 
-for i = 1, 18 do
-
+for i = 1, 20 do
     CreateMotionLine(
-        math.rad(
-            (360 / 18) * i
-        ),
-        math.random(
-            155,
-            190
-        ),
-        math.random(
-            35,
-            90
-        )
+        math.rad((360 / 20) * i),
+        math.random(165, 205),
+        math.random(35, 85)
     )
-
 end
-
---==============================================================
--- ANIMACIÓN DE LÍNEAS
---==============================================================
 
 local MotionConnection
+MotionConnection = RunService.RenderStepped:Connect(function(delta)
+    if not Main.Parent then
+        MotionConnection:Disconnect()
+        return
+    end
 
-MotionConnection =
-    RunService.RenderStepped:Connect(
-        function(delta)
+    for _, info in ipairs(Lines) do
+        info.Angle += info.Speed * delta
 
-            if not Main.Parent then
+        local line = info.Object
+        local radius = info.Radius +
+            math.sin(tick() * 1.5 + info.Angle) * 8
 
-                if MotionConnection then
-                    MotionConnection:Disconnect()
-                end
+        line.Position = UDim2.new(
+            0.5,
+            math.cos(info.Angle) * radius,
+            0.5,
+            math.sin(info.Angle) * radius
+        )
 
-                return
-            end
-
-            for _, info in ipairs(
-                Lines
-            ) do
-
-                info.Angle +=
-                    info.Speed *
-                    delta
-
-                local line =
-                    info.Object
-
-                local radius =
-                    info.Radius +
-                    math.sin(
-                        tick() *
-                        1.5 +
-                        info.Angle
-                    ) *
-                    7
-
-                line.Position =
-                    UDim2.new(
-                        0.5,
-                        math.cos(
-                            info.Angle
-                        ) * radius,
-
-                        0.5,
-                        math.sin(
-                            info.Angle
-                        ) * radius
-                    )
-
-                line.Rotation =
-                    math.deg(
-                        info.Angle
-                    )
-
-                line.BackgroundTransparency =
-                    0.25 +
-                    math.sin(
-                        tick() * 2 +
-                        info.Angle
-                    ) *
-                    0.15
-
-            end
-
-        end
-    )
+        line.Rotation = math.deg(info.Angle)
+        line.BackgroundTransparency =
+            0.28 + math.sin(tick() * 2 + info.Angle) * 0.13
+    end
+end)
 
 --==============================================================
 -- BARRA SUPERIOR
 --==============================================================
 
-local Top =
-    Instance.new("Frame")
-
-Top.Size =
-    UDim2.new(
-        1,
-        -12,
-        0,
-        35
-    )
-
-Top.Position =
-    UDim2.fromOffset(
-        6,
-        6
-    )
-
-Top.BackgroundColor3 =
-    Color3.fromRGB(
-        12,
-        12,
-        15
-    )
-
+local Top = Instance.new("Frame")
+Top.Name = "Top"
+Top.Size = UDim2.new(1, -12, 0, 39)
+Top.Position = UDim2.fromOffset(6, 6)
+Top.BackgroundColor3 = DARK2
 Top.BorderSizePixel = 0
+Top.ZIndex = 8
+Top.Parent = Main
 
-Top.Parent =
-    Main
+local TopCorner = Instance.new("UICorner")
+TopCorner.CornerRadius = UDim.new(0, 12)
+TopCorner.Parent = Top
 
-local TopCorner =
-    Instance.new("UICorner")
-
-TopCorner.CornerRadius =
-    UDim.new(
-        0,
-        11
-    )
-
-TopCorner.Parent =
-    Top
+local TopStroke = Instance.new("UIStroke")
+TopStroke.Thickness = 1
+TopStroke.Color = Color3.fromRGB(50, 50, 58)
+TopStroke.Transparency = 0.15
+TopStroke.Parent = Top
 
 --==============================================================
--- LOGO CIRCULAR
+-- LOGO REAL
 --==============================================================
 
-local Logo =
-    Instance.new("Frame")
-
-Logo.Size =
-    UDim2.fromOffset(
-        48,
-        48
-    )
-
-Logo.Position =
-    UDim2.fromOffset(
-        8,
-        -2
-    )
-
-Logo.BackgroundColor3 =
-    Color3.fromRGB(
-        2,
-        2,
-        3
-    )
-
+local Logo = Instance.new("ImageLabel")
+Logo.Name = "Logo"
+Logo.Size = UDim2.fromOffset(48, 48)
+Logo.Position = UDim2.fromOffset(8, -4)
+Logo.BackgroundColor3 = Color3.fromRGB(2, 2, 4)
+Logo.BackgroundTransparency = 0
 Logo.BorderSizePixel = 0
+Logo.Image = "rbxassetid://103645600156879"
+Logo.ImageTransparency = 0
+Logo.ScaleType = Enum.ScaleType.Fit
+Logo.ZIndex = 12
+Logo.Parent = Top
 
-Logo.ZIndex = 10
+local LogoCorner = Instance.new("UICorner")
+LogoCorner.CornerRadius = UDim.new(1, 0)
+LogoCorner.Parent = Logo
 
-Logo.Parent =
-    Top
-
-local LogoCorner =
-    Instance.new("UICorner")
-
-LogoCorner.CornerRadius =
-    UDim.new(
-        1,
-        0
-    )
-
-LogoCorner.Parent =
-    Logo
-
-local LogoStroke =
-    Instance.new("UIStroke")
-
+local LogoStroke = Instance.new("UIStroke")
 LogoStroke.Thickness = 1.5
-
-LogoStroke.Color =
-    Color3.fromRGB(
-        130,
-        130,
-        135
-    )
-
-LogoStroke.Parent =
-    Logo
-
-local LogoText =
-    Instance.new("TextLabel")
-
-LogoText.Size =
-    UDim2.new(
-        1,
-        0,
-        1,
-        0
-    )
-
-LogoText.BackgroundTransparency = 1
-
-LogoText.Text =
-    "K"
-
-LogoText.Font =
-    Enum.Font.GothamBlack
-
-LogoText.TextSize = 22
-
-LogoText.TextColor3 =
-    Color3.fromRGB(
-        220,
-        220,
-        225
-    )
-
-LogoText.Parent =
-    Logo
+LogoStroke.Color = ACTIVE
+LogoStroke.Transparency = 0.1
+LogoStroke.Parent = Logo
 
 --==============================================================
--- ANIMACIÓN DEL LOGO
+-- MINI IMAGEN ESQUINA
 --==============================================================
 
+local CornerImage = Instance.new("ImageLabel")
+CornerImage.Name = "CornerImage"
+CornerImage.Size = UDim2.fromOffset(28, 28)
+CornerImage.Position = UDim2.new(1, -34, 0, 5)
+CornerImage.BackgroundTransparency = 1
+CornerImage.Image = "rbxassetid://81940639078484"
+CornerImage.ImageTransparency = 0.08
+CornerImage.ScaleType = Enum.ScaleType.Fit
+CornerImage.ZIndex = 12
+CornerImage.Parent = Top
+
+local CornerStroke = Instance.new("UIStroke")
+CornerStroke.Thickness = 1
+CornerStroke.Color = Color3.fromRGB(95, 95, 105)
+CornerStroke.Transparency = 0.35
+CornerStroke.Parent = CornerImage
+
+local CornerCorner = Instance.new("UICorner")
+CornerCorner.CornerRadius = UDim.new(1, 0)
+CornerCorner.Parent = CornerImage
+
+-- Logo animado: movimiento suave, no brillo de letras.
 task.spawn(function()
-
     while ScreenGui.Parent do
+        TweenService:Create(
+            Logo,
+            TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {Rotation = 6}
+        ):Play()
+
+        task.wait(1.5)
 
         TweenService:Create(
             Logo,
-            TweenInfo.new(
-                1.2,
-                Enum.EasingStyle.Sine,
-                Enum.EasingDirection.InOut
-            ),
-            {
-                Rotation = 8
-            }
+            TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {Rotation = -6}
         ):Play()
 
-        task.wait(1.2)
-
-        TweenService:Create(
-            Logo,
-            TweenInfo.new(
-                1.2,
-                Enum.EasingStyle.Sine,
-                Enum.EasingDirection.InOut
-            ),
-            {
-                Rotation = -8
-            }
-        ):Play()
-
-        task.wait(1.2)
-
+        task.wait(1.5)
     end
-
 end)
 
 --==============================================================
 -- TÍTULO
 --==============================================================
 
-local Title =
-    Instance.new("TextLabel")
-
-Title.Size =
-    UDim2.new(
-        1,
-        -75,
-        1,
-        0
-    )
-
-Title.Position =
-    UDim2.fromOffset(
-        65,
-        0
-    )
-
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -105, 1, 0)
+Title.Position = UDim2.fromOffset(65, 0)
 Title.BackgroundTransparency = 1
-
-Title.Text =
-    "INSTA TP"
-
-Title.Font =
-    Enum.Font.GothamBold
-
+Title.Text = "INSTA TP"
+Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
+Title.TextColor3 = WHITE
+Title.TextStrokeTransparency = 1
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.ZIndex = 10
+Title.Parent = Top
 
--- BRILLO BAJO
-Title.TextColor3 =
-    Color3.fromRGB(
-        205,
-        205,
-        210
-    )
-
-Title.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-Title.Parent =
-    Top
-
---==============================================================
--- SUBTÍTULO
---==============================================================
-
-local SubTitle =
-    Instance.new("TextLabel")
-
-SubTitle.Size =
-    UDim2.new(
-        1,
-        -75,
-        0,
-        12
-    )
-
-SubTitle.Position =
-    UDim2.fromOffset(
-        66,
-        19
-    )
-
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Size = UDim2.new(1, -105, 0, 12)
+SubTitle.Position = UDim2.fromOffset(66, 21)
 SubTitle.BackgroundTransparency = 1
-
-SubTitle.Text =
-    "BLACK MOTION"
-
-SubTitle.Font =
-    Enum.Font.GothamMedium
-
+SubTitle.Text = "BLACK MOTION  •  V2"
+SubTitle.Font = Enum.Font.GothamMedium
 SubTitle.TextSize = 7
-
-SubTitle.TextColor3 =
-    Color3.fromRGB(
-        105,
-        105,
-        110
-    )
-
-SubTitle.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-SubTitle.Parent =
-    Top
+SubTitle.TextColor3 = SOFT_WHITE
+SubTitle.TextStrokeTransparency = 1
+SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+SubTitle.ZIndex = 10
+SubTitle.Parent = Top
 
 --==============================================================
 -- CARD DEL MEJOR HUEVO
 --==============================================================
 
-local EggCard =
-    Instance.new("Frame")
-
-EggCard.Size =
-    UDim2.new(
-        1,
-        -20,
-        0,
-        72
-    )
-
-EggCard.Position =
-    UDim2.fromOffset(
-        10,
-        48
-    )
-
-EggCard.BackgroundColor3 =
-    Color3.fromRGB(
-        10,
-        10,
-        13
-    )
-
+local EggCard = Instance.new("Frame")
+EggCard.Name = "EggCard"
+EggCard.Size = UDim2.new(1, -20, 0, 76)
+EggCard.Position = UDim2.fromOffset(10, 51)
+EggCard.BackgroundColor3 = DARK2
 EggCard.BorderSizePixel = 0
+EggCard.ZIndex = 7
+EggCard.Parent = Main
 
-EggCard.Parent =
-    Main
+local EggCorner = Instance.new("UICorner")
+EggCorner.CornerRadius = UDim.new(0, 12)
+EggCorner.Parent = EggCard
 
-local EggCorner =
-    Instance.new("UICorner")
-
-EggCorner.CornerRadius =
-    UDim.new(
-        0,
-        11
-    )
-
-EggCorner.Parent =
-    EggCard
-
-local EggStroke =
-    Instance.new("UIStroke")
-
+local EggStroke = Instance.new("UIStroke")
 EggStroke.Thickness = 1
+EggStroke.Color = Color3.fromRGB(60, 60, 70)
+EggStroke.Transparency = 0.1
+EggStroke.Parent = EggCard
 
-EggStroke.Color =
-    Color3.fromRGB(
-        45,
-        45,
-        50
-    )
+local EggAccent = Instance.new("Frame")
+EggAccent.Size = UDim2.fromOffset(3, 54)
+EggAccent.Position = UDim2.fromOffset(6, 11)
+EggAccent.BackgroundColor3 = ACTIVE
+EggAccent.BorderSizePixel = 0
+EggAccent.ZIndex = 9
+EggAccent.Parent = EggCard
 
-EggStroke.Parent =
-    EggCard
+local EggAccentCorner = Instance.new("UICorner")
+EggAccentCorner.CornerRadius = UDim.new(1, 0)
+EggAccentCorner.Parent = EggAccent
 
---==============================================================
--- ICONO HUEVO
---==============================================================
-
-local EggIcon =
-    Instance.new("TextLabel")
-
-EggIcon.Size =
-    UDim2.fromOffset(
-        45,
-        55
-    )
-
-EggIcon.Position =
-    UDim2.fromOffset(
-        7,
-        8
-    )
-
+local EggIcon = Instance.new("TextLabel")
+EggIcon.Size = UDim2.fromOffset(45, 58)
+EggIcon.Position = UDim2.fromOffset(11, 9)
 EggIcon.BackgroundTransparency = 1
-
-EggIcon.Text =
-    "🥚"
-
+EggIcon.Text = "🥚"
 EggIcon.TextSize = 28
+EggIcon.TextStrokeTransparency = 1
+EggIcon.ZIndex = 9
+EggIcon.Parent = EggCard
 
-EggIcon.Parent =
-    EggCard
-
---==============================================================
--- TÍTULO CARD
---==============================================================
-
-local BestTitle =
-    Instance.new("TextLabel")
-
-BestTitle.Size =
-    UDim2.new(
-        1,
-        -60,
-        0,
-        16
-    )
-
-BestTitle.Position =
-    UDim2.fromOffset(
-        53,
-        7
-    )
-
+local BestTitle = Instance.new("TextLabel")
+BestTitle.Size = UDim2.new(1, -70, 0, 15)
+BestTitle.Position = UDim2.fromOffset(57, 8)
 BestTitle.BackgroundTransparency = 1
-
-BestTitle.Text =
-    "MEJOR HUEVO"
-
-BestTitle.Font =
-    Enum.Font.GothamBold
-
+BestTitle.Text = "MEJOR HUEVO"
+BestTitle.Font = Enum.Font.GothamBold
 BestTitle.TextSize = 9
+BestTitle.TextColor3 = SOFT_WHITE
+BestTitle.TextStrokeTransparency = 1
+BestTitle.TextXAlignment = Enum.TextXAlignment.Left
+BestTitle.ZIndex = 9
+BestTitle.Parent = EggCard
 
-BestTitle.TextColor3 =
-    Color3.fromRGB(
-        125,
-        125,
-        130
-    )
-
-BestTitle.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-BestTitle.Parent =
-    EggCard
-
---==============================================================
--- NOMBRE
---==============================================================
-
-local EggName =
-    Instance.new("TextLabel")
-
-EggName.Size =
-    UDim2.new(
-        1,
-        -60,
-        0,
-        22
-    )
-
-EggName.Position =
-    UDim2.fromOffset(
-        53,
-        22
-    )
-
+local EggName = Instance.new("TextLabel")
+EggName.Size = UDim2.new(1, -70, 0, 22)
+EggName.Position = UDim2.fromOffset(57, 23)
 EggName.BackgroundTransparency = 1
-
-EggName.Text =
-    "Buscando..."
-
-EggName.Font =
-    Enum.Font.GothamBold
-
+EggName.Text = "Buscando..."
+EggName.Font = Enum.Font.GothamBold
 EggName.TextSize = 12
+EggName.TextColor3 = WHITE
+EggName.TextStrokeTransparency = 1
+EggName.TextXAlignment = Enum.TextXAlignment.Left
+EggName.ZIndex = 9
+EggName.Parent = EggCard
 
-EggName.TextColor3 =
-    Color3.fromRGB(
-        215,
-        215,
-        220
-    )
-
-EggName.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-EggName.Parent =
-    EggCard
-
---==============================================================
--- LUCKY
---==============================================================
-
-local LuckyText =
-    Instance.new("TextLabel")
-
-LuckyText.Size =
-    UDim2.new(
-        1,
-        -60,
-        0,
-        18
-    )
-
-LuckyText.Position =
-    UDim2.fromOffset(
-        53,
-        43
-    )
-
+local LuckyText = Instance.new("TextLabel")
+LuckyText.Size = UDim2.new(1, -70, 0, 18)
+LuckyText.Position = UDim2.fromOffset(57, 45)
 LuckyText.BackgroundTransparency = 1
-
-LuckyText.Text =
-    "🍀 Lucky: --"
-
-LuckyText.Font =
-    Enum.Font.GothamMedium
-
+LuckyText.Text = "🍀 Lucky: --"
+LuckyText.Font = Enum.Font.GothamMedium
 LuckyText.TextSize = 9
-
-LuckyText.TextColor3 =
-    Color3.fromRGB(
-        145,
-        145,
-        150
-    )
-
-LuckyText.TextXAlignment =
-    Enum.TextXAlignment.Left
-
-LuckyText.Parent =
-    EggCard
+LuckyText.TextColor3 = SOFT_WHITE
+LuckyText.TextStrokeTransparency = 1
+LuckyText.TextXAlignment = Enum.TextXAlignment.Left
+LuckyText.ZIndex = 9
+LuckyText.Parent = EggCard
 
 --==============================================================
--- BOTÓN INSTA
+-- BOTONES
 --==============================================================
 
-local TPButton =
-    Instance.new("TextButton")
+local function MakeButton(name, text, position)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Size = UDim2.fromOffset(145, 43)
+    button.Position = position
+    button.BackgroundColor3 = DARK3
+    button.BorderSizePixel = 0
+    button.AutoButtonColor = false
+    button.Text = text
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 9
+    button.TextColor3 = WHITE
+    button.TextStrokeTransparency = 1
+    button.ZIndex = 8
+    button.Parent = Main
 
-TPButton.Size =
-    UDim2.fromOffset(
-        130,
-        43
-    )
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 11)
+    corner.Parent = button
 
-TPButton.Position =
-    UDim2.fromOffset(
-        10,
-        128
-    )
+    local stroke = Instance.new("UIStroke")
+    stroke.Name = "GlowStroke"
+    stroke.Thickness = 1.2
+    stroke.Color = Color3.fromRGB(60, 60, 70)
+    stroke.Transparency = 0.05
+    stroke.Parent = button
 
-TPButton.BackgroundColor3 =
-    Color3.fromRGB(
-        13,
-        13,
-        16
-    )
+    local inner = Instance.new("Frame")
+    inner.Name = "Inner"
+    inner.Size = UDim2.new(1, -8, 1, -8)
+    inner.Position = UDim2.fromOffset(4, 4)
+    inner.BackgroundTransparency = 1
+    inner.BorderSizePixel = 0
+    inner.ZIndex = 8
+    inner.Parent = button
 
-TPButton.BorderSizePixel = 0
+    local innerCorner = Instance.new("UICorner")
+    innerCorner.CornerRadius = UDim.new(0, 8)
+    innerCorner.Parent = inner
 
-TPButton.Text =
-    "INSTA TP   OFF"
+    button.MouseEnter:Connect(function()
+        TweenService:Create(
+            stroke,
+            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Thickness = 2,
+                Transparency = 0,
+                Color = Color3.fromRGB(130, 130, 140)
+            }
+        ):Play()
 
-TPButton.Font =
-    Enum.Font.GothamBold
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundColor3 = Color3.fromRGB(20, 20, 25)}
+        ):Play()
+    end)
 
-TPButton.TextSize = 9
+    button.MouseLeave:Connect(function()
+        TweenService:Create(
+            stroke,
+            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {
+                Thickness = 1.2,
+                Transparency = 0.05,
+                Color = Color3.fromRGB(60, 60, 70)
+            }
+        ):Play()
 
--- NO MÁS LETRAS BRILLANTES
-TPButton.TextColor3 =
-    Color3.fromRGB(
-        175,
-        175,
-        180
-    )
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundColor3 = DARK3}
+        ):Play()
+    end)
 
-TPButton.Parent =
-    Main
+    return button, stroke
+end
 
-local TPCorner =
-    Instance.new("UICorner")
+local TPButton, TPStroke = MakeButton(
+    "TPButton",
+    "INSTA TP   OFF",
+    UDim2.fromOffset(10, 135)
+)
 
-TPCorner.CornerRadius =
-    UDim.new(
-        0,
-        10
-    )
-
-TPCorner.Parent =
-    TPButton
-
-local TPStroke =
-    Instance.new("UIStroke")
-
-TPStroke.Thickness = 1
-
-TPStroke.Color =
-    Color3.fromRGB(
-        65,
-        65,
-        70
-    )
-
-TPStroke.Parent =
-    TPButton
+local LOPButton, LOPStroke = MakeButton(
+    "LOPButton",
+    "LOP   OFF",
+    UDim2.fromOffset(165, 135)
+)
 
 --==============================================================
--- BOTÓN LOP
+-- BOTÓN DE MINIMIZAR
 --==============================================================
 
-local LOPButton =
-    Instance.new("TextButton")
+local MinButton = Instance.new("TextButton")
+MinButton.Name = "MinButton"
+MinButton.Size = UDim2.fromOffset(25, 25)
+MinButton.Position = UDim2.new(1, -63, 0, 7)
+MinButton.BackgroundColor3 = Color3.fromRGB(18, 18, 23)
+MinButton.BorderSizePixel = 0
+MinButton.Text = "—"
+MinButton.Font = Enum.Font.GothamBold
+MinButton.TextSize = 12
+MinButton.TextColor3 = SOFT_WHITE
+MinButton.TextStrokeTransparency = 1
+MinButton.AutoButtonColor = false
+MinButton.ZIndex = 13
+MinButton.Parent = Top
 
-LOPButton.Size =
-    UDim2.fromOffset(
-        130,
-        43
-    )
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(1, 0)
+MinCorner.Parent = MinButton
 
-LOPButton.Position =
-    UDim2.fromOffset(
-        150,
-        128
-    )
+local MinStroke = Instance.new("UIStroke")
+MinStroke.Thickness = 1
+MinStroke.Color = Color3.fromRGB(70, 70, 80)
+MinStroke.Parent = MinButton
 
-LOPButton.BackgroundColor3 =
-    Color3.fromRGB(
-        13,
-        13,
-        16
-    )
+local minimized = false
 
-LOPButton.BorderSizePixel = 0
+MinButton.Activated:Connect(function()
+    minimized = not minimized
 
-LOPButton.Text =
-    "LOP   OFF"
-
-LOPButton.Font =
-    Enum.Font.GothamBold
-
-LOPButton.TextSize = 9
-
-LOPButton.TextColor3 =
-    Color3.fromRGB(
-        175,
-        175,
-        180
-    )
-
-LOPButton.Parent =
-    Main
-
-local LOPCorner =
-    Instance.new("UICorner")
-
-LOPCorner.CornerRadius =
-    UDim.new(
-        0,
-        10
-    )
-
-LOPCorner.Parent =
-    LOPButton
-
-local LOPStroke =
-    Instance.new("UIStroke")
-
-LOPStroke.Thickness = 1
-
-LOPStroke.Color =
-    Color3.fromRGB(
-        65,
-        65,
-        70
-    )
-
-LOPStroke.Parent =
-    LOPButton
+    if minimized then
+        MinButton.Text = "+"
+        TweenService:Create(
+            Main,
+            TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Size = UDim2.fromOffset(PANEL_W, 52)}
+        ):Play()
+    else
+        MinButton.Text = "—"
+        TweenService:Create(
+            Main,
+            TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            {Size = UDim2.fromOffset(PANEL_W, PANEL_H)}
+        ):Play()
+    end
+end)
 
 --==============================================================
 -- STATUS
 --==============================================================
 
-local Status =
-    Instance.new("TextLabel")
-
-Status.Size =
-    UDim2.new(
-        1,
-        -20,
-        0,
-        13
-    )
-
-Status.Position =
-    UDim2.fromOffset(
-        10,
-        177
-    )
-
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, -20, 0, 13)
+Status.Position = UDim2.fromOffset(10, 211)
 Status.BackgroundTransparency = 1
-
-Status.Text =
-    "● READY"
-
-Status.Font =
-    Enum.Font.GothamMedium
-
+Status.Text = "● READY"
+Status.Font = Enum.Font.GothamMedium
 Status.TextSize = 7
-
-Status.TextColor3 =
-    Color3.fromRGB(
-        100,
-        100,
-        105
-    )
-
-Status.TextXAlignment =
-    Enum.TextXAlignment.Center
-
-Status.Parent =
-    Main
+Status.TextColor3 = SOFT_WHITE
+Status.TextStrokeTransparency = 1
+Status.TextXAlignment = Enum.TextXAlignment.Center
+Status.ZIndex = 9
+Status.Parent = Main
 
 --==============================================================
--- ANIMACIÓN SUAVE DE STATUS
---==============================================================
-
-task.spawn(function()
-
-    while ScreenGui.Parent do
-
-        TweenService:Create(
-            Status,
-            TweenInfo.new(
-                0.8,
-                Enum.EasingStyle.Sine,
-                Enum.EasingDirection.InOut
-            ),
-            {
-                TextTransparency = 0.35
-            }
-        ):Play()
-
-        task.wait(0.8)
-
-        TweenService:Create(
-            Status,
-            TweenInfo.new(
-                0.8,
-                Enum.EasingStyle.Sine,
-                Enum.EasingDirection.InOut
-            ),
-            {
-                TextTransparency = 0
-            }
-        ):Play()
-
-        task.wait(0.8)
-
-    end
-
-end)
-
---==============================================================
--- ACTUALIZAR INTERFAZ
+-- UPDATE UI
 --==============================================================
 
 local function UpdateUI()
-
     if BestEgg and BestEgg.Parent then
-
-        local data =
-            GetEggData(
-                BestEgg.Name
-            )
+        local data = GetEggData(BestEgg.Name)
 
         if data then
-
-            EggName.Text =
-                BestEgg.Name
-
-            LuckyText.Text =
-                "🍀 Lucky: "
-                .. tostring(
-                    data.Luck
-                )
-
+            EggName.Text = BestEgg.Name
+            LuckyText.Text = "🍀 Lucky: " .. tostring(data.Luck)
         end
-
     else
-
-        EggName.Text =
-            "Buscando..."
-
-        LuckyText.Text =
-            "🍀 Lucky: --"
-
+        EggName.Text = "Buscando..."
+        LuckyText.Text = "🍀 Lucky: --"
     end
-
 end
 
 --==============================================================
--- CLICK ANIMADO
+-- CLICK ANIMATION
 --==============================================================
 
 local function ClickAnimation(button)
-
-    local originalSize =
-        button.Size
+    local originalSize = button.Size
 
     TweenService:Create(
         button,
-        TweenInfo.new(
-            0.07,
-            Enum.EasingStyle.Quad,
-            Enum.EasingDirection.Out
-        ),
+        TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
-            Size =
-                UDim2.fromOffset(
-                    originalSize.X.Offset - 5,
-                    originalSize.Y.Offset - 3
-                )
+            Size = UDim2.fromOffset(
+                originalSize.X.Offset - 5,
+                originalSize.Y.Offset - 3
+            )
         }
     ):Play()
 
-    task.delay(
-        0.07,
-        function()
-
+    task.delay(0.07, function()
+        if button and button.Parent then
             TweenService:Create(
                 button,
-                TweenInfo.new(
-                    0.13,
-                    Enum.EasingStyle.Back,
-                    Enum.EasingDirection.Out
-                ),
-                {
-                    Size =
-                        originalSize
-                }
+                TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                {Size = originalSize}
             ):Play()
-
         end
-    )
-
+    end)
 end
 
 --==============================================================
--- CAMBIAR ESTADO INSTA
+-- ESTADO INSTA
 --==============================================================
 
 local function UpdateTPButton()
-
     if InstaTP then
+        TPButton.Text = "INSTA TP   ON"
+        TPButton.TextColor3 = WHITE
 
-        TPButton.Text =
-            "INSTA TP   ON"
-
-        TPButton.TextColor3 =
-            Color3.fromRGB(
-                205,
-                205,
-                210
-            )
-
-        TPStroke.Color =
-            Color3.fromRGB(
-                115,
-                115,
-                120
-            )
-
+        TweenService:Create(
+            TPStroke,
+            TweenInfo.new(0.2),
+            {
+                Color = Color3.fromRGB(155, 155, 165),
+                Thickness = 2.2,
+                Transparency = 0
+            }
+        ):Play()
     else
+        TPButton.Text = "INSTA TP   OFF"
+        TPButton.TextColor3 = WHITE
 
-        TPButton.Text =
-            "INSTA TP   OFF"
-
-        TPButton.TextColor3 =
-            Color3.fromRGB(
-                175,
-                175,
-                180
-            )
-
-        TPStroke.Color =
-            Color3.fromRGB(
-                65,
-                65,
-                70
-            )
-
+        TweenService:Create(
+            TPStroke,
+            TweenInfo.new(0.2),
+            {
+                Color = Color3.fromRGB(60, 60, 70),
+                Thickness = 1.2,
+                Transparency = 0.05
+            }
+        ):Play()
     end
-
 end
 
 --==============================================================
--- CAMBIAR LOP
+-- ESTADO LOP
 --==============================================================
 
 local function UpdateLOPButton()
-
     if LOP then
+        LOPButton.Text = "LOP   ON"
+        LOPButton.TextColor3 = WHITE
 
-        LOPButton.Text =
-            "LOP   ON"
-
-        LOPButton.TextColor3 =
-            Color3.fromRGB(
-                205,
-                205,
-                210
-            )
-
-        LOPStroke.Color =
-            Color3.fromRGB(
-                110,
-                110,
-                115
-            )
-
+        TweenService:Create(
+            LOPStroke,
+            TweenInfo.new(0.2),
+            {
+                Color = Color3.fromRGB(145, 145, 155),
+                Thickness = 2.2,
+                Transparency = 0
+            }
+        ):Play()
     else
+        LOPButton.Text = "LOP   OFF"
+        LOPButton.TextColor3 = WHITE
 
-        LOPButton.Text =
-            "LOP   OFF"
-
-        LOPButton.TextColor3 =
-            Color3.fromRGB(
-                175,
-                175,
-                180
-            )
-
-        LOPStroke.Color =
-            Color3.fromRGB(
-                65,
-                65,
-                70
-            )
-
+        TweenService:Create(
+            LOPStroke,
+            TweenInfo.new(0.2),
+            {
+                Color = Color3.fromRGB(60, 60, 70),
+                Thickness = 1.2,
+                Transparency = 0.05
+            }
+        ):Play()
     end
-
 end
 
 --==============================================================
+-- FIN GUI
+--==============================================================
+
 -- CICLO
 --==============================================================
 
@@ -2482,61 +1850,6 @@ task.spawn(function()
 end)
 
 --==============================================================
--- BOTÓN ABRIR / CERRAR INTERFAZ
---==============================================================
-
-local InterfaceOpen = true
-
-ToggleButton.Activated:Connect(function()
-
-    InterfaceOpen = not InterfaceOpen
-
-    local targetTransparency = InterfaceOpen and 0 or 1
-
-    TweenService:Create(
-        ToggleScale,
-        TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {Scale = 0.88}
-    ):Play()
-
-    task.delay(0.08, function()
-        TweenService:Create(
-            ToggleScale,
-            TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-            {Scale = 1}
-        ):Play()
-    end)
-
-    if InterfaceOpen then
-
-        Main.Visible = true
-        MotionLayer.Visible = true
-
-        TweenService:Create(
-            Main,
-            TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 0}
-        ):Play()
-
-    else
-
-        TweenService:Create(
-            Main,
-            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-            {BackgroundTransparency = 1}
-        ):Play()
-
-        task.delay(0.2, function()
-            if not InterfaceOpen then
-                Main.Visible = false
-                MotionLayer.Visible = false
-            end
-        end)
-
-    end
-end)
-
---==============================================================
 -- INICIO
 --==============================================================
 
@@ -2547,352 +1860,3 @@ UpdateLOPButton()
 
 Status.Text =
     "● READY"
-
---==============================================================
--- OPEN BUTTON • RINGS / PULSE
---==============================================================
-if OpenButton then
-    for i = 1, 3 do
-        local ring = Instance.new("UIStroke")
-        ring.Name = "PulseRing"..i
-        ring.Thickness = 1
-        ring.Transparency = 0.35 + i * 0.15
-        ring.Color = Color3.fromRGB(145,145,150)
-        ring.Parent = OpenButton
-
-        task.spawn(function()
-            while ring.Parent do
-                TweenService:Create(
-                    ring,
-                    TweenInfo.new(0.9 + i*0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                    {Transparency = 0.08}
-                ):Play()
-                task.wait(0.9 + i*0.25)
-                TweenService:Create(
-                    ring,
-                    TweenInfo.new(0.9 + i*0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                    {Transparency = 0.65}
-                ):Play()
-                task.wait(0.9 + i*0.25)
-            end
-        end)
-    end
-end
-
-
---==============================================================
--- BOTONES • BORDES / PULSO / BRILLO
---==============================================================
-for _,obj in ipairs(Main:GetDescendants()) do
-    if obj:IsA("TextButton") then
-        local st = obj:FindFirstChild("BlackMotionButtonStroke")
-        if not st then
-            st=Instance.new("UIStroke")
-            st.Name="BlackMotionButtonStroke"
-            st.Thickness=1.4
-            st.Color=Color3.fromRGB(75,75,80)
-            st.Transparency=.15
-            st.Parent=obj
-        end
-
-        task.spawn(function()
-            local t=math.random()
-            while obj.Parent do
-                t += .04
-                st.Transparency=.10 + (math.sin(t*2)+1)*.16
-                st.Thickness=1.15 + (math.sin(t)+1)*.35
-                task.wait(.04)
-            end
-        end)
-    end
-end
-
-
---==============================================================
--- BOTÓN FLOTANTE • FOTO ARRIBA A LA DERECHA
---==============================================================
-local CornerButton = Instance.new("ImageButton")
-CornerButton.Name = "CornerLogoButton"
-CornerButton.Size = UDim2.fromOffset(56,56)
-CornerButton.Position = UDim2.new(1,-70,0,18)
-CornerButton.BackgroundColor3 = Color3.fromRGB(5,5,7)
-CornerButton.BackgroundTransparency = .08
-CornerButton.Image = "rbxassetid://103645600156879"
-CornerButton.ScaleType = Enum.ScaleType.Crop
-CornerButton.AutoButtonColor = false
-CornerButton.ZIndex = 200
-CornerButton.Parent = ScreenGui
-
-local CornerRound = Instance.new("UICorner")
-CornerRound.CornerRadius = UDim.new(1,0)
-CornerRound.Parent = CornerButton
-
-local CornerStroke = Instance.new("UIStroke")
-CornerStroke.Thickness = 2
-CornerStroke.Color = Color3.fromRGB(145,145,150)
-CornerStroke.Transparency = .08
-CornerStroke.Parent = CornerButton
-
-local CornerGlow = Instance.new("UIStroke")
-CornerGlow.Thickness = 5
-CornerGlow.Transparency = .7
-CornerGlow.Color = Color3.fromRGB(80,80,85)
-CornerGlow.Parent = CornerButton
-
-local panelVisible = true
-local function SetPanelVisible(state)
-    panelVisible = state
-    Main.Visible = state
-    if MotionLayer then MotionLayer.Visible = state end
-    if BubbleLayer then BubbleLayer.Visible = state end
-    CornerButton.ZIndex = 200
-end
-
-CornerButton.Activated:Connect(function()
-    panelVisible = not panelVisible
-    SetPanelVisible(panelVisible)
-    TweenService:Create(
-        CornerButton,
-        TweenInfo.new(.16,Enum.EasingStyle.Back,Enum.EasingDirection.Out),
-        {Size=UDim2.fromOffset(panelVisible and 60 or 56,panelVisible and 60 or 56)}
-    ):Play()
-end)
-
-task.spawn(function()
-    local t=0
-    while CornerButton.Parent do
-        t += .04
-        CornerStroke.Transparency=.05+(math.sin(t*2)+1)*.18
-        CornerGlow.Transparency=.55+(math.sin(t)+1)*.18
-        CornerButton.Rotation=math.sin(t)*3
-        task.wait(.04)
-    end
-end)
-
-
---==============================================================
--- KOXTA BLACK MOTION • VISUAL PACK ONLY
---==============================================================
-
--- Extra background layer
-local FX = Instance.new("Frame")
-FX.Name = "BlackMotionFX"
-FX.Size = UDim2.fromScale(1,1)
-FX.BackgroundTransparency = 1
-FX.BorderSizePixel = 0
-FX.ZIndex = 0
-FX.Parent = ScreenGui
-
--- Floating bubbles
-for i = 1, 36 do
-    local b = Instance.new("Frame")
-    local d = math.random(4,15)
-    b.Size = UDim2.fromOffset(d,d)
-    b.Position = UDim2.new(math.random(0,100)/100,0,math.random(0,105)/100,0)
-    b.BackgroundColor3 = Color3.fromRGB(math.random(80,180),math.random(80,180),math.random(80,180))
-    b.BackgroundTransparency = math.random(35,78)/100
-    b.BorderSizePixel = 0
-    b.ZIndex = 1
-    b.Parent = FX
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(1,0)
-    c.Parent = b
-
-    local st = Instance.new("UIStroke")
-    st.Thickness = 1
-    st.Color = Color3.fromRGB(150,150,155)
-    st.Transparency = .55
-    st.Parent = b
-
-    task.spawn(function()
-        while b.Parent do
-            local x = math.clamp(b.Position.X.Scale + math.random(-12,12)/1000,.01,.99)
-            local y = b.Position.Y.Scale - math.random(4,12)/1000
-            if y < -.06 then
-                y = 1.06
-                x = math.random(1,99)/100
-            end
-            TweenService:Create(
-                b,
-                TweenInfo.new(.22,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),
-                {Position=UDim2.new(x,0,y,0)}
-            ):Play()
-            task.wait(.22)
-        end
-    end)
-end
-
--- Tiny stars/dust
-for i = 1, 28 do
-    local p = Instance.new("Frame")
-    p.Size = UDim2.fromOffset(math.random(1,3),math.random(1,3))
-    p.Position = UDim2.new(math.random(2,98)/100,0,math.random(2,98)/100,0)
-    p.BackgroundColor3 = Color3.fromRGB(220,220,225)
-    p.BackgroundTransparency = 1
-    p.BorderSizePixel = 0
-    p.ZIndex = 2
-    p.Parent = FX
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(1,0)
-    c.Parent = p
-
-    task.spawn(function()
-        while p.Parent do
-            TweenService:Create(p,TweenInfo.new(.55,Enum.EasingStyle.Sine),{BackgroundTransparency=.15}):Play()
-            task.wait(.55)
-            TweenService:Create(p,TweenInfo.new(.55,Enum.EasingStyle.Sine),{BackgroundTransparency=1}):Play()
-            task.wait(.55)
-        end
-    end)
-end
-
--- Decorative moving lines
-for i = 1, 10 do
-    local line = Instance.new("Frame")
-    line.Size = UDim2.fromOffset(math.random(30,90),1)
-    line.Position = UDim2.new(math.random(5,95)/100,0,math.random(5,95)/100,0)
-    line.Rotation = math.random(0,360)
-    line.BackgroundColor3 = Color3.fromRGB(100,100,105)
-    line.BackgroundTransparency = .6
-    line.BorderSizePixel = 0
-    line.ZIndex = 1
-    line.Parent = FX
-
-    task.spawn(function()
-        while line.Parent do
-            TweenService:Create(
-                line,
-                TweenInfo.new(1.8,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),
-                {
-                    Position=UDim2.new(math.random(5,95)/100,0,math.random(5,95)/100,0),
-                    Rotation=math.random(0,360),
-                    BackgroundTransparency=.35
-                }
-            ):Play()
-            task.wait(1.8)
-        end
-    end)
-end
-
--- Second logo INSIDE the existing panel.
-local PanelLogo = Instance.new("ImageLabel")
-PanelLogo.Name = "PanelLogo"
-PanelLogo.Size = UDim2.fromOffset(38,38)
-PanelLogo.Position = UDim2.new(1,-48,0,7)
-PanelLogo.BackgroundTransparency = 1
-PanelLogo.Image = "rbxassetid://103645600156879"
-PanelLogo.ScaleType = Enum.ScaleType.Crop
-PanelLogo.ZIndex = 20
-PanelLogo.Parent = Main
-
-local PLC = Instance.new("UICorner")
-PLC.CornerRadius = UDim.new(1,0)
-PLC.Parent = PanelLogo
-
-local PLS = Instance.new("UIStroke")
-PLS.Thickness = 2
-PLS.Color = Color3.fromRGB(130,130,135)
-PLS.Transparency = .15
-PLS.Parent = PanelLogo
-
-task.spawn(function()
-    local t=0
-    while PanelLogo.Parent do
-        t += .04
-        PanelLogo.Rotation = math.sin(t)*3
-        PLS.Transparency = .08 + (math.sin(t*2)+1)*.14
-        task.wait(.04)
-    end
-end)
-
--- Animated outer border around existing panel.
-local Outer = Main:FindFirstChild("BlackMotionOuter")
-if not Outer then
-    Outer = Instance.new("UIStroke")
-    Outer.Name = "BlackMotionOuter"
-    Outer.Thickness = 2
-    Outer.Color = Color3.fromRGB(105,105,110)
-    Outer.Transparency = .35
-    Outer.Parent = Main
-
-    task.spawn(function()
-        local t=0
-        while Main.Parent do
-            t += .04
-            Outer.Transparency = .2 + (math.sin(t*2)+1)*.14
-            Outer.Thickness = 1.6 + (math.sin(t)+1)*.5
-            task.wait(.04)
-        end
-    end)
-end
-
--- Animate existing button strokes without replacing the buttons.
-for _,obj in ipairs(Main:GetDescendants()) do
-    if obj:IsA("TextButton") then
-        local st = obj:FindFirstChild("BlackMotionButtonFX")
-        if not st then
-            st = Instance.new("UIStroke")
-            st.Name = "BlackMotionButtonFX"
-            st.Thickness = 1.3
-            st.Color = Color3.fromRGB(90,90,95)
-            st.Transparency = .22
-            st.Parent = obj
-
-            task.spawn(function()
-                local t=math.random()
-                while obj.Parent do
-                    t += .05
-                    st.Transparency = .12 + (math.sin(t*2)+1)*.13
-                    st.Thickness = 1.1 + (math.sin(t)+1)*.35
-                    task.wait(.05)
-                end
-            end)
-        end
-    end
-end
-
--- Floating OPEN/CLOSE logo button. It only controls visibility.
-local OpenClose = Instance.new("ImageButton")
-OpenClose.Name = "BlackMotionOpenClose"
-OpenClose.Size = UDim2.fromOffset(56,56)
-OpenClose.Position = UDim2.new(1,-72,0,18)
-OpenClose.BackgroundColor3 = Color3.fromRGB(4,4,6)
-OpenClose.BackgroundTransparency = .08
-OpenClose.Image = "rbxassetid://103645600156879"
-OpenClose.ScaleType = Enum.ScaleType.Crop
-OpenClose.AutoButtonColor = false
-OpenClose.ZIndex = 100
-OpenClose.Parent = ScreenGui
-
-local OCC = Instance.new("UICorner")
-OCC.CornerRadius = UDim.new(1,0)
-OCC.Parent = OpenClose
-
-local OCS = Instance.new("UIStroke")
-OCS.Thickness = 2
-OCS.Color = Color3.fromRGB(145,145,150)
-OCS.Parent = OpenClose
-
-local panelState = true
-OpenClose.Activated:Connect(function()
-    panelState = not panelState
-    Main.Visible = panelState
-    OpenClose.Visible = true
-    TweenService:Create(
-        OpenClose,
-        TweenInfo.new(.15,Enum.EasingStyle.Back,Enum.EasingDirection.Out),
-        {Size=UDim2.fromOffset(panelState and 60 or 56,panelState and 60 or 56)}
-    ):Play()
-end)
-
-task.spawn(function()
-    local t=0
-    while OpenClose.Parent do
-        t += .04
-        OCS.Transparency = .08 + (math.sin(t*2)+1)*.16
-        OpenClose.Rotation = math.sin(t)*3
-        task.wait(.04)
-    end
-end)
