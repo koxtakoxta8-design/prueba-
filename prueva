@@ -1407,3 +1407,116 @@ TweenService:Create(
 
 RefreshBestEgg()
 UpdateUI()
+
+--==============================================================
+-- CERRAR / ABRIR INTERFAZ - FIX V4
+--==============================================================
+
+local MainVisible = true
+
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "OpenButton"
+OpenButton.Parent = ScreenGui
+OpenButton.Size = UDim2.fromOffset(48, 48)
+OpenButton.Position = UDim2.new(1, -62, 0, 85)
+OpenButton.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
+OpenButton.BackgroundTransparency = 0.20
+OpenButton.Text = "K"
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.TextSize = 22
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.AutoButtonColor = true
+OpenButton.Visible = false
+OpenButton.Active = true
+OpenButton.ZIndex = 100
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(1, 0)
+OpenCorner.Parent = OpenButton
+
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = Color3.fromRGB(145, 145, 150)
+OpenStroke.Thickness = 1
+OpenStroke.Transparency = 0
+OpenStroke.Parent = OpenButton
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = Top
+CloseButton.Size = UDim2.fromOffset(30, 30)
+CloseButton.Position = UDim2.new(1, -38, 0.5, -15)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "×"
+CloseButton.TextColor3 = Color3.fromRGB(190, 190, 195)
+CloseButton.TextSize = 25
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.AutoButtonColor = false
+CloseButton.Active = true
+CloseButton.ZIndex = 100
+
+local function SetPanelVisible(state)
+    MainVisible = state
+    Main.Visible = state
+    OpenButton.Visible = not state
+
+    if state then
+        Main.Active = true
+        Top.Active = true
+    end
+end
+
+CloseButton.MouseButton1Click:Connect(function()
+    SetPanelVisible(false)
+end)
+
+OpenButton.MouseButton1Click:Connect(function()
+    SetPanelVisible(true)
+end)
+
+CloseButton.Activated:Connect(function()
+    SetPanelVisible(false)
+end)
+
+OpenButton.Activated:Connect(function()
+    SetPanelVisible(true)
+end)
+
+-- Touch fallback: detect taps directly.
+CloseButton.TouchTap:Connect(function()
+    SetPanelVisible(false)
+end)
+
+OpenButton.TouchTap:Connect(function()
+    SetPanelVisible(true)
+end)
+
+--==============================================================
+-- BORDE GRIS FINO
+--==============================================================
+
+local MainBorder = Main:FindFirstChild("MainBorder")
+if not MainBorder then
+    MainBorder = Instance.new("UIStroke")
+    MainBorder.Name = "MainBorder"
+    MainBorder.Parent = Main
+end
+
+MainBorder.Color = Color3.fromRGB(105, 105, 110)
+MainBorder.Thickness = 1
+MainBorder.Transparency = 0
+
+-- Transparencia media
+Main.BackgroundTransparency = 0.38
+
+-- Imagen solicitada
+local HeaderImage = Main:FindFirstChild("HeaderImage")
+if HeaderImage and HeaderImage:IsA("ImageLabel") then
+    HeaderImage.Image = "rbxassetid://103645600156879"
+end
+
+-- Asegurar que los controles estén por encima del resto.
+Main.ZIndex = 10
+Top.ZIndex = 20
+CloseButton.ZIndex = 100
+OpenButton.ZIndex = 100
+
