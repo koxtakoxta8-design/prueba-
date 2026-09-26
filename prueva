@@ -69,7 +69,8 @@ local EggData = {
     ["Galaxy Egg"] = {Luck="1.5B", Rarity="Divine"},
     ["Black Hole Egg"] = {Luck="100B", Rarity="Ethereal"},
     ["Cherub Egg"] = {Luck="1T", Rarity="Ethereal"},
-    ["Volcanic Egg"] = {Luck="2.5T", Rarity="Ethereal"}
+    ["Volcanic Egg"] = {Luck="2.5T", Rarity="Ethereal"},
+    ["Solaris Egg"] = {Luck="300B", Rarity="Ethereal"}
 }
 
 --==============================================================
@@ -295,8 +296,8 @@ local function IsValidEgg(obj)
     end
 
     if (
-        position - EXCLUSION_CENTER
-    ).Magnitude <= EXCLUSION_RADIUS then
+        position - BASE_EXCLUSION_CENTER
+    ).Magnitude <= BASE_EXCLUSION_RADIUS then
         return false
     end
 
@@ -728,9 +729,8 @@ ScreenGui.Name =
     "INSTA_STEAL_BLACK_EDITION"
 
 ScreenGui.ResetOnSpawn = false
-Gui.DisplayOrder = 9999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.DisplayOrder = 999
+ScreenGui.DisplayOrder = 9999
 ScreenGui.Parent =
     LocalPlayer:WaitForChild("PlayerGui")
 
@@ -792,29 +792,6 @@ Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
 Shadow.ZIndex = 0
 Shadow.Parent = Main
 
---==============================================================
---==============================================================
-
-
-
-for i = 1, 12 do
-        0,
-        0
-    )
-
-
-end
-
-task.spawn(function()
-                if newY < 0.08 then
-                end
-                TweenService:Create(
-                ):Play()
-            end
-        end
-        task.wait(0.55)
-    end
-end)
 
 --==============================================================
 -- BARRA SUPERIOR
@@ -976,19 +953,18 @@ local dragStart=nil
 local startPos=nil
 
 Top.InputBegan:Connect(function(input)
-    if input.UserInputType==Enum.UserInputType.MouseButton1
-    or input.UserInputType==Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
 
-        -- No iniciar el arrastre cuando se pulsa un botón.
         if input.Target == DiscordButton
         or input.Target == PlusButton then
             return
         end
 
-        dragging=true
-        dragStart=input.Position
-        startPos=Main.Position
-        dragInput=input
+        dragging = true
+        dragStart = input.Position
+        startPos = Main.Position
+        dragInput = input
     end
 end)
 
@@ -1030,6 +1006,7 @@ OpenButton.ImageTransparency = 0
 OpenButton.ScaleType = Enum.ScaleType.Crop
 OpenButton.Visible = true
 OpenButton.AutoButtonColor = false
+OpenButton.Active = true
 OpenButton.ZIndex = 30
 OpenButton.Parent = ScreenGui
 
@@ -1289,6 +1266,15 @@ LOPStroke.Parent = LOPButton
 -- Seguridad visual: los controles quedan por encima del fondo animado.
 TPButton.Visible = true
 LOPButton.Visible = true
+DiscordButton.ZIndex = 100
+PlusButton.ZIndex = 100
+TPButton.ZIndex = 100
+LOPButton.ZIndex = 100
+EggCard.ZIndex = 90
+EggText.ZIndex = 101
+Status.ZIndex = 101
+TargetLabel.ZIndex = 101
+Arrow.ZIndex = 101
 TPButton.Active = true
 LOPButton.Active = true
 DiscordButton.Visible = true
@@ -1664,81 +1650,6 @@ task.spawn(function()
         UpdateUI()
 
         task.wait(REFRESH_TIME)
-
-    end
-
-end)
-
---==============================================================
--- PANEL MOVIBLE
---==============================================================
-
-local dragging = false
-local dragStart
-local startPosition
-
-local function UpdateDrag(input)
-
-    local delta =
-        input.Position - dragStart
-
-    Main.Position =
-        UDim2.new(
-            startPosition.X.Scale,
-            startPosition.X.Offset + delta.X,
-            startPosition.Y.Scale,
-            startPosition.Y.Offset + delta.Y
-        )
-
-end
-
-Top.InputBegan:Connect(function(input)
-
-    if
-        input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or
-        input.UserInputType ==
-        Enum.UserInputType.Touch
-    then
-
-        dragging = true
-        dragStart = input.Position
-        startPosition = Main.Position
-
-    end
-
-end)
-
-Top.InputChanged:Connect(function(input)
-
-    if
-        input.UserInputType ==
-        Enum.UserInputType.MouseMovement
-        or
-        input.UserInputType ==
-        Enum.UserInputType.Touch
-    then
-
-        if dragging then
-            UpdateDrag(input)
-        end
-
-    end
-
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-
-    if
-        input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or
-        input.UserInputType ==
-        Enum.UserInputType.Touch
-    then
-
-        dragging = false
 
     end
 
