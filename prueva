@@ -1415,17 +1415,18 @@ UpdateUI()
 
 local InterfaceSaved = false
 
--- El botón que antes era X ahora es GUARDAR INTERFAZ.
+-- Botón X en la esquina superior derecha.
+-- Al tocarlo, guarda/oculta la interfaz y deja la foto para reabrir.
 local SaveInterfaceButton = Instance.new("TextButton")
 SaveInterfaceButton.Name = "SaveInterfaceButton"
 SaveInterfaceButton.Parent = Top
-SaveInterfaceButton.Size = UDim2.fromOffset(125, 28)
-SaveInterfaceButton.Position = UDim2.new(1, -135, 0.5, -14)
+SaveInterfaceButton.Size = UDim2.fromOffset(30, 30)
+SaveInterfaceButton.Position = UDim2.new(1, -36, 0.5, -15)
 SaveInterfaceButton.BackgroundTransparency = 1
-SaveInterfaceButton.Text = "GUARDAR INTERFAZ"
+SaveInterfaceButton.Text = "×"
 SaveInterfaceButton.TextColor3 = Color3.fromRGB(190, 190, 195)
-SaveInterfaceButton.TextSize = 11
-SaveInterfaceButton.Font = Enum.Font.GothamMedium
+SaveInterfaceButton.TextSize = 24
+SaveInterfaceButton.Font = Enum.Font.GothamBold
 SaveInterfaceButton.AutoButtonColor = false
 SaveInterfaceButton.Active = true
 SaveInterfaceButton.ZIndex = 100
@@ -1434,10 +1435,11 @@ SaveInterfaceButton.ZIndex = 100
 local ReopenButton = Instance.new("ImageButton")
 ReopenButton.Name = "ReopenButton"
 ReopenButton.Parent = ScreenGui
-ReopenButton.Size = UDim2.fromOffset(58, 58)
-ReopenButton.Position = UDim2.new(1, -72, 0, 82)
+ReopenButton.Size = UDim2.fromOffset(54, 54)
+ReopenButton.Position = UDim2.new(1, -66, 0, 12)
+ReopenButton.AnchorPoint = Vector2.new(0, 0)
 ReopenButton.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
-ReopenButton.BackgroundTransparency = 0.20
+ReopenButton.BackgroundTransparency = 0.18
 ReopenButton.Image = "rbxassetid://103645600156879"
 ReopenButton.ScaleType = Enum.ScaleType.Crop
 ReopenButton.Visible = false
@@ -1452,6 +1454,7 @@ ReopenCorner.Parent = ReopenButton
 local ReopenStroke = Instance.new("UIStroke")
 ReopenStroke.Color = Color3.fromRGB(105, 105, 110)
 ReopenStroke.Thickness = 1
+ReopenStroke.Transparency = 0
 ReopenStroke.Parent = ReopenButton
 
 local function SaveAndHideInterface()
