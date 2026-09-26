@@ -755,6 +755,39 @@ Main.BorderSizePixel = 0
 Main.ClipsDescendants = false
 
 Main.Parent =
+
+--==============================================================
+-- LOGO DENTRO DEL PANEL • MISMO ID
+--==============================================================
+local PanelLogo = Instance.new("ImageLabel")
+PanelLogo.Name = "PanelLogo"
+PanelLogo.Size = UDim2.fromOffset(42,42)
+PanelLogo.Position = UDim2.fromOffset(238,8)
+PanelLogo.BackgroundTransparency = 1
+PanelLogo.Image = "rbxassetid://103645600156879"
+PanelLogo.ScaleType = Enum.ScaleType.Crop
+PanelLogo.ZIndex = 50
+PanelLogo.Parent = Main
+
+local PanelLogoCorner = Instance.new("UICorner")
+PanelLogoCorner.CornerRadius = UDim.new(1,0)
+PanelLogoCorner.Parent = PanelLogo
+
+local PanelLogoStroke = Instance.new("UIStroke")
+PanelLogoStroke.Thickness = 2
+PanelLogoStroke.Color = Color3.fromRGB(125,125,130)
+PanelLogoStroke.Transparency = .15
+PanelLogoStroke.Parent = PanelLogo
+
+task.spawn(function()
+    local t=0
+    while PanelLogo.Parent do
+        t += .05
+        PanelLogo.Rotation = math.sin(t)*4
+        PanelLogoStroke.Transparency = .12 + (math.sin(t*2)+1)*.12
+        task.wait(.05)
+    end
+end)
     ScreenGui
 
 local MainCorner =
@@ -2437,3 +2470,93 @@ if OpenButton then
         end)
     end
 end
+
+
+--==============================================================
+-- BOTONES • BORDES / PULSO / BRILLO
+--==============================================================
+for _,obj in ipairs(Main:GetDescendants()) do
+    if obj:IsA("TextButton") then
+        local st = obj:FindFirstChild("BlackMotionButtonStroke")
+        if not st then
+            st=Instance.new("UIStroke")
+            st.Name="BlackMotionButtonStroke"
+            st.Thickness=1.4
+            st.Color=Color3.fromRGB(75,75,80)
+            st.Transparency=.15
+            st.Parent=obj
+        end
+
+        task.spawn(function()
+            local t=math.random()
+            while obj.Parent do
+                t += .04
+                st.Transparency=.10 + (math.sin(t*2)+1)*.16
+                st.Thickness=1.15 + (math.sin(t)+1)*.35
+                task.wait(.04)
+            end
+        end)
+    end
+end
+
+
+--==============================================================
+-- BOTÓN FLOTANTE • FOTO ARRIBA A LA DERECHA
+--==============================================================
+local CornerButton = Instance.new("ImageButton")
+CornerButton.Name = "CornerLogoButton"
+CornerButton.Size = UDim2.fromOffset(56,56)
+CornerButton.Position = UDim2.new(1,-70,0,18)
+CornerButton.BackgroundColor3 = Color3.fromRGB(5,5,7)
+CornerButton.BackgroundTransparency = .08
+CornerButton.Image = "rbxassetid://103645600156879"
+CornerButton.ScaleType = Enum.ScaleType.Crop
+CornerButton.AutoButtonColor = false
+CornerButton.ZIndex = 200
+CornerButton.Parent = Gui
+
+local CornerRound = Instance.new("UICorner")
+CornerRound.CornerRadius = UDim.new(1,0)
+CornerRound.Parent = CornerButton
+
+local CornerStroke = Instance.new("UIStroke")
+CornerStroke.Thickness = 2
+CornerStroke.Color = Color3.fromRGB(145,145,150)
+CornerStroke.Transparency = .08
+CornerStroke.Parent = CornerButton
+
+local CornerGlow = Instance.new("UIStroke")
+CornerGlow.Thickness = 5
+CornerGlow.Transparency = .7
+CornerGlow.Color = Color3.fromRGB(80,80,85)
+CornerGlow.Parent = CornerButton
+
+local panelVisible = true
+local function SetPanelVisible(state)
+    panelVisible = state
+    Main.Visible = state
+    if MotionLayer then MotionLayer.Visible = state end
+    if BubbleLayer then BubbleLayer.Visible = state end
+    CornerButton.ZIndex = 200
+end
+
+CornerButton.Activated:Connect(function()
+    panelVisible = not panelVisible
+    SetPanelVisible(panelVisible)
+    TweenService:Create(
+        CornerButton,
+        TweenInfo.new(.16,Enum.EasingStyle.Back,Enum.EasingDirection.Out),
+        {Size=UDim2.fromOffset(panelVisible and 60 or 56,panelVisible and 60 or 56)}
+    ):Play()
+end)
+
+task.spawn(function()
+    local t=0
+    while CornerButton.Parent do
+        t += .04
+        CornerStroke.Transparency=.05+(math.sin(t*2)+1)*.18
+        CornerGlow.Transparency=.55+(math.sin(t)+1)*.18
+        CornerButton.Rotation=math.sin(t)*3
+        task.wait(.04)
+    end
+end)
