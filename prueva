@@ -728,6 +728,7 @@ ScreenGui.Name =
     "INSTA_STEAL_BLACK_EDITION"
 
 ScreenGui.ResetOnSpawn = false
+Gui.DisplayOrder = 9999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 999
 ScreenGui.Parent =
@@ -792,58 +793,22 @@ Shadow.ZIndex = 0
 Shadow.Parent = Main
 
 --==============================================================
--- BURBUJAS / EFECTOS DE FONDO
 --==============================================================
 
-local BubbleLayer = Instance.new("Frame")
-BubbleLayer.Name = "BubbleLayer"
-BubbleLayer.Size = UDim2.fromScale(1, 1)
-BubbleLayer.BackgroundTransparency = 1
-BubbleLayer.ClipsDescendants = true
-BubbleLayer.ZIndex = 1
-BubbleLayer.Parent = Main
 
-local BubbleRng = Random.new()
-local Bubbles = {}
 
 for i = 1, 12 do
-    local Bubble = Instance.new("Frame")
-    local size = BubbleRng:NextInteger(4, 10)
-    Bubble.Size = UDim2.fromOffset(size, size)
-    Bubble.Position = UDim2.new(
-        BubbleRng:NextNumber(0.02, 0.92),
         0,
-        BubbleRng:NextNumber(0.15, 0.95),
         0
     )
-    Bubble.BackgroundColor3 = Color3.fromRGB(70, 75, 82)
-    Bubble.BackgroundTransparency = BubbleRng:NextNumber(0.55, 0.82)
-    Bubble.BorderSizePixel = 0
-    Bubble.ZIndex = 1
-    Bubble.Parent = BubbleLayer
 
-    local BubbleCorner = Instance.new("UICorner")
-    BubbleCorner.CornerRadius = UDim.new(1, 0)
-    BubbleCorner.Parent = Bubble
 
-    table.insert(Bubbles, Bubble)
 end
 
 task.spawn(function()
-    while BubbleLayer.Parent do
-        for _, Bubble in ipairs(Bubbles) do
-            if Bubble.Parent then
-                local x = Bubble.Position.X.Scale
-                local y = Bubble.Position.Y.Scale
-                local newY = y - BubbleRng:NextNumber(0.04, 0.10)
                 if newY < 0.08 then
-                    newY = BubbleRng:NextNumber(0.75, 1.05)
-                    x = BubbleRng:NextNumber(0.02, 0.94)
                 end
                 TweenService:Create(
-                    Bubble,
-                    TweenInfo.new(BubbleRng:NextNumber(1.2, 2.6), Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-                    {Position = UDim2.new(x, 0, newY, 0), BackgroundTransparency = BubbleRng:NextNumber(0.55, 0.86)}
                 ):Play()
             end
         end
