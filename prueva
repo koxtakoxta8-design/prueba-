@@ -511,9 +511,9 @@ MainCorner.Parent = Main
 local Stroke =
     Instance.new("UIStroke")
 
-Stroke.Thickness = 1.5
-Stroke.Color = Color3.fromRGB(55, 57, 61)
-Stroke.Transparency = 0.15
+Stroke.Thickness = 1
+Stroke.Color = Color3.fromRGB(125, 127, 132)
+Stroke.Transparency = 0.08
 Stroke.Parent = Main
 
 -- sombra
@@ -662,9 +662,9 @@ PlusButton.BackgroundColor3 =
     Color3.fromRGB(27, 29, 33)
 
 PlusButton.BorderSizePixel = 0
-PlusButton.Text = "+"
+PlusButton.Text = "×"
 PlusButton.Font = Enum.Font.GothamBold
-PlusButton.TextSize = 15
+PlusButton.TextSize = 18
 PlusButton.TextColor3 = Color3.fromRGB(225, 225, 225)
 PlusButton.AutoButtonColor = false
 PlusButton.Parent = Top
@@ -676,6 +676,46 @@ PlusCorner.CornerRadius =
     UDim.new(0, 8)
 
 PlusCorner.Parent = PlusButton
+
+--==============================================================
+-- ABRIR / CERRAR INTERFAZ
+--==============================================================
+
+local OpenButton =
+    Instance.new("TextButton")
+
+OpenButton.Size = UDim2.fromOffset(42, 42)
+OpenButton.Position = UDim2.new(1, -58, 0, 120)
+OpenButton.BackgroundColor3 = Color3.fromRGB(8, 9, 11)
+OpenButton.BackgroundTransparency = 0.25
+OpenButton.BorderSizePixel = 0
+OpenButton.Text = "⚡"
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.TextSize = 18
+OpenButton.TextColor3 = Color3.fromRGB(235, 235, 238)
+OpenButton.Visible = false
+OpenButton.AutoButtonColor = false
+OpenButton.Parent = ScreenGui
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(1, 0)
+OpenCorner.Parent = OpenButton
+
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Thickness = 1
+OpenStroke.Color = Color3.fromRGB(125, 127, 132)
+OpenStroke.Transparency = 0.05
+OpenStroke.Parent = OpenButton
+
+PlusButton.Activated:Connect(function()
+    Main.Visible = false
+    OpenButton.Visible = true
+end)
+
+OpenButton.Activated:Connect(function()
+    Main.Visible = true
+    OpenButton.Visible = false
+end)
 
 --==============================================================
 -- INDICADOR
@@ -1357,7 +1397,7 @@ TweenService:Create(
     ),
     {
         Position = originalPosition,
-        BackgroundTransparency = 0
+        BackgroundTransparency = 0.40
     }
 ):Play()
 
