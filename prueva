@@ -467,12 +467,7 @@ end
 
 --==============================================================
 -- GUI
---==============================================================
--- INTERFAZ NUEVA
--- IMPORTANTE: NO CAMBIAR LA MECÁNICA.
--- Se conservan exactamente los nombres que usa la mecánica:
--- Main, Top, Status, EggText, TPButton, TPStroke,
--- LOPButton y LOPStroke.
+-- SOLO INTERFAZ: LA MECÁNICA FUERA DE ESTE BLOQUE NO SE CAMBIA
 --==============================================================
 
 local ScreenGui =
@@ -488,7 +483,7 @@ ScreenGui.Parent =
     LocalPlayer:WaitForChild("PlayerGui")
 
 --==============================================================
--- BOTÓN FLOTANTE K: ABRIR / CERRAR
+-- BOTÓN FLOTANTE K: ABRIR INTERFAZ
 --==============================================================
 
 local OpenButton =
@@ -506,8 +501,7 @@ OpenButton.Position =
 OpenButton.BackgroundColor3 =
     Color3.fromRGB(8, 9, 10)
 
-OpenButton.BackgroundTransparency = 0.12
-
+OpenButton.BackgroundTransparency = 0.15
 OpenButton.BorderSizePixel = 0
 
 OpenButton.Text =
@@ -522,14 +516,12 @@ OpenButton.TextColor3 =
     Color3.fromRGB(225, 225, 230)
 
 OpenButton.TextStrokeTransparency = 1
-
 OpenButton.AutoButtonColor = false
-
 OpenButton.Visible = false
+OpenButton.ZIndex = 100
 
-OpenButton.ZIndex = 50
-
-OpenButton.Parent = ScreenGui
+OpenButton.Parent =
+    ScreenGui
 
 local OpenCorner =
     Instance.new("UICorner")
@@ -560,9 +552,6 @@ OpenStroke.Parent =
 local Main =
     Instance.new("Frame")
 
-Main.Name =
-    "Main"
-
 Main.Size =
     UDim2.fromOffset(290, 195)
 
@@ -573,8 +562,9 @@ Main.BackgroundColor3 =
     Color3.fromRGB(5, 5, 7)
 
 Main.BackgroundTransparency = 0.18
-
 Main.BorderSizePixel = 0
+Main.Active = true
+Main.ZIndex = 10
 
 Main.Parent =
     ScreenGui
@@ -583,7 +573,7 @@ local Corner =
     Instance.new("UICorner")
 
 Corner.CornerRadius =
-    UDim.new(0, 14)
+    UDim.new(0, 16)
 
 Corner.Parent =
     Main
@@ -591,12 +581,9 @@ Corner.Parent =
 local Stroke =
     Instance.new("UIStroke")
 
-Stroke.Thickness = 1
-
-Stroke.Color =
-    Color3.fromRGB(72, 73, 78)
-
-Stroke.Transparency = 0.08
+Stroke.Thickness = 1.2
+Stroke.Color = Color3.fromRGB(75, 76, 81)
+Stroke.Transparency = 0.12
 
 Stroke.Parent =
     Main
@@ -623,6 +610,8 @@ Top.BackgroundColor3 =
 Top.BackgroundTransparency = 0.22
 
 Top.BorderSizePixel = 0
+Top.Active = true
+Top.ZIndex = 11
 
 Top.Parent =
     Main
@@ -640,10 +629,7 @@ local TopStroke =
     Instance.new("UIStroke")
 
 TopStroke.Thickness = 1
-
-TopStroke.Color =
-    Color3.fromRGB(45, 46, 50)
-
+TopStroke.Color = Color3.fromRGB(45, 46, 50)
 TopStroke.Transparency = 0.2
 
 TopStroke.Parent =
@@ -674,9 +660,7 @@ Logo.ScaleType =
     Enum.ScaleType.Fit
 
 Logo.ZIndex = 20
-
-Logo.Parent =
-    Top
+Logo.Parent = Top
 
 local LogoCorner =
     Instance.new("UICorner")
@@ -695,7 +679,7 @@ local Title =
     Instance.new("TextLabel")
 
 Title.Size =
-    UDim2.new(1, -100, 0, 18)
+    UDim2.new(1, -110, 0, 18)
 
 Title.Position =
     UDim2.fromOffset(43, 4)
@@ -714,18 +698,17 @@ Title.TextColor3 =
     Color3.fromRGB(225, 225, 230)
 
 Title.TextStrokeTransparency = 1
-
 Title.TextXAlignment =
     Enum.TextXAlignment.Left
 
-Title.Parent =
-    Top
+Title.ZIndex = 20
+Title.Parent = Top
 
 local SubTitle =
     Instance.new("TextLabel")
 
 SubTitle.Size =
-    UDim2.new(1, -100, 0, 12)
+    UDim2.new(1, -110, 0, 12)
 
 SubTitle.Position =
     UDim2.fromOffset(44, 21)
@@ -744,12 +727,11 @@ SubTitle.TextColor3 =
     Color3.fromRGB(125, 126, 132)
 
 SubTitle.TextStrokeTransparency = 1
-
 SubTitle.TextXAlignment =
     Enum.TextXAlignment.Left
 
-SubTitle.Parent =
-    Top
+SubTitle.ZIndex = 20
+SubTitle.Parent = Top
 
 --==============================================================
 -- FOTO 2
@@ -776,9 +758,7 @@ CornerImage.ScaleType =
     Enum.ScaleType.Fit
 
 CornerImage.ZIndex = 20
-
-CornerImage.Parent =
-    Top
+CornerImage.Parent = Top
 
 --==============================================================
 -- BOTÓN X
@@ -799,8 +779,7 @@ CloseButton.Position =
 CloseButton.BackgroundColor3 =
     Color3.fromRGB(25, 26, 28)
 
-CloseButton.BackgroundTransparency = 0.12
-
+CloseButton.BackgroundTransparency = 0.08
 CloseButton.BorderSizePixel = 0
 
 CloseButton.Text =
@@ -815,10 +794,8 @@ CloseButton.TextColor3 =
     Color3.fromRGB(190, 191, 195)
 
 CloseButton.TextStrokeTransparency = 1
-
 CloseButton.AutoButtonColor = false
-
-CloseButton.ZIndex = 21
+CloseButton.ZIndex = 30
 
 CloseButton.Parent =
     Top
@@ -833,8 +810,11 @@ CloseCorner.Parent =
     CloseButton
 
 --==============================================================
--- ESTADO
+-- INDICADOR
 --==============================================================
+
+local Status =
+    Instance.new("TextLabel")
 
 Status.Size =
     UDim2.fromOffset(80, 20)
@@ -856,6 +836,7 @@ Status.TextColor3 =
     Color3.fromRGB(130, 130, 135)
 
 Status.TextStrokeTransparency = 1
+Status.ZIndex = 20
 
 Status.Parent =
     Main
@@ -877,8 +858,8 @@ EggCard.BackgroundColor3 =
     Color3.fromRGB(11, 11, 14)
 
 EggCard.BackgroundTransparency = 0.25
-
 EggCard.BorderSizePixel = 0
+EggCard.ZIndex = 11
 
 EggCard.Parent =
     Main
@@ -887,7 +868,7 @@ local EggCorner =
     Instance.new("UICorner")
 
 EggCorner.CornerRadius =
-    UDim.new(0, 10)
+    UDim.new(0, 11)
 
 EggCorner.Parent =
     EggCard
@@ -896,14 +877,16 @@ local EggStroke =
     Instance.new("UIStroke")
 
 EggStroke.Color =
-    Color3.fromRGB(45, 45, 50)
+    Color3.fromRGB(40, 40, 45)
 
 EggStroke.Thickness = 1
-
-EggStroke.Transparency = 0.15
+EggStroke.Transparency = 0.12
 
 EggStroke.Parent =
     EggCard
+
+local EggText =
+    Instance.new("TextLabel")
 
 EggText.Size =
     UDim2.new(1, -18, 1, -8)
@@ -925,16 +908,18 @@ EggText.TextColor3 =
     Color3.fromRGB(225, 225, 230)
 
 EggText.TextStrokeTransparency = 1
-
 EggText.TextXAlignment =
     Enum.TextXAlignment.Left
 
-EggText.Parent =
-    EggCard
+EggText.ZIndex = 20
+EggText.Parent = EggCard
 
 --==============================================================
 -- BOTÓN INSTA TP
 --==============================================================
+
+local TPButton =
+    Instance.new("TextButton")
 
 TPButton.Size =
     UDim2.fromOffset(130, 42)
@@ -946,7 +931,6 @@ TPButton.BackgroundColor3 =
     Color3.fromRGB(15, 15, 18)
 
 TPButton.BackgroundTransparency = 0.18
-
 TPButton.BorderSizePixel = 0
 
 TPButton.Text =
@@ -958,11 +942,11 @@ TPButton.Font =
 TPButton.TextSize = 10
 
 TPButton.TextColor3 =
-    Color3.fromRGB(175, 175, 180)
+    Color3.fromRGB(255, 70, 70)
 
 TPButton.TextStrokeTransparency = 1
-
 TPButton.AutoButtonColor = false
+TPButton.ZIndex = 20
 
 TPButton.Parent =
     Main
@@ -971,17 +955,19 @@ local TPCorner =
     Instance.new("UICorner")
 
 TPCorner.CornerRadius =
-    UDim.new(0, 9)
+    UDim.new(0, 10)
 
 TPCorner.Parent =
     TPButton
 
-TPStroke.Thickness = 1
+local TPStroke =
+    Instance.new("UIStroke")
 
 TPStroke.Color =
-    Color3.fromRGB(65, 65, 70)
+    Color3.fromRGB(255, 70, 70)
 
-TPStroke.Transparency = 0.08
+TPStroke.Thickness = 1.3
+TPStroke.Transparency = 0.05
 
 TPStroke.Parent =
     TPButton
@@ -989,6 +975,9 @@ TPStroke.Parent =
 --==============================================================
 -- BOTÓN LOP
 --==============================================================
+
+local LOPButton =
+    Instance.new("TextButton")
 
 LOPButton.Size =
     UDim2.fromOffset(130, 42)
@@ -1000,7 +989,6 @@ LOPButton.BackgroundColor3 =
     Color3.fromRGB(15, 15, 18)
 
 LOPButton.BackgroundTransparency = 0.18
-
 LOPButton.BorderSizePixel = 0
 
 LOPButton.Text =
@@ -1012,11 +1000,11 @@ LOPButton.Font =
 LOPButton.TextSize = 10
 
 LOPButton.TextColor3 =
-    Color3.fromRGB(175, 175, 180)
+    Color3.fromRGB(150, 150, 155)
 
 LOPButton.TextStrokeTransparency = 1
-
 LOPButton.AutoButtonColor = false
+LOPButton.ZIndex = 20
 
 LOPButton.Parent =
     Main
@@ -1025,42 +1013,126 @@ local LOPCorner =
     Instance.new("UICorner")
 
 LOPCorner.CornerRadius =
-    UDim.new(0, 9)
+    UDim.new(0, 10)
 
 LOPCorner.Parent =
     LOPButton
 
-LOPStroke.Thickness = 1
+local LOPStroke =
+    Instance.new("UIStroke")
 
 LOPStroke.Color =
     Color3.fromRGB(65, 65, 70)
 
-LOPStroke.Transparency = 0.08
+LOPStroke.Thickness = 1.3
+LOPStroke.Transparency = 0.05
 
 LOPStroke.Parent =
     LOPButton
 
 --==============================================================
+-- ANIMACIÓN DE BOTONES
+--==============================================================
+
+local function ButtonPulse(button)
+
+    local original = button.Size
+
+    TweenService:Create(
+        button,
+        TweenInfo.new(
+            0.08,
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
+        ),
+        {
+            Size = UDim2.fromOffset(
+                original.X.Offset - 4,
+                original.Y.Offset - 3
+            )
+        }
+    ):Play()
+
+    task.delay(0.08, function()
+
+        if button and button.Parent then
+
+            TweenService:Create(
+                button,
+                TweenInfo.new(
+                    0.12,
+                    Enum.EasingStyle.Back,
+                    Enum.EasingDirection.Out
+                ),
+                {
+                    Size = original
+                }
+            ):Play()
+
+        end
+
+    end)
+
+end
+
+--==============================================================
+-- ACTUALIZAR PANEL
+--==============================================================
+
+local function UpdateUI()
+
+    if BestEgg and BestEgg.Parent then
+
+        local data =
+            GetEggData(BestEgg.Name)
+
+        if data then
+
+            EggText.Text =
+                "🥚  MEJOR HUEVO\n"
+                .. BestEgg.Name
+                .. "   •   🍀 Lucky: "
+                .. data.Luck
+
+        end
+
+    else
+
+        EggText.Text =
+            "🥚  MEJOR HUEVO\nBuscando..."
+
+    end
+
+end
+
+--==============================================================
 -- ABRIR / CERRAR
--- Solo oculta la interfaz. NO toca InstaTP, LOP ni ningún ciclo.
+-- NO MODIFICA InstaTP NI LOP
 --==============================================================
 
 local interfaceOpen = true
 
 CloseButton.Activated:Connect(function()
+
     interfaceOpen = false
+
     Main.Visible = false
     OpenButton.Visible = true
+
 end)
 
 OpenButton.Activated:Connect(function()
+
     interfaceOpen = true
+
     Main.Visible = true
     OpenButton.Visible = false
+
 end)
 
 --==============================================================
 -- FIN DE GUI
+--==============================================================
 --==============================================================
 -- CICLO
 --==============================================================
@@ -1292,6 +1364,10 @@ local startPosition
 
 local function UpdateDrag(input)
 
+    if not dragging then
+        return
+    end
+
     local delta =
         input.Position - dragStart
 
@@ -1323,7 +1399,7 @@ Top.InputBegan:Connect(function(input)
 
 end)
 
-Top.InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
 
     if
         input.UserInputType ==
