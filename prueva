@@ -722,112 +722,6 @@ MotionLayer.BackgroundTransparency = 1
 MotionLayer.BorderSizePixel = 0
 MotionLayer.Parent = ScreenGui
 
-
---==============================================================
--- BLACK MOTION • BURBUJAS / POLVO / DESTELLOS
--- SOLO VISUAL — NO TOCA LA MECÁNICA
---==============================================================
-
-local ParticleLayer = Instance.new("Frame")
-ParticleLayer.Name = "ParticleLayer"
-ParticleLayer.Size = UDim2.fromScale(1,1)
-ParticleLayer.BackgroundTransparency = 1
-ParticleLayer.BorderSizePixel = 0
-ParticleLayer.ZIndex = 1
-ParticleLayer.Parent = ScreenGui
-
-for i = 1, 32 do
-    local Bubble = Instance.new("Frame")
-    local D = math.random(5,16)
-
-    Bubble.Size = UDim2.fromOffset(D,D)
-    Bubble.Position = UDim2.new(
-        math.random(2,98)/100,0,
-        math.random(2,105)/100,0
-    )
-    Bubble.BackgroundColor3 = Color3.fromRGB(
-        math.random(75,180),
-        math.random(75,180),
-        math.random(75,180)
-    )
-    Bubble.BackgroundTransparency = math.random(35,78)/100
-    Bubble.BorderSizePixel = 0
-    Bubble.ZIndex = 1
-    Bubble.Parent = ParticleLayer
-
-    local BubbleCorner = Instance.new("UICorner")
-    BubbleCorner.CornerRadius = UDim.new(1,0)
-    BubbleCorner.Parent = Bubble
-
-    local BubbleStroke = Instance.new("UIStroke")
-    BubbleStroke.Thickness = 1
-    BubbleStroke.Color = Color3.fromRGB(160,160,165)
-    BubbleStroke.Transparency = .55
-    BubbleStroke.Parent = Bubble
-
-    task.spawn(function()
-        while Bubble.Parent do
-            local x = math.clamp(
-                Bubble.Position.X.Scale + math.random(-18,18)/1000,
-                .01,.99
-            )
-            local y = Bubble.Position.Y.Scale - math.random(5,15)/1000
-
-            if y < -.08 then
-                y = 1.08
-                x = math.random(1,99)/100
-            end
-
-            TweenService:Create(
-                Bubble,
-                TweenInfo.new(.18,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),
-                {
-                    Position = UDim2.new(x,0,y,0),
-                    BackgroundTransparency = math.random(30,78)/100
-                }
-            ):Play()
-
-            task.wait(.18)
-        end
-    end)
-end
-
-for i = 1, 22 do
-    local Spark = Instance.new("Frame")
-    Spark.Size = UDim2.fromOffset(math.random(1,3),math.random(1,3))
-    Spark.Position = UDim2.new(
-        math.random(2,98)/100,0,
-        math.random(2,98)/100,0
-    )
-    Spark.BackgroundColor3 = Color3.fromRGB(220,220,225)
-    Spark.BackgroundTransparency = 1
-    Spark.BorderSizePixel = 0
-    Spark.ZIndex = 2
-    Spark.Parent = ParticleLayer
-
-    local SparkCorner = Instance.new("UICorner")
-    SparkCorner.CornerRadius = UDim.new(1,0)
-    SparkCorner.Parent = Spark
-
-    task.spawn(function()
-        while Spark.Parent do
-            TweenService:Create(
-                Spark,
-                TweenInfo.new(.5,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),
-                {BackgroundTransparency = .12}
-            ):Play()
-            task.wait(.5)
-
-            TweenService:Create(
-                Spark,
-                TweenInfo.new(.5,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),
-                {BackgroundTransparency = 1}
-            ):Play()
-            task.wait(.5)
-        end
-    end)
-end
-
 --==============================================================
 -- PANEL PRINCIPAL
 --==============================================================
@@ -861,27 +755,148 @@ Main.BorderSizePixel = 0
 Main.ClipsDescendants = false
 
 Main.Parent =
-    ScreenGui
 
 
--- Borde exterior animado
-local OuterStroke = Instance.new("UIStroke")
-OuterStroke.Name = "OuterAnimatedBorder"
-OuterStroke.Thickness = 3
-OuterStroke.Color = Color3.fromRGB(105,105,110)
-OuterStroke.Transparency = .45
-OuterStroke.Parent = Main
+
+--==============================================================
+-- BLACK MOTION • BURBUJAS / PARTICULAS / DESTELLOS
+--==============================================================
+
+local BubbleLayer = Instance.new("Frame")
+BubbleLayer.Name = "BubbleLayer"
+BubbleLayer.Size = UDim2.fromScale(1,1)
+BubbleLayer.Position = UDim2.fromScale(0,0)
+BubbleLayer.BackgroundTransparency = 1
+BubbleLayer.BorderSizePixel = 0
+BubbleLayer.ZIndex = 2
+BubbleLayer.Parent = ScreenGui
+
+for i = 1, 35 do
+    local bubble = Instance.new("Frame")
+    local d = math.random(4,14)
+
+    bubble.Size = UDim2.fromOffset(d,d)
+    bubble.Position = UDim2.new(
+        math.random(2,98)/100,0,
+        math.random(5,105)/100,0
+    )
+    bubble.BackgroundColor3 = Color3.fromRGB(
+        math.random(90,180),
+        math.random(90,180),
+        math.random(90,180)
+    )
+    bubble.BackgroundTransparency = math.random(35,75)/100
+    bubble.BorderSizePixel = 0
+    bubble.ZIndex = 2
+    bubble.Parent = BubbleLayer
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1,0)
+    corner.Parent = bubble
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1
+    stroke.Color = Color3.fromRGB(150,150,155)
+    stroke.Transparency = .55
+    stroke.Parent = bubble
+
+    task.spawn(function()
+        while bubble.Parent do
+            local x = math.clamp(
+                bubble.Position.X.Scale + math.random(-20,20)/1000,
+                .01,.99
+            )
+            local y = bubble.Position.Y.Scale - math.random(5,16)/1000
+
+            if y < -.08 then
+                y = 1.08
+                x = math.random(1,99)/100
+            end
+
+            TweenService:Create(
+                bubble,
+                TweenInfo.new(.18,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),
+                {
+                    Position = UDim2.new(x,0,y,0),
+                    BackgroundTransparency = math.random(30,78)/100
+                }
+            ):Play()
+
+            task.wait(.18)
+        end
+    end)
+end
+
+-- Destellos
+for i = 1, 25 do
+    local sparkle = Instance.new("Frame")
+    sparkle.Size = UDim2.fromOffset(math.random(1,3),math.random(1,3))
+    sparkle.Position = UDim2.new(
+        math.random(3,97)/100,0,
+        math.random(3,97)/100,0
+    )
+    sparkle.BackgroundColor3 = Color3.fromRGB(220,220,225)
+    sparkle.BackgroundTransparency = 1
+    sparkle.BorderSizePixel = 0
+    sparkle.ZIndex = 3
+    sparkle.Parent = BubbleLayer
+
+    local sc = Instance.new("UICorner")
+    sc.CornerRadius = UDim.new(1,0)
+    sc.Parent = sparkle
+
+    task.spawn(function()
+        while sparkle.Parent do
+            TweenService:Create(
+                sparkle,
+                TweenInfo.new(math.random(4,9)/10,Enum.EasingStyle.Sine),
+                {BackgroundTransparency = .15}
+            ):Play()
+            task.wait(math.random(4,9)/10)
+
+            TweenService:Create(
+                sparkle,
+                TweenInfo.new(math.random(4,9)/10,Enum.EasingStyle.Sine),
+                {BackgroundTransparency = 1}
+            ):Play()
+            task.wait(math.random(4,9)/10)
+        end
+    end)
+end
+
+--==============================================================
+-- LOGO DENTRO DEL PANEL • MISMO ID
+--==============================================================
+local PanelLogo = Instance.new("ImageLabel")
+PanelLogo.Name = "PanelLogo"
+PanelLogo.Size = UDim2.fromOffset(42,42)
+PanelLogo.Position = UDim2.fromOffset(238,8)
+PanelLogo.BackgroundTransparency = 1
+PanelLogo.Image = "rbxassetid://103645600156879"
+PanelLogo.ScaleType = Enum.ScaleType.Crop
+PanelLogo.ZIndex = 50
+PanelLogo.Parent = Main
+
+local PanelLogoCorner = Instance.new("UICorner")
+PanelLogoCorner.CornerRadius = UDim.new(1,0)
+PanelLogoCorner.Parent = PanelLogo
+
+local PanelLogoStroke = Instance.new("UIStroke")
+PanelLogoStroke.Thickness = 2
+PanelLogoStroke.Color = Color3.fromRGB(125,125,130)
+PanelLogoStroke.Transparency = .15
+PanelLogoStroke.Parent = PanelLogo
 
 task.spawn(function()
-    local t = 0
-    while ScreenGui.Parent do
-        t += .035
-        OuterStroke.Transparency = .25 + (math.sin(t*2)+1)*.16
-        OuterStroke.Thickness = 2 + (math.sin(t)+1)*.45
-        task.wait(.035)
+    local t=0
+    while PanelLogo.Parent do
+        t += .05
+        PanelLogo.Rotation = math.sin(t)*4
+        PanelLogoStroke.Transparency = .12 + (math.sin(t*2)+1)*.12
+        task.wait(.05)
     end
 end)
-
+    ScreenGui
 
 local MainCorner =
     Instance.new("UICorner")
@@ -1241,39 +1256,6 @@ Logo.ZIndex = 10
 
 Logo.Parent =
     Top
-
-
--- Segunda foto: esquina superior derecha del panel
-local PanelPhoto = Instance.new("ImageLabel")
-PanelPhoto.Name = "PanelPhoto"
-PanelPhoto.Size = UDim2.fromOffset(32,32)
-PanelPhoto.Position = UDim2.new(1,-39,0,2)
-PanelPhoto.BackgroundColor3 = Color3.fromRGB(2,2,3)
-PanelPhoto.BorderSizePixel = 0
-PanelPhoto.Image = "rbxassetid://103645600156879"
-PanelPhoto.ScaleType = Enum.ScaleType.Crop
-PanelPhoto.ZIndex = 12
-PanelPhoto.Parent = Top
-
-local PanelPhotoCorner = Instance.new("UICorner")
-PanelPhotoCorner.CornerRadius = UDim.new(1,0)
-PanelPhotoCorner.Parent = PanelPhoto
-
-local PanelPhotoStroke = Instance.new("UIStroke")
-PanelPhotoStroke.Thickness = 1.5
-PanelPhotoStroke.Color = Color3.fromRGB(130,130,135)
-PanelPhotoStroke.Parent = PanelPhoto
-
-task.spawn(function()
-    local t = 0
-    while ScreenGui.Parent do
-        t += .05
-        PanelPhoto.Rotation = math.sin(t)*4
-        PanelPhotoStroke.Transparency = .15 + (math.sin(t*2)+1)*.12
-        task.wait(.05)
-    end
-end)
-
 
 local LogoCorner =
     Instance.new("UICorner")
@@ -2554,37 +2536,6 @@ ToggleButton.Activated:Connect(function()
     end
 end)
 
-
---==============================================================
--- BOTONES • BORDE / PULSO VISUAL
--- SOLO VISUAL
---==============================================================
-
-for _, Obj in ipairs(Main:GetDescendants()) do
-    if Obj:IsA("TextButton") then
-        local Stroke = Obj:FindFirstChild("AnimatedButtonStroke")
-
-        if not Stroke then
-            Stroke = Instance.new("UIStroke")
-            Stroke.Name = "AnimatedButtonStroke"
-            Stroke.Thickness = 1.4
-            Stroke.Color = Color3.fromRGB(80,80,85)
-            Stroke.Transparency = .25
-            Stroke.Parent = Obj
-        end
-
-        task.spawn(function()
-            local t = math.random()
-            while Obj.Parent do
-                t += .045
-                Stroke.Transparency = .12 + (math.sin(t*2)+1)*.15
-                Stroke.Thickness = 1.15 + (math.sin(t)+1)*.35
-                task.wait(.045)
-            end
-        end)
-    end
-end
-
 --==============================================================
 -- INICIO
 --==============================================================
@@ -2596,3 +2547,352 @@ UpdateLOPButton()
 
 Status.Text =
     "● READY"
+
+--==============================================================
+-- OPEN BUTTON • RINGS / PULSE
+--==============================================================
+if OpenButton then
+    for i = 1, 3 do
+        local ring = Instance.new("UIStroke")
+        ring.Name = "PulseRing"..i
+        ring.Thickness = 1
+        ring.Transparency = 0.35 + i * 0.15
+        ring.Color = Color3.fromRGB(145,145,150)
+        ring.Parent = OpenButton
+
+        task.spawn(function()
+            while ring.Parent do
+                TweenService:Create(
+                    ring,
+                    TweenInfo.new(0.9 + i*0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                    {Transparency = 0.08}
+                ):Play()
+                task.wait(0.9 + i*0.25)
+                TweenService:Create(
+                    ring,
+                    TweenInfo.new(0.9 + i*0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                    {Transparency = 0.65}
+                ):Play()
+                task.wait(0.9 + i*0.25)
+            end
+        end)
+    end
+end
+
+
+--==============================================================
+-- BOTONES • BORDES / PULSO / BRILLO
+--==============================================================
+for _,obj in ipairs(Main:GetDescendants()) do
+    if obj:IsA("TextButton") then
+        local st = obj:FindFirstChild("BlackMotionButtonStroke")
+        if not st then
+            st=Instance.new("UIStroke")
+            st.Name="BlackMotionButtonStroke"
+            st.Thickness=1.4
+            st.Color=Color3.fromRGB(75,75,80)
+            st.Transparency=.15
+            st.Parent=obj
+        end
+
+        task.spawn(function()
+            local t=math.random()
+            while obj.Parent do
+                t += .04
+                st.Transparency=.10 + (math.sin(t*2)+1)*.16
+                st.Thickness=1.15 + (math.sin(t)+1)*.35
+                task.wait(.04)
+            end
+        end)
+    end
+end
+
+
+--==============================================================
+-- BOTÓN FLOTANTE • FOTO ARRIBA A LA DERECHA
+--==============================================================
+local CornerButton = Instance.new("ImageButton")
+CornerButton.Name = "CornerLogoButton"
+CornerButton.Size = UDim2.fromOffset(56,56)
+CornerButton.Position = UDim2.new(1,-70,0,18)
+CornerButton.BackgroundColor3 = Color3.fromRGB(5,5,7)
+CornerButton.BackgroundTransparency = .08
+CornerButton.Image = "rbxassetid://103645600156879"
+CornerButton.ScaleType = Enum.ScaleType.Crop
+CornerButton.AutoButtonColor = false
+CornerButton.ZIndex = 200
+CornerButton.Parent = ScreenGui
+
+local CornerRound = Instance.new("UICorner")
+CornerRound.CornerRadius = UDim.new(1,0)
+CornerRound.Parent = CornerButton
+
+local CornerStroke = Instance.new("UIStroke")
+CornerStroke.Thickness = 2
+CornerStroke.Color = Color3.fromRGB(145,145,150)
+CornerStroke.Transparency = .08
+CornerStroke.Parent = CornerButton
+
+local CornerGlow = Instance.new("UIStroke")
+CornerGlow.Thickness = 5
+CornerGlow.Transparency = .7
+CornerGlow.Color = Color3.fromRGB(80,80,85)
+CornerGlow.Parent = CornerButton
+
+local panelVisible = true
+local function SetPanelVisible(state)
+    panelVisible = state
+    Main.Visible = state
+    if MotionLayer then MotionLayer.Visible = state end
+    if BubbleLayer then BubbleLayer.Visible = state end
+    CornerButton.ZIndex = 200
+end
+
+CornerButton.Activated:Connect(function()
+    panelVisible = not panelVisible
+    SetPanelVisible(panelVisible)
+    TweenService:Create(
+        CornerButton,
+        TweenInfo.new(.16,Enum.EasingStyle.Back,Enum.EasingDirection.Out),
+        {Size=UDim2.fromOffset(panelVisible and 60 or 56,panelVisible and 60 or 56)}
+    ):Play()
+end)
+
+task.spawn(function()
+    local t=0
+    while CornerButton.Parent do
+        t += .04
+        CornerStroke.Transparency=.05+(math.sin(t*2)+1)*.18
+        CornerGlow.Transparency=.55+(math.sin(t)+1)*.18
+        CornerButton.Rotation=math.sin(t)*3
+        task.wait(.04)
+    end
+end)
+
+
+--==============================================================
+-- KOXTA BLACK MOTION • VISUAL PACK ONLY
+--==============================================================
+
+-- Extra background layer
+local FX = Instance.new("Frame")
+FX.Name = "BlackMotionFX"
+FX.Size = UDim2.fromScale(1,1)
+FX.BackgroundTransparency = 1
+FX.BorderSizePixel = 0
+FX.ZIndex = 0
+FX.Parent = ScreenGui
+
+-- Floating bubbles
+for i = 1, 36 do
+    local b = Instance.new("Frame")
+    local d = math.random(4,15)
+    b.Size = UDim2.fromOffset(d,d)
+    b.Position = UDim2.new(math.random(0,100)/100,0,math.random(0,105)/100,0)
+    b.BackgroundColor3 = Color3.fromRGB(math.random(80,180),math.random(80,180),math.random(80,180))
+    b.BackgroundTransparency = math.random(35,78)/100
+    b.BorderSizePixel = 0
+    b.ZIndex = 1
+    b.Parent = FX
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(1,0)
+    c.Parent = b
+
+    local st = Instance.new("UIStroke")
+    st.Thickness = 1
+    st.Color = Color3.fromRGB(150,150,155)
+    st.Transparency = .55
+    st.Parent = b
+
+    task.spawn(function()
+        while b.Parent do
+            local x = math.clamp(b.Position.X.Scale + math.random(-12,12)/1000,.01,.99)
+            local y = b.Position.Y.Scale - math.random(4,12)/1000
+            if y < -.06 then
+                y = 1.06
+                x = math.random(1,99)/100
+            end
+            TweenService:Create(
+                b,
+                TweenInfo.new(.22,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),
+                {Position=UDim2.new(x,0,y,0)}
+            ):Play()
+            task.wait(.22)
+        end
+    end)
+end
+
+-- Tiny stars/dust
+for i = 1, 28 do
+    local p = Instance.new("Frame")
+    p.Size = UDim2.fromOffset(math.random(1,3),math.random(1,3))
+    p.Position = UDim2.new(math.random(2,98)/100,0,math.random(2,98)/100,0)
+    p.BackgroundColor3 = Color3.fromRGB(220,220,225)
+    p.BackgroundTransparency = 1
+    p.BorderSizePixel = 0
+    p.ZIndex = 2
+    p.Parent = FX
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(1,0)
+    c.Parent = p
+
+    task.spawn(function()
+        while p.Parent do
+            TweenService:Create(p,TweenInfo.new(.55,Enum.EasingStyle.Sine),{BackgroundTransparency=.15}):Play()
+            task.wait(.55)
+            TweenService:Create(p,TweenInfo.new(.55,Enum.EasingStyle.Sine),{BackgroundTransparency=1}):Play()
+            task.wait(.55)
+        end
+    end)
+end
+
+-- Decorative moving lines
+for i = 1, 10 do
+    local line = Instance.new("Frame")
+    line.Size = UDim2.fromOffset(math.random(30,90),1)
+    line.Position = UDim2.new(math.random(5,95)/100,0,math.random(5,95)/100,0)
+    line.Rotation = math.random(0,360)
+    line.BackgroundColor3 = Color3.fromRGB(100,100,105)
+    line.BackgroundTransparency = .6
+    line.BorderSizePixel = 0
+    line.ZIndex = 1
+    line.Parent = FX
+
+    task.spawn(function()
+        while line.Parent do
+            TweenService:Create(
+                line,
+                TweenInfo.new(1.8,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),
+                {
+                    Position=UDim2.new(math.random(5,95)/100,0,math.random(5,95)/100,0),
+                    Rotation=math.random(0,360),
+                    BackgroundTransparency=.35
+                }
+            ):Play()
+            task.wait(1.8)
+        end
+    end)
+end
+
+-- Second logo INSIDE the existing panel.
+local PanelLogo = Instance.new("ImageLabel")
+PanelLogo.Name = "PanelLogo"
+PanelLogo.Size = UDim2.fromOffset(38,38)
+PanelLogo.Position = UDim2.new(1,-48,0,7)
+PanelLogo.BackgroundTransparency = 1
+PanelLogo.Image = "rbxassetid://103645600156879"
+PanelLogo.ScaleType = Enum.ScaleType.Crop
+PanelLogo.ZIndex = 20
+PanelLogo.Parent = Main
+
+local PLC = Instance.new("UICorner")
+PLC.CornerRadius = UDim.new(1,0)
+PLC.Parent = PanelLogo
+
+local PLS = Instance.new("UIStroke")
+PLS.Thickness = 2
+PLS.Color = Color3.fromRGB(130,130,135)
+PLS.Transparency = .15
+PLS.Parent = PanelLogo
+
+task.spawn(function()
+    local t=0
+    while PanelLogo.Parent do
+        t += .04
+        PanelLogo.Rotation = math.sin(t)*3
+        PLS.Transparency = .08 + (math.sin(t*2)+1)*.14
+        task.wait(.04)
+    end
+end)
+
+-- Animated outer border around existing panel.
+local Outer = Main:FindFirstChild("BlackMotionOuter")
+if not Outer then
+    Outer = Instance.new("UIStroke")
+    Outer.Name = "BlackMotionOuter"
+    Outer.Thickness = 2
+    Outer.Color = Color3.fromRGB(105,105,110)
+    Outer.Transparency = .35
+    Outer.Parent = Main
+
+    task.spawn(function()
+        local t=0
+        while Main.Parent do
+            t += .04
+            Outer.Transparency = .2 + (math.sin(t*2)+1)*.14
+            Outer.Thickness = 1.6 + (math.sin(t)+1)*.5
+            task.wait(.04)
+        end
+    end)
+end
+
+-- Animate existing button strokes without replacing the buttons.
+for _,obj in ipairs(Main:GetDescendants()) do
+    if obj:IsA("TextButton") then
+        local st = obj:FindFirstChild("BlackMotionButtonFX")
+        if not st then
+            st = Instance.new("UIStroke")
+            st.Name = "BlackMotionButtonFX"
+            st.Thickness = 1.3
+            st.Color = Color3.fromRGB(90,90,95)
+            st.Transparency = .22
+            st.Parent = obj
+
+            task.spawn(function()
+                local t=math.random()
+                while obj.Parent do
+                    t += .05
+                    st.Transparency = .12 + (math.sin(t*2)+1)*.13
+                    st.Thickness = 1.1 + (math.sin(t)+1)*.35
+                    task.wait(.05)
+                end
+            end)
+        end
+    end
+end
+
+-- Floating OPEN/CLOSE logo button. It only controls visibility.
+local OpenClose = Instance.new("ImageButton")
+OpenClose.Name = "BlackMotionOpenClose"
+OpenClose.Size = UDim2.fromOffset(56,56)
+OpenClose.Position = UDim2.new(1,-72,0,18)
+OpenClose.BackgroundColor3 = Color3.fromRGB(4,4,6)
+OpenClose.BackgroundTransparency = .08
+OpenClose.Image = "rbxassetid://103645600156879"
+OpenClose.ScaleType = Enum.ScaleType.Crop
+OpenClose.AutoButtonColor = false
+OpenClose.ZIndex = 100
+OpenClose.Parent = ScreenGui
+
+local OCC = Instance.new("UICorner")
+OCC.CornerRadius = UDim.new(1,0)
+OCC.Parent = OpenClose
+
+local OCS = Instance.new("UIStroke")
+OCS.Thickness = 2
+OCS.Color = Color3.fromRGB(145,145,150)
+OCS.Parent = OpenClose
+
+local panelState = true
+OpenClose.Activated:Connect(function()
+    panelState = not panelState
+    Main.Visible = panelState
+    OpenClose.Visible = true
+    TweenService:Create(
+        OpenClose,
+        TweenInfo.new(.15,Enum.EasingStyle.Back,Enum.EasingDirection.Out),
+        {Size=UDim2.fromOffset(panelState and 60 or 56,panelState and 60 or 56)}
+    ):Play()
+end)
+
+task.spawn(function()
+    local t=0
+    while OpenClose.Parent do
+        t += .04
+        OCS.Transparency = .08 + (math.sin(t*2)+1)*.16
+        OpenClose.Rotation = math.sin(t)*3
+        task.wait(.04)
+    end
+end)
