@@ -1,1516 +1,548 @@
 --==============================================================
--- INSTA TP • BLACK EDITION
--- BEST EGG + AUTO GRAB x3 + SAVED SPAWN
--- REFRESH: 1 SEGUNDO
--- LOP = LOOP
--- PANEL MOVIBLE + ANIMACIONES
+-- AUTO EGG • COMPLETE
+-- SOLO PARA TU PROPIA EXPERIENCIA ROBLOX
+-- Workspace → mejor huevo → recoger → tu Plot
 --==============================================================
 
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
+local Player = Players.LocalPlayer
 
-local LocalPlayer = Players.LocalPlayer
+local AUTO = false
+local BUSY = false
 
---==============================================================
--- CONFIG
---==============================================================
-
-local REFRESH_TIME = 1
-local DETECTION_DISTANCE = 100000
-local EXCLUSION_RADIUS = 210
-
-local EXCLUSION_CENTER = Vector3.new(
-    146.87,
-    40316.12,
-    911.14
-)
-
-local InstaTP = false
-local LOP = false
-local Busy = false
-
-local SavedSpawnCFrame = nil
-
-local BestEgg = nil
-local BestLuck = 0
-
---==============================================================
--- DATOS
---==============================================================
-
-local EggData = {
-    ["White Egg"] = {Luck="1", Rarity="Common"},
-    ["Brown Egg"] = {Luck="5", Rarity="Common"},
-    ["Cracked Egg"] = {Luck="30", Rarity="Rare"},
-    ["Easter Egg"] = {Luck="50", Rarity="Rare"},
-    ["Stone Egg"] = {Luck="100", Rarity="Rare"},
-    ["Leaf Egg"] = {Luck="200", Rarity="Rare"},
-    ["Mushroom Egg"] = {Luck="500", Rarity="Epic"},
-    ["Flower Egg"] = {Luck="750", Rarity="Epic"},
-    ["Slime Egg"] = {Luck="1K", Rarity="Epic"},
-    ["Ice Egg"] = {Luck="3K", Rarity="Epic"},
-    ["Glass Egg"] = {Luck="10K", Rarity="Legendary"},
-    ["Golden Egg"] = {Luck="30K", Rarity="Legendary"},
-    ["Crystal Egg"] = {Luck="150K", Rarity="Mythic"},
-    ["Skull Egg"] = {Luck="250K", Rarity="Mythic"},
-    ["Dominus Egg"] = {Luck="700K", Rarity="Mythic"},
-    ["Flaming Egg"] = {Luck="1M", Rarity="Mythic"},
-    ["Sinister Egg"] = {Luck="3M", Rarity="Mythic"},
-    ["Soul Egg"] = {Luck="7M", Rarity="Mythic"},
-    ["Aurora Egg"] = {Luck="300M", Rarity="Divine"},
-    ["Galaxy Egg"] = {Luck="1.5B", Rarity="Divine"},
-    ["Black Hole Egg"] = {Luck="100B", Rarity="Ethereal"},
-    ["Cherub Egg"] = {Luck="1T", Rarity="Ethereal"}
+local KnownLuck = {
+    ["White Egg"] = 1,
+    ["Brown Egg"] = 5,
+    ["Cracked Egg"] = 30,
+    ["Easter Egg"] = 50,
+    ["Stone Egg"] = 100,
+    ["Leaf Egg"] = 200,
+    ["Mushroom Egg"] = 500,
+    ["Flower Egg"] = 750,
+    ["Slime Egg"] = 1000,
+    ["Ice Egg"] = 3000,
+    ["Glass Egg"] = 10000,
+    ["Golden Egg"] = 30000,
+    ["Crystal Egg"] = 150000,
+    ["Skull Egg"] = 250000,
+    ["Dominus Egg"] = 700000,
+    ["Flaming Egg"] = 1000000,
+    ["Sinister Egg"] = 3000000,
+    ["Soul Egg"] = 7000000,
+    ["Aurora Egg"] = 300000000,
+    ["Galaxy Egg"] = 1500000000,
+    ["Black Hole Egg"] = 100000000000,
+    ["Blackhole Egg"] = 100000000000,
+    ["Solaris Egg"] = 300000000000,
+    ["Cherub Egg"] = 1000000000000,
+    ["Volcanic Egg"] = 2500000000000,
 }
 
 --==============================================================
--- UTILIDADES
+-- GUI
 --==============================================================
 
-local function ParseLuck(value)
-    local text = tostring(value or ""):upper()
-    local number = tonumber(string.match(text, "[%d%.]+"))
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "AutoEggComplete"
+Gui.ResetOnSpawn = false
+Gui.Parent = Player:WaitForChild("PlayerGui")
 
-    if not number then
-        return 0
-    end
+local Main = Instance.new("Frame")
+Main.Size = UDim2.fromOffset(330,245)
+Main.Position = UDim2.new(.5,-165,.5,-122)
+Main.BackgroundColor3 = Color3.fromRGB(8,8,10)
+Main.BorderSizePixel = 0
+Main.Parent = Gui
 
-    if string.find(text, "T", 1, true) then
-        return number * 1e12
-    elseif string.find(text, "B", 1, true) then
-        return number * 1e9
-    elseif string.find(text, "M", 1, true) then
-        return number * 1e6
-    elseif string.find(text, "K", 1, true) then
-        return number * 1e3
-    end
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0,20)
+Corner.Parent = Main
 
-    return number
-end
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(0,255,150)
+Stroke.Thickness = 2
+Stroke.Parent = Main
 
-local function GetEggData(name)
-    if not name then
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1,-20,0,38)
+Title.Position = UDim2.fromOffset(10,8)
+Title.BackgroundTransparency = 1
+Title.Text = "🥚  AUTO EGG"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.TextSize = 22
+Title.Font = Enum.Font.GothamBold
+Title.Parent = Main
+
+local Best = Instance.new("TextLabel")
+Best.Size = UDim2.new(1,-30,0,30)
+Best.Position = UDim2.fromOffset(15,52)
+Best.BackgroundTransparency = 1
+Best.Text = "🏆 Mejor: BUSCANDO..."
+Best.TextColor3 = Color3.fromRGB(0,255,150)
+Best.TextSize = 17
+Best.Font = Enum.Font.GothamBold
+Best.TextXAlignment = Enum.TextXAlignment.Left
+Best.Parent = Main
+
+local Luck = Best:Clone()
+Luck.Position = UDim2.fromOffset(15,82)
+Luck.Text = "Luck: —"
+Luck.TextColor3 = Color3.fromRGB(210,210,210)
+Luck.TextSize = 13
+Luck.Parent = Main
+
+local Status = Best:Clone()
+Status.Position = UDim2.fromOffset(15,108)
+Status.Text = "Estado: ESPERANDO"
+Status.TextColor3 = Color3.fromRGB(180,180,180)
+Status.TextSize = 13
+Status.Parent = Main
+
+local Plot = Best:Clone()
+Plot.Position = UDim2.fromOffset(15,134)
+Plot.Text = "Plot: BUSCANDO"
+Plot.TextColor3 = Color3.fromRGB(180,180,180)
+Plot.TextSize = 13
+Plot.Parent = Main
+
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(1,-30,0,45)
+Button.Position = UDim2.fromOffset(15,181)
+Button.BackgroundColor3 = Color3.fromRGB(35,35,40)
+Button.BorderSizePixel = 0
+Button.Text = "AUTO EGG  •  OFF"
+Button.TextColor3 = Color3.new(1,1,1)
+Button.TextSize = 15
+Button.Font = Enum.Font.GothamBold
+Button.Parent = Main
+
+local BC = Instance.new("UICorner")
+BC.CornerRadius = UDim.new(0,12)
+BC.Parent = Button
+
+--==============================================================
+-- CHARACTER
+--==============================================================
+
+local function Root()
+
+    local Character = Player.Character
+
+    if not Character then
         return nil
     end
 
-    if EggData[name] then
-        return EggData[name]
+    return Character:FindFirstChild("HumanoidRootPart")
+end
+
+--==============================================================
+-- POSICIÓN
+--==============================================================
+
+local function PositionOf(Object)
+
+    if Object:IsA("BasePart") then
+        return Object.Position
     end
 
-    local lower = string.lower(name)
+    if Object:IsA("Model") then
 
-    for eggName, data in pairs(EggData) do
-        if string.find(
-            lower,
-            string.lower(eggName),
-            1,
-            true
-        ) then
-            return data
+        if Object.PrimaryPart then
+            return Object.PrimaryPart.Position
+        end
+
+        local Part =
+            Object:FindFirstChildWhichIsA("BasePart",true)
+
+        if Part then
+            return Part.Position
         end
     end
 
     return nil
 end
 
-local function GetRoot()
-    local character = LocalPlayer.Character
-    if not character then
-        return nil
-    end
+--==============================================================
+-- ES HUEVO
+--==============================================================
 
-    return character:FindFirstChild("HumanoidRootPart")
+local function IsEgg(Object)
+
+    local Name = Object.Name:lower()
+
+    return
+        Name:find("egg") ~= nil
+        or Name:find("huevo") ~= nil
+        or Object:GetAttribute("IsEgg") == true
 end
 
-local function GetPart(obj)
-    if not obj then
-        return nil
-    end
+--==============================================================
+-- LUCK
+--==============================================================
 
-    if obj:IsA("BasePart") then
-        return obj
-    end
+local function GetLuck(Object)
 
-    if obj:IsA("Model") then
-        if obj.PrimaryPart then
-            return obj.PrimaryPart
+    for _,Name in ipairs({
+        "Luck",
+        "luck",
+        "EggLuck",
+        "RarityValue"
+    }) do
+
+        local Value = Object:GetAttribute(Name)
+
+        if typeof(Value) == "number" then
+            return Value
         end
-
-        return obj:FindFirstChildWhichIsA(
-            "BasePart",
-            true
-        )
     end
 
-    return nil
-end
+    for _,Child in ipairs(Object:GetDescendants()) do
 
-local function GetPosition(obj)
-    local part = GetPart(obj)
+        if Child:IsA("NumberValue")
+        or Child:IsA("IntValue") then
 
-    if part then
-        return part.Position
+            local N = Child.Name:lower()
+
+            if N == "luck"
+            or N == "eggluck"
+            or N == "rarityvalue" then
+
+                return Child.Value
+            end
+        end
     end
 
-    return nil
-end
-
---==============================================================
--- CACHE DE HUEVOS
---==============================================================
-
-local EggCache = {}
-
-local function RegisterEgg(obj)
-
-    if not obj or not obj.Parent then
-        return
-    end
-
-    if GetEggData(obj.Name) then
-        EggCache[obj] = true
-    end
-end
-
-local function RemoveEgg(obj)
-    EggCache[obj] = nil
-end
-
-for _, obj in ipairs(Workspace:GetDescendants()) do
-    RegisterEgg(obj)
-end
-
-Workspace.DescendantAdded:Connect(function(obj)
-
-    if GetEggData(obj.Name) then
-        EggCache[obj] = true
-    end
-
-end)
-
-Workspace.DescendantRemoving:Connect(function(obj)
-
-    EggCache[obj] = nil
-
-end)
-
---==============================================================
--- VALIDAR HUEVO
---==============================================================
-
-local function IsValidEgg(obj)
-
-    if not obj or not obj.Parent then
-        return false
-    end
-
-    local data = GetEggData(obj.Name)
-
-    if not data then
-        return false
-    end
-
-    local position = GetPosition(obj)
-
-    if not position then
-        return false
-    end
-
-    local root = GetRoot()
-
-    if not root then
-        return false
-    end
-
-    if (
-        position - EXCLUSION_CENTER
-    ).Magnitude <= EXCLUSION_RADIUS then
-        return false
-    end
-
-    if (
-        position - root.Position
-    ).Magnitude > DETECTION_DISTANCE then
-        return false
-    end
-
-    return true
+    return KnownLuck[Object.Name] or 0
 end
 
 --==============================================================
 -- BUSCAR MEJOR HUEVO
 --==============================================================
 
-local function RefreshBestEgg()
+local function BestEgg()
 
-    local best = nil
-    local bestValue = -1
+    local Result = nil
+    local Highest = -math.huge
 
-    for obj in pairs(EggCache) do
+    for _,Object in ipairs(workspace:GetDescendants()) do
 
-        if IsValidEgg(obj) then
+        if IsEgg(Object) then
 
-            local data = GetEggData(obj.Name)
+            local Position = PositionOf(Object)
 
-            if data then
+            if Position then
 
-                local value =
-                    ParseLuck(data.Luck)
+                local Value = GetLuck(Object)
 
-                if value > bestValue then
-                    bestValue = value
-                    best = obj
+                if Value > Highest then
+
+                    Highest = Value
+
+                    Result = {
+                        Object = Object,
+                        Position = Position,
+                        Luck = Value
+                    }
                 end
-
             end
-
-        else
-
-            EggCache[obj] = nil
-
         end
-
     end
 
-    BestEgg = best
-    BestLuck = bestValue
-
-    return best
-end
-
---==============================================================
--- GUARDAR SPAWN
---==============================================================
-
-local function SaveSpawn()
-
-    local root = GetRoot()
-
-    if root then
-        SavedSpawnCFrame = root.CFrame
-    end
-
+    return Result
 end
 
 --==============================================================
 -- TP
 --==============================================================
 
-local function TeleportToEgg(egg)
+local function TP(Position)
 
-    local root = GetRoot()
-    local position = GetPosition(egg)
+    local Character = Player.Character
+    local RootPart = Root()
 
-    if not root or not position then
+    if not Character or not RootPart then
         return false
     end
 
-    root.CFrame =
-        CFrame.new(
-            position + Vector3.new(0, 2.5, 0)
-        )
-
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
-
-    return true
-end
-
-local function ReturnSpawn()
-
-    local root = GetRoot()
-
-    if not root or not SavedSpawnCFrame then
-        return false
-    end
-
-    root.CFrame = SavedSpawnCFrame
-
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
+    RootPart.CFrame =
+        CFrame.new(Position + Vector3.new(0,3,0))
 
     return true
 end
 
 --==============================================================
--- FREEZE
+-- BUSCAR PROMPT
 --==============================================================
 
-local function Freeze()
+local function FindPrompt(Egg)
 
-    local character = LocalPlayer.Character
-    if not character then
-        return
-    end
-
-    local humanoid =
-        character:FindFirstChildOfClass("Humanoid")
-
-    local root =
-        character:FindFirstChild("HumanoidRootPart")
-
-    if humanoid then
-        humanoid.AutoRotate = false
-        humanoid.WalkSpeed = 0
-        humanoid.JumpPower = 0
-        humanoid.JumpHeight = 0
-    end
-
-    if root then
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
-    end
-
-end
-
-local function Unfreeze()
-
-    local character = LocalPlayer.Character
-    if not character then
-        return
-    end
-
-    local humanoid =
-        character:FindFirstChildOfClass("Humanoid")
-
-    if humanoid then
-        humanoid.AutoRotate = true
-        humanoid.WalkSpeed = 16
-        humanoid.JumpPower = 50
-        humanoid.JumpHeight = 7.2
-    end
-
-end
-
---==============================================================
--- PROMPT
---==============================================================
-
-local function FindGrabPrompt(egg)
-
-    if not egg then
+    if not Egg then
         return nil
     end
 
-    for _, obj in ipairs(egg:GetDescendants()) do
+    if Egg:IsA("ProximityPrompt") then
+        return Egg
+    end
 
-        if obj:IsA("ProximityPrompt") then
+    local Prompt =
+        Egg:FindFirstChildWhichIsA(
+            "ProximityPrompt",
+            true
+        )
 
-            local text =
-                string.lower(
-                    tostring(obj.ActionText)
-                    .. " "
-                    .. tostring(obj.ObjectText)
-                )
-
-            if
-                string.find(text, "grab", 1, true)
-                or string.find(text, "pick", 1, true)
-                or string.find(text, "collect", 1, true)
-                or string.find(text, "recoger", 1, true)
-                or string.find(text, "agarrar", 1, true)
-                or string.find(text, "tomar", 1, true)
-            then
-                return obj
-            end
-
-        end
-
+    if Prompt then
+        return Prompt
     end
 
     return nil
 end
 
 --==============================================================
--- AUTO GRAB x3
+-- RECOGER
 --==============================================================
 
-local function AutoGrab(egg)
+local function CollectEgg(Egg)
 
-    local prompt =
-        FindGrabPrompt(egg)
+    Status.Text = "Estado: RECOGIENDO"
 
-    if not prompt then
+    local Prompt = FindPrompt(Egg.Object)
+
+    if not Prompt then
         return false
     end
 
-    Freeze()
+    -- En una experiencia propia, este prompt debe ser
+    -- el mecanismo autorizado por tu sistema de huevos.
 
-    pcall(function()
-        prompt.HoldDuration = 0
-    end)
-
-    for i = 1, 3 do
-
-        if not InstaTP then
-            break
-        end
+    if Prompt.Enabled then
 
         pcall(function()
-            prompt:InputHoldBegin()
+            Prompt:InputHoldBegin()
         end)
 
-        task.wait(0.08)
+        task.wait(math.max(Prompt.HoldDuration,0.05))
 
         pcall(function()
-            prompt:InputHoldEnd()
+            Prompt:InputHoldEnd()
         end)
 
-        task.wait(0.08)
-
+        return true
     end
 
-    return true
+    return false
 end
 
 --==============================================================
--- GUI
+-- OWNER
 --==============================================================
 
-local ScreenGui =
-    Instance.new("ScreenGui")
+local function IsMine(Object)
 
-ScreenGui.Name =
-    "INSTA_STEAL_BLACK_EDITION"
+    for _,Name in ipairs({
+        "Owner",
+        "owner",
+        "OwnerName",
+        "ownerName"
+    }) do
 
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent =
-    LocalPlayer:WaitForChild("PlayerGui")
+        local Attribute = Object:GetAttribute(Name)
 
---==============================================================
--- PANEL ESTILO LENNON HUB
---==============================================================
+        if Attribute ~= nil then
 
-local Main =
-    Instance.new("Frame")
+            if tostring(Attribute) == Player.Name
+            or tostring(Attribute) == tostring(Player.UserId) then
 
-Main.Size =
-    UDim2.fromOffset(305, 190)
+                return true
+            end
+        end
 
-Main.Position =
-    UDim2.new(1, -325, 0, 120)
+        local Value =
+            Object:FindFirstChild(Name,true)
 
-Main.BackgroundColor3 =
-    Color3.fromRGB(7, 8, 9)
+        if Value then
 
-Main.BackgroundTransparency = 0.40
-Main.BorderSizePixel = 0
-Main.Parent = ScreenGui
+            if Value:IsA("StringValue")
+            and Value.Value == Player.Name then
+                return true
+            end
 
-local MainCorner =
-    Instance.new("UICorner")
+            if Value:IsA("ObjectValue")
+            and Value.Value == Player then
+                return true
+            end
 
-MainCorner.CornerRadius =
-    UDim.new(0, 16)
+            if Value:IsA("IntValue")
+            and Value.Value == Player.UserId then
+                return true
+            end
+        end
+    end
 
-MainCorner.Parent = Main
-
-local Stroke =
-    Instance.new("UIStroke")
-
-Stroke.Thickness = 1
-Stroke.Color = Color3.fromRGB(125, 127, 132)
-Stroke.Transparency = 0.08
-Stroke.Parent = Main
-
--- sombra
-local Shadow =
-    Instance.new("ImageLabel")
-
-Shadow.Name = "Shadow"
-Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-Shadow.Position = UDim2.new(0.5, 0, 0.5, 4)
-Shadow.Size = UDim2.new(1, 24, 1, 24)
-Shadow.BackgroundTransparency = 1
-Shadow.Image = "rbxassetid://1316045217"
-Shadow.ImageTransparency = 0.45
-Shadow.ScaleType = Enum.ScaleType.Slice
-Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
-Shadow.ZIndex = 0
-Shadow.Parent = Main
+    return false
+end
 
 --==============================================================
--- BARRA SUPERIOR
+-- BUSCAR MI PLOT
 --==============================================================
 
-local Top =
-    Instance.new("Frame")
+local function FindMyPlot()
 
-Top.Size =
-    UDim2.new(1, -12, 0, 43)
+    for _,Object in ipairs(workspace:GetDescendants()) do
 
-Top.Position =
-    UDim2.fromOffset(6, 6)
+        local Name = Object.Name:lower()
 
-Top.BackgroundColor3 =
-    Color3.fromRGB(12, 13, 15)
+        if Name:find("plot")
+        or Name:find("tycoon")
+        or Name:find("base") then
 
-Top.BackgroundTransparency = 0.28
-Top.BorderSizePixel = 0
-Top.Parent = Main
+            if IsMine(Object) then
 
-local TopCorner =
-    Instance.new("UICorner")
+                local Position =
+                    PositionOf(Object)
 
-TopCorner.CornerRadius =
-    UDim.new(0, 12)
+                if Position then
+                    return Object,Position
+                end
+            end
+        end
+    end
 
-TopCorner.Parent = Top
-
-local Logo =
-    Instance.new("ImageLabel")
-
-Logo.Size =
-    UDim2.fromOffset(31, 31)
-
-Logo.Position =
-    UDim2.fromOffset(6, 6)
-
-Logo.BackgroundColor3 =
-    Color3.fromRGB(25, 27, 30)
-
-Logo.BackgroundTransparency = 0.15
-Logo.BorderSizePixel = 0
-Logo.Image = "rbxassetid://103645600156879"
-Logo.ImageTransparency = 0
-Logo.ScaleType = Enum.ScaleType.Crop
-Logo.Parent = Top
-
-local LogoCorner =
-    Instance.new("UICorner")
-
-LogoCorner.CornerRadius =
-    UDim.new(1, 0)
-
-LogoCorner.Parent = Logo
-
-local Title =
-    Instance.new("TextLabel")
-
-Title.Size =
-    UDim2.new(1, -105, 0, 18)
-
-Title.Position =
-    UDim2.fromOffset(44, 5)
-
-Title.BackgroundTransparency = 1
-Title.Text = "INSTA HUB"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 13
-Title.TextColor3 = Color3.fromRGB(245, 245, 245)
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = Top
-
-local Subtitle =
-    Instance.new("TextLabel")
-
-Subtitle.Size =
-    UDim2.new(1, -105, 0, 14)
-
-Subtitle.Position =
-    UDim2.fromOffset(44, 22)
-
-Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "INSTA STEAL / BLACK EDITION"
-Subtitle.Font = Enum.Font.Gotham
-Subtitle.TextSize = 7
-Subtitle.TextColor3 = Color3.fromRGB(145, 148, 153)
-Subtitle.TextXAlignment = Enum.TextXAlignment.Left
-Subtitle.Parent = Top
-
-local DiscordButton =
-    Instance.new("TextButton")
-
-DiscordButton.Size =
-    UDim2.fromOffset(27, 27)
-
-DiscordButton.Position =
-    UDim2.new(1, -63, 0, 8)
-
-DiscordButton.BackgroundColor3 =
-    Color3.fromRGB(27, 29, 33)
-
-DiscordButton.BorderSizePixel = 0
-DiscordButton.Text = "◉"
-DiscordButton.Font = Enum.Font.GothamBold
-DiscordButton.TextSize = 13
-DiscordButton.TextColor3 = Color3.fromRGB(220, 222, 225)
-DiscordButton.AutoButtonColor = false
-DiscordButton.Parent = Top
-
-local DiscordCorner =
-    Instance.new("UICorner")
-
-DiscordCorner.CornerRadius =
-    UDim.new(0, 8)
-
-DiscordCorner.Parent = DiscordButton
-
-local PlusButton =
-    Instance.new("TextButton")
-
-PlusButton.Size =
-    UDim2.fromOffset(27, 27)
-
-PlusButton.Position =
-    UDim2.new(1, -31, 0, 8)
-
-PlusButton.BackgroundColor3 =
-    Color3.fromRGB(27, 29, 33)
-
-PlusButton.BorderSizePixel = 0
-PlusButton.Text = "×"
-PlusButton.Font = Enum.Font.GothamBold
-PlusButton.TextSize = 18
-PlusButton.TextColor3 = Color3.fromRGB(225, 225, 225)
-PlusButton.AutoButtonColor = false
-PlusButton.Parent = Top
-
-local PlusCorner =
-    Instance.new("UICorner")
-
-PlusCorner.CornerRadius =
-    UDim.new(0, 8)
-
-PlusCorner.Parent = PlusButton
+    return nil
+end
 
 --==============================================================
--- ABRIR / CERRAR INTERFAZ
+-- SECUENCIA COMPLETA
 --==============================================================
 
-local OpenButton =
-    Instance.new("TextButton")
+local function Run()
 
-OpenButton.Size = UDim2.fromOffset(42, 42)
-OpenButton.Position = UDim2.new(1, -58, 0, 120)
-OpenButton.BackgroundColor3 = Color3.fromRGB(8, 9, 11)
-OpenButton.BackgroundTransparency = 0.25
-OpenButton.BorderSizePixel = 0
-OpenButton.Text = "⚡"
-OpenButton.Font = Enum.Font.GothamBold
-OpenButton.TextSize = 18
-OpenButton.TextColor3 = Color3.fromRGB(235, 235, 238)
-OpenButton.Visible = false
-OpenButton.AutoButtonColor = false
-OpenButton.Parent = ScreenGui
+    if BUSY or not AUTO then
+        return
+    end
 
-local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(1, 0)
-OpenCorner.Parent = OpenButton
+    BUSY = true
 
-local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Thickness = 1
-OpenStroke.Color = Color3.fromRGB(125, 127, 132)
-OpenStroke.Transparency = 0.05
-OpenStroke.Parent = OpenButton
+    local Egg = BestEgg()
 
-PlusButton.Activated:Connect(function()
-    Main.Visible = false
-    OpenButton.Visible = true
-end)
+    if not Egg then
 
-OpenButton.Activated:Connect(function()
-    Main.Visible = true
-    OpenButton.Visible = false
+        Status.Text = "Estado: NO HAY HUEVOS"
+        BUSY = false
+        return
+    end
+
+    Best.Text =
+        "🏆 Mejor: " .. Egg.Object.Name
+
+    Luck.Text =
+        "Luck: " .. tostring(Egg.Luck)
+
+    -- 1. IR AL HUEVO
+    Status.Text = "Estado: TP AL HUEVO"
+
+    TP(Egg.Position)
+
+    task.wait(.15)
+
+    -- 2. RECOGER
+    CollectEgg(Egg)
+
+    task.wait(.25)
+
+    -- 3. BUSCAR PLOT
+    Status.Text = "Estado: BUSCANDO MI PLOT"
+
+    local MyPlot,PlotPosition =
+        FindMyPlot()
+
+    if not MyPlot then
+
+        Plot.Text = "Plot: NO ENCONTRADO"
+        Status.Text = "Estado: ERROR PLOT"
+
+        BUSY = false
+        return
+    end
+
+    Plot.Text = "Plot: ENCONTRADO"
+
+    -- 4. VOLVER AL PLOT
+    Status.Text = "Estado: TP AL PLOT"
+
+    TP(PlotPosition)
+
+    task.wait(.3)
+
+    Status.Text = "Estado: COMPLETADO"
+
+    BUSY = false
+end
+
+--==============================================================
+-- BOTÓN
+--==============================================================
+
+Button.MouseButton1Click:Connect(function()
+
+    AUTO = not AUTO
+
+    if AUTO then
+
+        Button.Text = "AUTO EGG  •  ON"
+        Button.BackgroundColor3 =
+            Color3.fromRGB(0,120,75)
+
+        Status.Text = "Estado: ACTIVADO"
+
+        task.spawn(function()
+
+            while AUTO do
+
+                pcall(Run)
+
+                task.wait(.5)
+
+            end
+
+        end)
+
+    else
+
+        Button.Text = "AUTO EGG  •  OFF"
+        Button.BackgroundColor3 =
+            Color3.fromRGB(35,35,40)
+
+        Status.Text = "Estado: DESACTIVADO"
+    end
 end)
 
 --==============================================================
--- INDICADOR
---==============================================================
-
-local Status =
-    Instance.new("TextLabel")
-
-Status.Size =
-    UDim2.fromOffset(75, 15)
-
-Status.Position =
-    UDim2.new(1, -87, 0, 53)
-
-Status.BackgroundTransparency = 1
-Status.Text = "● READY"
-Status.Font = Enum.Font.GothamBold
-Status.TextSize = 7
-Status.TextColor3 = Color3.fromRGB(135, 138, 143)
-Status.TextXAlignment = Enum.TextXAlignment.Right
-Status.Parent = Main
-
---==============================================================
--- CURRENT TARGET
---==============================================================
-
-local TargetLabel =
-    Instance.new("TextLabel")
-
-TargetLabel.Size =
-    UDim2.new(1, -30, 0, 14)
-
-TargetLabel.Position =
-    UDim2.fromOffset(15, 50)
-
-TargetLabel.BackgroundTransparency = 1
-TargetLabel.Text = "CURRENT TARGET"
-TargetLabel.Font = Enum.Font.GothamBold
-TargetLabel.TextSize = 8
-TargetLabel.TextColor3 = Color3.fromRGB(150, 153, 158)
-TargetLabel.TextXAlignment = Enum.TextXAlignment.Left
-TargetLabel.Parent = Main
-
-local Arrow =
-    Instance.new("TextLabel")
-
-Arrow.Size =
-    UDim2.fromOffset(20, 16)
-
-Arrow.Position =
-    UDim2.new(1, -27, 0, 49)
-
-Arrow.BackgroundTransparency = 1
-Arrow.Text = "⌄"
-Arrow.Font = Enum.Font.GothamBold
-Arrow.TextSize = 15
-Arrow.TextColor3 = Color3.fromRGB(190, 193, 198)
-Arrow.Parent = Main
-
-local EggCard =
-    Instance.new("Frame")
-
-EggCard.Size =
-    UDim2.new(1, -20, 0, 45)
-
-EggCard.Position =
-    UDim2.fromOffset(10, 67)
-
-EggCard.BackgroundColor3 =
-    Color3.fromRGB(13, 14, 16)
-
-EggCard.BackgroundTransparency = 0.30
-EggCard.BorderSizePixel = 0
-EggCard.Parent = Main
-
-local EggCorner =
-    Instance.new("UICorner")
-
-EggCorner.CornerRadius =
-    UDim.new(0, 10)
-
-EggCorner.Parent = EggCard
-
-local EggStroke =
-    Instance.new("UIStroke")
-
-EggStroke.Color =
-    Color3.fromRGB(42, 44, 48)
-
-EggStroke.Thickness = 1
-EggStroke.Transparency = 0.25
-EggStroke.Parent = EggCard
-
-local EggText =
-    Instance.new("TextLabel")
-
-EggText.Size =
-    UDim2.new(1, -18, 1, -4)
-
-EggText.Position =
-    UDim2.fromOffset(9, 2)
-
-EggText.BackgroundTransparency = 1
-EggText.Text =
-    "🥚  MEJOR HUEVO\nBuscando..."
-
-EggText.Font =
-    Enum.Font.GothamBold
-
-EggText.TextSize = 10
-EggText.TextColor3 = Color3.fromRGB(240, 240, 243)
-EggText.TextXAlignment = Enum.TextXAlignment.Left
-EggText.TextYAlignment = Enum.TextYAlignment.Center
-EggText.Parent = EggCard
-
---==============================================================
--- SEPARADOR
---==============================================================
-
-local Divider =
-    Instance.new("Frame")
-
-Divider.Size =
-    UDim2.new(1, -22, 0, 1)
-
-Divider.Position =
-    UDim2.fromOffset(11, 116)
-
-Divider.BackgroundColor3 =
-    Color3.fromRGB(39, 40, 43)
-
-Divider.BorderSizePixel = 0
-Divider.Parent = Main
-
---==============================================================
--- INSTA STEAL
---==============================================================
-
-local TPButton =
-    Instance.new("TextButton")
-
-TPButton.Size =
-    UDim2.fromOffset(154, 42)
-
-TPButton.Position =
-    UDim2.fromOffset(10, 128)
-
-TPButton.BackgroundColor3 =
-    Color3.fromRGB(20, 21, 23)
-
-TPButton.BackgroundTransparency = 0.28
-TPButton.BorderSizePixel = 0
-TPButton.Text =
-    "INSTA STEAL  OFF"
-
-TPButton.Font =
-    Enum.Font.GothamBold
-
-TPButton.TextSize = 9
-TPButton.TextColor3 = Color3.fromRGB(255, 70, 70)
-TPButton.AutoButtonColor = false
-TPButton.Parent = Main
-
-local TPCorner =
-    Instance.new("UICorner")
-
-TPCorner.CornerRadius =
-    UDim.new(0, 10)
-
-TPCorner.Parent = TPButton
-
-local TPStroke =
-    Instance.new("UIStroke")
-
-TPStroke.Color =
-    Color3.fromRGB(255, 70, 70)
-
-TPStroke.Thickness = 1.2
-TPStroke.Parent = TPButton
-
---==============================================================
--- LOOP
---==============================================================
-
-local LOPButton =
-    Instance.new("TextButton")
-
-LOPButton.Size =
-    UDim2.fromOffset(120, 42)
-
-LOPButton.Position =
-    UDim2.fromOffset(175, 128)
-
-LOPButton.BackgroundColor3 =
-    Color3.fromRGB(20, 21, 23)
-
-LOPButton.BackgroundTransparency = 0.28
-LOPButton.BorderSizePixel = 0
-LOPButton.Text =
-    "LOOP  OFF"
-
-LOPButton.Font =
-    Enum.Font.GothamBold
-
-LOPButton.TextSize = 9
-LOPButton.TextColor3 = Color3.fromRGB(150, 153, 158)
-LOPButton.AutoButtonColor = false
-LOPButton.Parent = Main
-
-local LOPCorner =
-    Instance.new("UICorner")
-
-LOPCorner.CornerRadius =
-    UDim.new(0, 10)
-
-LOPCorner.Parent = LOPButton
-
-local LOPStroke =
-    Instance.new("UIStroke")
-
-LOPStroke.Color =
-    Color3.fromRGB(65, 67, 72)
-
-LOPStroke.Thickness = 1.2
-LOPStroke.Parent = LOPButton
-
---==============================================================
--- ANIMACIÓN DEL BORDE
+-- ACTUALIZAR MEJOR HUEVO EN EL PANEL
 --==============================================================
 
 task.spawn(function()
 
-    local t = 0
+    while Gui.Parent do
 
-    while Main.Parent do
+        if not BUSY then
 
-        t += 0.035
+            local Egg = BestEgg()
 
-        local pulse =
-            0.5 +
-            math.sin(t) * 0.5
+            if Egg then
 
-        Stroke.Transparency =
-            0.05 + (pulse * 0.18)
+                Best.Text =
+                    "🏆 Mejor: " .. Egg.Object.Name
 
-        task.wait(0.03)
+                Luck.Text =
+                    "Luck: " .. tostring(Egg.Luck)
 
-    end
+            else
 
-end)
-
---==============================================================
--- ANIMACIÓN DE BOTONES
---==============================================================
-
-local function ButtonPulse(button)
-
-    local original = button.Size
-
-    TweenService:Create(
-        button,
-        TweenInfo.new(
-            0.08,
-            Enum.EasingStyle.Quad,
-            Enum.EasingDirection.Out
-        ),
-        {
-            Size = UDim2.fromOffset(
-                original.X.Offset - 5,
-                original.Y.Offset - 3
-            )
-        }
-    ):Play()
-
-    task.delay(0.08, function()
-
-        if button.Parent then
-
-            TweenService:Create(
-                button,
-                TweenInfo.new(
-                    0.14,
-                    Enum.EasingStyle.Back,
-                    Enum.EasingDirection.Out
-                ),
-                {
-                    Size = original
-                }
-            ):Play()
-
+                Best.Text = "🏆 Mejor: NINGUNO"
+                Luck.Text = "Luck: —"
+            end
         end
 
-    end)
-
-end
-
---==============================================================
--- EFECTO HOVER / TOUCH
---==============================================================
-
-local function AddButtonEffect(button, strokeObject)
-
-    button.MouseEnter:Connect(function()
-
-        TweenService:Create(
-            strokeObject,
-            TweenInfo.new(0.12),
-            {
-                Transparency = 0
-            }
-        ):Play()
-
-    end)
-
-    button.MouseLeave:Connect(function()
-
-        TweenService:Create(
-            strokeObject,
-            TweenInfo.new(0.12),
-            {
-                Transparency = 0.05
-            }
-        ):Play()
-
-    end)
-
-end
-
-AddButtonEffect(TPButton, TPStroke)
-AddButtonEffect(LOPButton, LOPStroke)
-
--- ACTUALIZAR PANEL
---==============================================================
-
-local function UpdateUI()
-
-    if BestEgg and BestEgg.Parent then
-
-        local data =
-            GetEggData(BestEgg.Name)
-
-        if data then
-
-            EggText.Text =
-                "🥚  MEJOR HUEVO\n"
-                .. BestEgg.Name
-                .. "   •   🍀 Lucky: "
-                .. data.Luck
-
-        end
-
-    else
-
-        EggText.Text =
-            "🥚  MEJOR HUEVO\nBuscando..."
-
+        task.wait(.25)
     end
-
-end
-
---==============================================================
--- CICLO
---==============================================================
-
-local function DoCycle()
-
-    if not InstaTP then
-        return
-    end
-
-    RefreshBestEgg()
-    UpdateUI()
-
-    local egg = BestEgg
-
-    if not egg then
-        Status.Text = "● SIN HUEVO"
-        return
-    end
-
-    Status.Text = "● TELEPORT"
-
-    if not TeleportToEgg(egg) then
-        return
-    end
-
-    Freeze()
-
-    task.wait(0.12)
-
-    if not InstaTP then
-        Unfreeze()
-        return
-    end
-
-    Status.Text = "● AUTO GRAB"
-
-    AutoGrab(egg)
-
-    task.wait(0.25)
-
-    if not InstaTP then
-        Unfreeze()
-        return
-    end
-
-    Status.Text = "● RETURN"
-
-    ReturnSpawn()
-
-    task.wait(0.15)
-
-    Unfreeze()
-
-    Status.Text =
-        LOP and "● LOOP ACTIVE" or "● READY"
-
-end
-
---==============================================================
--- LOP
---==============================================================
-
-LOPButton.Activated:Connect(function()
-
-    ButtonPulse(LOPButton)
-
-    LOP = not LOP
-
-    if LOP then
-
-        LOPButton.Text =
-            "LOP  ON"
-
-        LOPButton.TextColor3 =
-            Color3.fromRGB(0, 255, 150)
-
-        LOPStroke.Color =
-            Color3.fromRGB(0, 255, 150)
-
-    else
-
-        LOPButton.Text =
-            "LOP  OFF"
-
-        LOPButton.TextColor3 =
-            Color3.fromRGB(150, 150, 155)
-
-        LOPStroke.Color =
-            Color3.fromRGB(65, 65, 70)
-
-        Status.Text =
-            InstaTP and "● ACTIVE" or "● READY"
-
-    end
-
 end)
-
---==============================================================
--- INSTA TP
---==============================================================
-
-TPButton.Activated:Connect(function()
-
-    ButtonPulse(TPButton)
-
-    InstaTP = not InstaTP
-
-    if InstaTP then
-
-        SaveSpawn()
-
-        TPButton.Text =
-            "INSTA STEAL  ON"
-
-        TPButton.TextColor3 =
-            Color3.fromRGB(0, 255, 150)
-
-        TPStroke.Color =
-            Color3.fromRGB(0, 255, 150)
-
-        if LOP then
-
-            Status.Text =
-                "● LOOP ACTIVE"
-
-            task.spawn(function()
-
-                while InstaTP and LOP do
-
-                    if not Busy then
-
-                        Busy = true
-
-                        pcall(function()
-                            DoCycle()
-                        end)
-
-                        Busy = false
-
-                    end
-
-                    task.wait(REFRESH_TIME)
-
-                end
-
-            end)
-
-        else
-
-            task.spawn(function()
-
-                if not Busy then
-
-                    Busy = true
-
-                    pcall(function()
-                        DoCycle()
-                    end)
-
-                    Busy = false
-
-                end
-
-                InstaTP = false
-
-                TPButton.Text =
-                    "INSTA STEAL  OFF"
-
-                TPButton.TextColor3 =
-                    Color3.fromRGB(255, 70, 70)
-
-                TPStroke.Color =
-                    Color3.fromRGB(255, 70, 70)
-
-                Status.Text =
-                    "● READY"
-
-            end)
-
-        end
-
-    else
-
-        InstaTP = false
-
-        TPButton.Text =
-            "INSTA STEAL  OFF"
-
-        TPButton.TextColor3 =
-            Color3.fromRGB(255, 70, 70)
-
-        TPStroke.Color =
-            Color3.fromRGB(255, 70, 70)
-
-        Status.Text =
-            "● READY"
-
-        Unfreeze()
-
-    end
-
-end)
-
---==============================================================
--- REFRESH DEL MEJOR HUEVO
---==============================================================
-
-task.spawn(function()
-
-    while ScreenGui.Parent do
-
-        RefreshBestEgg()
-        UpdateUI()
-
-        task.wait(REFRESH_TIME)
-
-    end
-
-end)
-
---==============================================================
--- PANEL MOVIBLE
---==============================================================
-
-local dragging = false
-local dragStart
-local startPosition
-
-local function UpdateDrag(input)
-
-    local delta =
-        input.Position - dragStart
-
-    Main.Position =
-        UDim2.new(
-            startPosition.X.Scale,
-            startPosition.X.Offset + delta.X,
-            startPosition.Y.Scale,
-            startPosition.Y.Offset + delta.Y
-        )
-
-end
-
-Top.InputBegan:Connect(function(input)
-
-    if
-        input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or
-        input.UserInputType ==
-        Enum.UserInputType.Touch
-    then
-
-        dragging = true
-        dragStart = input.Position
-        startPosition = Main.Position
-
-    end
-
-end)
-
-Top.InputChanged:Connect(function(input)
-
-    if
-        input.UserInputType ==
-        Enum.UserInputType.MouseMovement
-        or
-        input.UserInputType ==
-        Enum.UserInputType.Touch
-    then
-
-        if dragging then
-            UpdateDrag(input)
-        end
-
-    end
-
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-
-    if
-        input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or
-        input.UserInputType ==
-        Enum.UserInputType.Touch
-    then
-
-        dragging = false
-
-    end
-
-end)
-
---==============================================================
--- ANIMACIÓN DE ENTRADA
---==============================================================
-
-local originalPosition = Main.Position
-
-Main.Position =
-    UDim2.new(
-        1,
-        -300,
-        0,
-        80
-    )
-
-Main.BackgroundTransparency = 1
-
-TweenService:Create(
-    Main,
-    TweenInfo.new(
-        0.45,
-        Enum.EasingStyle.Back,
-        Enum.EasingDirection.Out
-    ),
-    {
-        Position = originalPosition,
-        BackgroundTransparency = 0.40
-    }
-):Play()
-
---==============================================================
--- INICIO
---==============================================================
-
-RefreshBestEgg()
-UpdateUI()
-
-
---==============================================================
--- GUARDAR INTERFAZ / FOTO PARA ABRIR - V5
---==============================================================
-
-local InterfaceSaved = false
-
--- Botón X en la esquina superior derecha.
--- Al tocarlo, guarda/oculta la interfaz y deja la foto para reabrir.
-local SaveInterfaceButton = Instance.new("TextButton")
-SaveInterfaceButton.Name = "SaveInterfaceButton"
-SaveInterfaceButton.Parent = Top
-SaveInterfaceButton.Size = UDim2.fromOffset(30, 30)
-SaveInterfaceButton.Position = UDim2.new(1, -36, 0.5, -15)
-SaveInterfaceButton.BackgroundTransparency = 1
-SaveInterfaceButton.Text = "×"
-SaveInterfaceButton.TextColor3 = Color3.fromRGB(190, 190, 195)
-SaveInterfaceButton.TextSize = 24
-SaveInterfaceButton.Font = Enum.Font.GothamBold
-SaveInterfaceButton.AutoButtonColor = false
-SaveInterfaceButton.Active = true
-SaveInterfaceButton.ZIndex = 100
-
--- Botón de reapertura usando la imagen solicitada.
-local ReopenButton = Instance.new("ImageButton")
-ReopenButton.Name = "ReopenButton"
-ReopenButton.Parent = ScreenGui
-ReopenButton.Size = UDim2.fromOffset(54, 54)
-ReopenButton.Position = UDim2.new(1, -66, 0, 12)
-ReopenButton.AnchorPoint = Vector2.new(0, 0)
-ReopenButton.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
-ReopenButton.BackgroundTransparency = 0.18
-ReopenButton.Image = "rbxassetid://103645600156879"
-ReopenButton.ScaleType = Enum.ScaleType.Crop
-ReopenButton.Visible = false
-ReopenButton.Active = true
-ReopenButton.AutoButtonColor = true
-ReopenButton.ZIndex = 200
-
-local ReopenCorner = Instance.new("UICorner")
-ReopenCorner.CornerRadius = UDim.new(1, 0)
-ReopenCorner.Parent = ReopenButton
-
-local ReopenStroke = Instance.new("UIStroke")
-ReopenStroke.Color = Color3.fromRGB(105, 105, 110)
-ReopenStroke.Thickness = 1
-ReopenStroke.Transparency = 0
-ReopenStroke.Parent = ReopenButton
-
-local function SaveAndHideInterface()
-    InterfaceSaved = true
-
-    -- Guarda la posición actual antes de ocultar.
-    local savedPosition = Main.Position
-
-    Main.Visible = false
-    ReopenButton.Visible = true
-
-    -- Al reabrir conserva exactamente la posición.
-    ReopenButton:SetAttribute("SavedXScale", savedPosition.X.Scale)
-    ReopenButton:SetAttribute("SavedXOffset", savedPosition.X.Offset)
-    ReopenButton:SetAttribute("SavedYScale", savedPosition.Y.Scale)
-    ReopenButton:SetAttribute("SavedYOffset", savedPosition.Y.Offset)
-end
-
-local function ReopenInterface()
-    if not InterfaceSaved then
-        return
-    end
-
-    local xs = ReopenButton:GetAttribute("SavedXScale") or 0
-    local xo = ReopenButton:GetAttribute("SavedXOffset") or 0
-    local ys = ReopenButton:GetAttribute("SavedYScale") or 0
-    local yo = ReopenButton:GetAttribute("SavedYOffset") or 0
-
-    Main.Position = UDim2.new(xs, xo, ys, yo)
-    Main.Visible = true
-    ReopenButton.Visible = false
-end
-
-SaveInterfaceButton.Activated:Connect(SaveAndHideInterface)
-ReopenButton.Activated:Connect(ReopenInterface)
-
-SaveInterfaceButton.MouseButton1Click:Connect(SaveAndHideInterface)
-ReopenButton.MouseButton1Click:Connect(ReopenInterface)
-
--- Borde gris fino de la interfaz.
-local MainBorder = Main:FindFirstChild("MainBorder")
-if not MainBorder then
-    MainBorder = Instance.new("UIStroke")
-    MainBorder.Name = "MainBorder"
-    MainBorder.Parent = Main
-end
-MainBorder.Color = Color3.fromRGB(105, 105, 110)
-MainBorder.Thickness = 1
-MainBorder.Transparency = 0
-
--- Transparencia media.
-Main.BackgroundTransparency = 0.38
-
--- Asegurar prioridad de interacción.
-Main.ZIndex = 10
-Top.ZIndex = 20
-SaveInterfaceButton.ZIndex = 100
-ReopenButton.ZIndex = 200
-
