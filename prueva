@@ -23,6 +23,14 @@ local CENTRO_ZONA = Vector3.new(
 
 local RADIO_EXCLUSION = 210
 
+--==============================================================
+-- BLACK EDITION • UI
+--==============================================================
+
+local LOGO_ID = "rbxassetid://103645600156879"
+local AUTO_GRAB_BURST = 5
+local PANEL_TWEEN_TIME = 0.25
+
 
 local KnownLuck = {
     ["White Egg"] = 1,
@@ -53,19 +61,24 @@ local KnownLuck = {
 }
 
 --==============================================================
--- GUI
+-- GUI • BLACK EDITION
 --==============================================================
 
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "AutoEggComplete"
+Gui.Name = "KOXTA_AUTO_EGG_BLACK"
 Gui.ResetOnSpawn = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = Player:WaitForChild("PlayerGui")
 
 local Main = Instance.new("Frame")
 Main.Size = UDim2.fromOffset(330,245)
 Main.Position = UDim2.new(.5,-165,.5,-122)
-Main.BackgroundColor3 = Color3.fromRGB(8,8,10)
+Main.BackgroundColor3 = Color3.fromRGB(5,5,7)
 Main.BorderSizePixel = 0
+Main.Active = true
 Main.Parent = Gui
 
 local Corner = Instance.new("UICorner")
@@ -73,18 +86,48 @@ Corner.CornerRadius = UDim.new(0,20)
 Corner.Parent = Main
 
 local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(0,255,150)
-Stroke.Thickness = 2
+Stroke.Color = Color3.fromRGB(255,255,255)
+Stroke.Thickness = 1.5
 Stroke.Parent = Main
 
+-- Fondo animado
+local BackgroundGradient = Instance.new("UIGradient")
+BackgroundGradient.Rotation = 0
+BackgroundGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(4,4,6)),
+    ColorSequenceKeypoint.new(.5, Color3.fromRGB(18,18,22)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(4,4,6))
+})
+BackgroundGradient.Parent = Main
+
+local Glow = Instance.new("Frame")
+Glow.Size = UDim2.new(1,0,0,3)
+Glow.Position = UDim2.new(0,0,0,0)
+Glow.BackgroundColor3 = Color3.fromRGB(0,255,150)
+Glow.BorderSizePixel = 0
+Glow.Parent = Main
+
+local GlowCorner = Instance.new("UICorner")
+GlowCorner.CornerRadius = UDim.new(1,0)
+GlowCorner.Parent = Glow
+
+-- Logo
+local Logo = Instance.new("ImageLabel")
+Logo.Size = UDim2.fromOffset(42,42)
+Logo.Position = UDim2.fromOffset(12,8)
+Logo.BackgroundTransparency = 1
+Logo.Image = LOGO_ID
+Logo.Parent = Main
+
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1,-20,0,38)
-Title.Position = UDim2.fromOffset(10,8)
+Title.Size = UDim2.new(1,-70,0,38)
+Title.Position = UDim2.fromOffset(60,8)
 Title.BackgroundTransparency = 1
-Title.Text = "🥚  AUTO EGG"
+Title.Text = "KOXTA • AUTO EGG"
 Title.TextColor3 = Color3.new(1,1,1)
-Title.TextSize = 22
+Title.TextSize = 20
 Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Main
 
 local Best = Instance.new("TextLabel")
@@ -122,9 +165,9 @@ Plot.Parent = Main
 local Button = Instance.new("TextButton")
 Button.Size = UDim2.new(1,-30,0,45)
 Button.Position = UDim2.fromOffset(15,181)
-Button.BackgroundColor3 = Color3.fromRGB(35,35,40)
+Button.BackgroundColor3 = Color3.fromRGB(18,18,22)
 Button.BorderSizePixel = 0
-Button.Text = "AUTO EGG  •  OFF"
+Button.Text = "AUTO GRAB x5  •  OFF"
 Button.TextColor3 = Color3.new(1,1,1)
 Button.TextSize = 15
 Button.Font = Enum.Font.GothamBold
@@ -133,6 +176,86 @@ Button.Parent = Main
 local BC = Instance.new("UICorner")
 BC.CornerRadius = UDim.new(0,12)
 BC.Parent = Button
+
+local ButtonStroke = Instance.new("UIStroke")
+ButtonStroke.Color = Color3.fromRGB(0,255,150)
+ButtonStroke.Thickness = 1
+ButtonStroke.Parent = Button
+
+-- Botón flotante de esquina
+local OpenButton = Instance.new("ImageButton")
+OpenButton.Name = "OpenButton"
+OpenButton.Size = UDim2.fromOffset(48,48)
+OpenButton.Position = UDim2.new(1,-62,0,14)
+OpenButton.BackgroundColor3 = Color3.fromRGB(5,5,7)
+OpenButton.BorderSizePixel = 0
+OpenButton.Image = LOGO_ID
+OpenButton.Visible = false
+OpenButton.Active = true
+OpenButton.Parent = Gui
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(1,0)
+OpenCorner.Parent = OpenButton
+
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = Color3.fromRGB(0,255,150)
+OpenStroke.Thickness = 2
+OpenStroke.Parent = OpenButton
+
+-- Arrastar painel
+local dragging = false
+local dragStart
+local startPos
+
+Main.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Main.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+Main.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch then
+        input.Changed:Connect(function()
+            if dragging then
+                local delta = input.Position - dragStart
+
+                Main.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+    end
+end)
+
+-- Animaciones de fondo
+task.spawn(function()
+    local angle = 0
+
+    while Gui.Parent do
+        angle += 0.7
+        BackgroundGradient.Rotation = angle % 360
+
+        local pulse = (math.sin(os.clock() * 3) + 1) / 2
+        Glow.BackgroundTransparency = .1 + pulse * .35
+        OpenStroke.Transparency = pulse * .35
+
+        task.wait(.03)
+    end
+end)
 
 --==============================================================
 -- CHARACTER
@@ -326,7 +449,7 @@ end
 
 local function CollectEgg(Egg)
 
-    Status.Text = "Estado: RECOGIENDO"
+    Status.Text = "Estado: AUTO GRAB x5"
 
     local Prompt = FindPrompt(Egg.Object)
 
@@ -334,25 +457,42 @@ local function CollectEgg(Egg)
         return false
     end
 
-    -- En una experiencia propia, este prompt debe ser
-    -- el mecanismo autorizado por tu sistema de huevos.
+    if not Prompt.Enabled then
+        return false
+    end
 
-    if Prompt.Enabled then
+    local Success = false
+
+    for i = 1, AUTO_GRAB_BURST do
+
+        if not AUTO then
+            break
+        end
+
+        Status.Text =
+            "Estado: AUTO GRAB " .. i .. "/5"
 
         pcall(function()
             Prompt:InputHoldBegin()
         end)
 
-        task.wait(math.max(Prompt.HoldDuration,0.05))
+        task.wait(
+            math.max(
+                Prompt.HoldDuration,
+                0.03
+            )
+        )
 
         pcall(function()
             Prompt:InputHoldEnd()
         end)
 
-        return true
+        Success = true
+
+        task.wait(0.04)
     end
 
-    return false
+    return Success
 end
 
 --==============================================================
@@ -687,13 +827,67 @@ end
 -- BOTÓN
 --==============================================================
 
+-- Ocultar/mostrar painel
+local function HidePanel()
+    local target = UDim2.new(
+        Main.Position.X.Scale,
+        Main.Position.X.Offset,
+        Main.Position.Y.Scale,
+        Main.Position.Y.Offset - 18
+    )
+
+    TweenService:Create(
+        Main,
+        TweenInfo.new(PANEL_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            Position = target,
+            BackgroundTransparency = 1
+        }
+    ):Play()
+
+    task.delay(PANEL_TWEEN_TIME, function()
+        Main.Visible = false
+        Main.BackgroundTransparency = 0
+        OpenButton.Visible = true
+    end)
+end
+
+OpenButton.MouseButton1Click:Connect(function()
+    OpenButton.Visible = false
+    Main.Visible = true
+
+    local current = Main.Position
+    Main.Position = UDim2.new(
+        current.X.Scale,
+        current.X.Offset,
+        current.Y.Scale,
+        current.Y.Offset + 18
+    )
+
+    TweenService:Create(
+        Main,
+        TweenInfo.new(PANEL_TWEEN_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {
+            Position = current
+        }
+    ):Play()
+end)
+
+-- Doble click en el título para ocultar el panel.
+Title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        HidePanel()
+    end
+end)
+
 Button.MouseButton1Click:Connect(function()
 
     AUTO = not AUTO
 
     if AUTO then
 
-        Button.Text = "AUTO EGG  •  ON"
+        Button.Text = "AUTO GRAB x5  •  ON"
         Button.BackgroundColor3 =
             Color3.fromRGB(0,120,75)
 
@@ -713,7 +907,7 @@ Button.MouseButton1Click:Connect(function()
 
     else
 
-        Button.Text = "AUTO EGG  •  OFF"
+        Button.Text = "AUTO GRAB x5  •  OFF"
         Button.BackgroundColor3 =
             Color3.fromRGB(35,35,40)
 
