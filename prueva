@@ -386,9 +386,10 @@ local function GetEggPriority(Object)
 
     local Value = GetValue(Object)
 
-    -- Unknown egg with no usable value is not a valid target.
+    -- Unknown eggs are still valid candidates. If the game does not expose
+    -- Luck locally, keep them in the cache instead of reporting zero eggs.
     if Value <= 0 then
-        return 0
+        return 1
     end
 
     return Value
@@ -406,33 +407,64 @@ local function LooksLikeEggName(name)
         or (name:find("black", 1, true) and name:find("hole", 1, true)) ~= nil
 end
 
+local function PromptLooksLikeEgg(Prompt)
+    if not Prompt then
+        return false
+    end
+
+    local Text = table.concat({
+        tostring(Prompt.Name or ""),
+        tostring(Prompt.ActionText or ""),
+        tostring(Prompt.ObjectText or "")
+    }, " "):lower()
+
+    local Keys = {
+        "egg", "huevo", "hatch",
+        "grab egg", "collect egg", "pick egg",
+        "pick up egg", "take egg"
+    }
+
+    for _, Key in ipairs(Keys) do
+        if Text:find(Key, 1, true) then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function GetEggFromPrompt(Prompt)
     if not Prompt then
         return nil
     end
 
-    local current = Prompt.Parent
+    local Current = Prompt.Parent
 
-    for _ = 1, 10 do
-        if not current then
+    for _ = 1, 12 do
+        if not Current then
             break
         end
 
-        if current:IsA("Model") or current:IsA("BasePart") then
-            if LooksLikeEggName(current.Name)
-                or current:GetAttribute("IsEgg") == true
-                or current:GetAttribute("Egg") == true then
-                return current
+        if Current:IsA("Model") or Current:IsA("BasePart") then
+            if LooksLikeEggName(Current.Name)
+                or Current:GetAttribute("IsEgg") == true
+                or Current:GetAttribute("Egg") == true then
+                return Current
             end
         end
 
-        current = current.Parent
+        Current = Current.Parent
     end
 
-    -- IMPORTANTE:
-    -- No aceptar automáticamente cualquier modelo con un prompt
-    -- "Grab/Pick/Collect". Eso hacía que otros objetos fueran
-    -- tratados como huevos.
+    -- Algunos huevos no tienen "Egg" en el nombre interno.
+    -- En esos casos usamos el texto del ProximityPrompt.
+    if PromptLooksLikeEgg(Prompt) then
+        local Parent = Prompt.Parent
+        if Parent and (Parent:IsA("Model") or Parent:IsA("BasePart")) then
+            return Parent
+        end
+    end
+
     return nil
 end
 
@@ -485,10 +517,11 @@ local function RegisterEgg(Object)
         return
     end
 
-    -- Strict candidate check: no generic prompt fallback.
+    -- Aceptar nombres conocidos, atributos o prompts que indiquen huevo.
     if not LooksLikeEggName(Egg.Name)
         and Egg:GetAttribute("IsEgg") ~= true
-        and Egg:GetAttribute("Egg") ~= true then
+        and Egg:GetAttribute("Egg") ~= true
+        and not (Object:IsA("ProximityPrompt") and PromptLooksLikeEgg(Object)) then
         return
     end
 
@@ -526,17 +559,35 @@ local function RegisterEgg(Object)
 end
 
 local function RebuildCache()
-    table.clear(EggCache)
+    -- No table.clear here: events can register eggs while the initial scan runs.
+    -- Walk the hierarchy in small batches so execution stays responsive.
+    local Stack = {}
+    local Processed = 0
 
-    -- Single initial scan. Runtime additions are handled by
-    -- DescendantAdded, so Workspace is not repeatedly traversed.
-    for _, Object in ipairs(workspace:GetDescendants()) do
-        if Object:IsA("ProximityPrompt") then
-            RegisterEgg(Object)
-        elseif LooksLikeEggName(Object.Name)
-            or Object:GetAttribute("IsEgg") == true
-            or Object:GetAttribute("Egg") == true then
-            RegisterEgg(Object)
+    for _, Child in ipairs(workspace:GetChildren()) do
+        Stack[#Stack + 1] = Child
+    end
+
+    while #Stack > 0 do
+        local Object = table.remove(Stack)
+
+        if Object and Object.Parent then
+            if Object:IsA("ProximityPrompt") then
+                RegisterEgg(Object)
+            elseif LooksLikeEggName(Object.Name)
+                or Object:GetAttribute("IsEgg") == true
+                or Object:GetAttribute("Egg") == true then
+                RegisterEgg(Object)
+            end
+
+            for _, Child in ipairs(Object:GetChildren()) do
+                Stack[#Stack + 1] = Child
+            end
+        end
+
+        Processed += 1
+        if Processed % 80 == 0 then
+            task.wait()
         end
     end
 end
@@ -548,14 +599,18 @@ end
 workspace.DescendantAdded:Connect(function(Object)
     if Object:IsA("ProximityPrompt") then
         WatchPrompt(Object)
-        RegisterEgg(Object)
+        task.defer(function()
+            RegisterEgg(Object)
+        end)
         return
     end
 
     if LooksLikeEggName(Object.Name)
         or Object:GetAttribute("IsEgg") == true
         or Object:GetAttribute("Egg") == true then
-        RegisterEgg(Object)
+        task.defer(function()
+            RegisterEgg(Object)
+        end)
     end
 end)
 
@@ -951,7 +1006,7 @@ task.spawn(function()
             end
         end
 
-        task.wait(10)
+        task.wait(2.5)
     end
 end)
 
@@ -994,18 +1049,23 @@ task.spawn(function()
             "RÁFAGA: x5  •  HUEVOS: "
             .. tostring(Count)
 
-        task.wait(0.35)
+        task.wait(1.0)
     end
 end)
 
 --==============================================================
 -- CACHE INICIAL
 --==============================================================
-
-RebuildCache()
-
-StatusLabel.Text =
-    "Estado: LISTO • DETECTOR ACTIVO"
+-- Arranca en segundo plano para que la interfaz responda de inmediato.
+-- Los eventos DescendantAdded ya están activos, así que no se pierden
+-- huevos que aparezcan mientras se termina este primer recorrido.
+task.spawn(function()
+    RebuildCache()
+    if Gui.Parent then
+        StatusLabel.Text =
+            "Estado: LISTO • DETECTOR ACTIVO"
+    end
+end)
 
 --==============================================================
 -- MINIMIZAR / RESTAURAR
