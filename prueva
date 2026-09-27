@@ -18,7 +18,7 @@ local LOOP = false
 local BUSY = false
 
 local BURST_COUNT = 5
-local LOOP_DELAY = 0.15
+local LOOP_DELAY = 0.25
 local PROMPT_DELAY = 0.035
 local EGG_OFFSET = Vector3.new(0, 2, 0)
 
@@ -984,19 +984,28 @@ end)
 
 task.spawn(function()
     while Gui.Parent do
-        for _, Object in ipairs(workspace:GetDescendants()) do
-            if Object:IsA("ProximityPrompt") then
-                WatchPrompt(Object)
+        -- Safety refresh lento: no recorrer Workspace constantemente.
+        -- Los huevos nuevos ya se registran mediante DescendantAdded.
+        for Object, Data in pairs(EggCache) do
+            if Object and Object.Parent then
+                local Prompt = FindPrompt(Object)
 
-                if Object.Enabled then
-                    task.defer(function()
-                        RegisterEgg(Object)
-                    end)
+                if Prompt then
+                    WatchPrompt(Prompt)
+
+                    if Prompt.Enabled then
+                        Data.Position = GetPosition(Object)
+                        Data.Value = GetValue(Object)
+                        Data.Priority = GetEggPriority(Object)
+                        Data.Prompt = Prompt
+                    end
                 end
+            else
+                EggCache[Object] = nil
             end
         end
 
-        task.wait(0.35)
+        task.wait(2)
     end
 end)
 
@@ -1053,7 +1062,7 @@ task.spawn(function()
                 )
             )
 
-        task.wait(0.15)
+        task.wait(0.35)
     end
 end)
 
