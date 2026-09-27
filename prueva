@@ -3,7 +3,7 @@
 -- BEST EGG + AUTO GRAB x5 + OWNER PLOT + 210 EXCLUSION
 -- REFRESH: 1 SEGUNDO
 -- LOP = LOOP
--- PANEL MOVIBLE + ANIMACIONES
+-- PANEL MOVIBLE + GUI BÁSICA SIN ANIMACIONES
 --==============================================================
 
 local Players = game:GetService("Players")
@@ -234,13 +234,71 @@ end
 
 local EggCache = {}
 
-local function RegisterEgg(obj)
+local function GetDynamicLuck(obj)
+    if not obj then
+        return nil
+    end
 
+    local data = GetEggData(obj.Name)
+    if data and data.Luck then
+        return ParseLuck(data.Luck)
+    end
+
+    -- Intentar leer Luck/HatchLuck directamente del objeto.
+    local keys = {
+        "Luck", "HatchLuck", "Hatch Luck",
+        "LuckValue", "HatchLuckValue"
+    }
+
+    for _, key in ipairs(keys) do
+        local attr = obj:GetAttribute(key)
+        if attr ~= nil then
+            local n = ParseLuck(attr)
+            if n > 0 then
+                return n
+            end
+        end
+    end
+
+    for _, child in ipairs(obj:GetDescendants()) do
+        local n = string.lower(child.Name)
+        if n == "luck" or n == "hatchluck"
+        or n == "hatch luck" or n == "luckvalue"
+        or n == "hatchluckvalue" then
+            if child:IsA("StringValue")
+            or child:IsA("IntValue")
+            or child:IsA("NumberValue") then
+                local value = ParseLuck(child.Value)
+                if value > 0 then
+                    return value
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function LooksLikeEgg(obj)
+    if not obj then
+        return false
+    end
+
+    local lower = string.lower(tostring(obj.Name or ""))
+
+    if string.find(lower, "egg", 1, true) then
+        return true
+    end
+
+    return GetDynamicLuck(obj) ~= nil
+end
+
+local function RegisterEgg(obj)
     if not obj or not obj.Parent then
         return
     end
 
-    if GetEggData(obj.Name) then
+    if LooksLikeEgg(obj) then
         EggCache[obj] = true
     end
 end
@@ -254,11 +312,7 @@ for _, obj in ipairs(Workspace:GetDescendants()) do
 end
 
 Workspace.DescendantAdded:Connect(function(obj)
-
-    if GetEggData(obj.Name) then
-        EggCache[obj] = true
-    end
-
+    RegisterEgg(obj)
 end)
 
 Workspace.DescendantRemoving:Connect(function(obj)
@@ -316,82 +370,27 @@ end
 
 local function RefreshBestEgg()
 
-    --==========================================================
-    -- ORDEN COMPLETO DE HUEVOS: MENOR -> MAYOR
-    --==========================================================
-    -- El orden se basa en el nombre/jerarquía definida aquí,
-    -- NO en el valor de Luck.
-    --
-    -- El archivo original contiene 22 huevos.
-    -- Solaris Egg se añade como 23 porque indicaste que vale 300B.
-
-    local EggNameRank = {
-        ["White Egg"] = 1,
-        ["Brown Egg"] = 2,
-        ["Cracked Egg"] = 3,
-        ["Easter Egg"] = 4,
-        ["Stone Egg"] = 5,
-        ["Leaf Egg"] = 6,
-        ["Mushroom Egg"] = 7,
-        ["Flower Egg"] = 8,
-        ["Slime Egg"] = 9,
-        ["Ice Egg"] = 10,
-        ["Glass Egg"] = 11,
-        ["Golden Egg"] = 12,
-        ["Crystal Egg"] = 13,
-        ["Skull Egg"] = 14,
-        ["Dominus Egg"] = 15,
-        ["Flaming Egg"] = 16,
-        ["Sinister Egg"] = 17,
-        ["Soul Egg"] = 18,
-        ["Aurora Egg"] = 19,
-        ["Galaxy Egg"] = 20,
-        ["Black Hole Egg"] = 21,
-        ["Solaris Egg"] = 22,
-        ["Cherub Egg"] = 23,
-        ["Volcanic Egg"] = 24,
-    }
-
-    local function GetEggRank(name)
-        if EggNameRank[name] then
-            return EggNameRank[name]
-        end
-
-        local lower = string.lower(tostring(name or ""))
-
-        for eggName, rank in pairs(EggNameRank) do
-            if string.find(lower, string.lower(eggName), 1, true) then
-                return rank
-            end
-        end
-
-        return nil
-    end
-
     local best = nil
-    local bestRank = -1
+    local bestLuck = -1
 
     for obj in pairs(EggCache) do
-        if IsValidEgg(obj) then
-            local rank = GetEggRank(obj.Name)
 
-            if rank and rank > bestRank then
-                bestRank = rank
+        if IsValidEgg(obj) then
+
+            local luck = GetDynamicLuck(obj)
+
+            if luck and luck > bestLuck then
+                bestLuck = luck
                 best = obj
             end
+
         else
             EggCache[obj] = nil
         end
     end
 
     BestEgg = best
-
-    if best then
-        local data = GetEggData(best.Name)
-        BestLuck = data and data.Luck or "N/A"
-    else
-        BestLuck = 0
-    end
+    BestLuck = bestLuck > 0 and bestLuck or 0
 
     return best
 end
@@ -719,128 +718,107 @@ local SOLARIS_EGG_NAMES = {
 }
 
 --==============================================================
--- GUI CLÁSICA • RIDE A PET KOXTA • INSTA STEAL
--- SIN BURBUJAS • SIN ANIMACIONES DE FONDO
+-- GUI BÁSICA • SIN FOTO • SIN ANIMACIONES
 --==============================================================
 
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Eliminar versiones anteriores de esta interfaz.
-for _, oldGui in ipairs(PlayerGui:GetChildren()) do
-    if oldGui:IsA("ScreenGui") and (
-        oldGui.Name == "KOXTA_INSTA_STEAL"
-        or oldGui.Name == "INSTA_STEAL_BLACK_EDITION"
-        or oldGui.Name == "AutoEggComplete"
-        or oldGui.Name == "RIDE_A_PET_KOXTA"
-    ) then
-        pcall(function() oldGui:Destroy() end)
+for _,g in ipairs(PlayerGui:GetChildren()) do
+    if g:IsA("ScreenGui") and g.Name == "KOXTA_BASIC" then
+        g:Destroy()
     end
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KOXTA_INSTA_STEAL"
+ScreenGui.Name = "KOXTA_BASIC"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 999
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 10
 ScreenGui.Parent = PlayerGui
 
 local Main = Instance.new("Frame")
-Main.Name = "Main"
-Main.Size = UDim2.fromOffset(300,220)
-Main.Position = UDim2.new(0.5,-150,0.5,-110)
+Main.Size = UDim2.fromOffset(260,190)
+Main.Position = UDim2.new(.5,-130,.5,-95)
 Main.BackgroundColor3 = Color3.fromRGB(25,25,25)
-Main.BorderColor3 = Color3.fromRGB(80,80,80)
+Main.BorderColor3 = Color3.fromRGB(90,90,90)
 Main.BorderSizePixel = 1
 Main.Active = true
 Main.Parent = ScreenGui
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1,-20,0,35)
-Title.Position = UDim2.fromOffset(10,5)
-Title.BackgroundTransparency = 1
-Title.Text = "RIDE A PET KOXTA"
+Title.Size = UDim2.new(1,0,0,32)
+Title.BackgroundColor3 = Color3.fromRGB(35,35,35)
+Title.BorderSizePixel = 0
+Title.Text = "KOXTA TP"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.TextSize = 18
 Title.Font = Enum.Font.SourceSansBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Main
 
 local EggText = Instance.new("TextLabel")
-EggText.Size = UDim2.new(1,-20,0,35)
-EggText.Position = UDim2.fromOffset(10,42)
+EggText.Size = UDim2.new(1,-20,0,28)
+EggText.Position = UDim2.fromOffset(10,38)
 EggText.BackgroundColor3 = Color3.fromRGB(35,35,35)
 EggText.BorderColor3 = Color3.fromRGB(70,70,70)
-EggText.Text = "MEJOR HUEVO: BUSCANDO..."
+EggText.Text = "Mejor huevo: buscando..."
 EggText.TextColor3 = Color3.new(1,1,1)
 EggText.TextSize = 13
-EggText.Font = Enum.Font.SourceSansBold
-EggText.TextXAlignment = Enum.TextXAlignment.Left
+EggText.Font = Enum.Font.SourceSans
 EggText.Parent = Main
 
-local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1,-20,0,25)
-Status.Position = UDim2.fromOffset(10,80)
-Status.BackgroundTransparency = 1
-Status.Text = "ESTADO: ESPERANDO"
-Status.TextColor3 = Color3.fromRGB(190,190,190)
-Status.TextSize = 13
-Status.Font = Enum.Font.SourceSans
-Status.TextXAlignment = Enum.TextXAlignment.Left
-Status.Parent = Main
-
 local TPButton = Instance.new("TextButton")
-TPButton.Name = "InstaTP"
-TPButton.Size = UDim2.fromOffset(135,38)
-TPButton.Position = UDim2.fromOffset(10,112)
-TPButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
+TPButton.Size = UDim2.fromOffset(115,35)
+TPButton.Position = UDim2.fromOffset(10,75)
+TPButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
 TPButton.BorderColor3 = Color3.fromRGB(100,100,100)
-TPButton.Text = "INSTA STEAL: OFF"
+TPButton.Text = "INSTA TP: OFF"
 TPButton.TextColor3 = Color3.new(1,1,1)
 TPButton.TextSize = 14
 TPButton.Font = Enum.Font.SourceSansBold
-TPButton.AutoButtonColor = true
-TPButton.ZIndex = 10
 TPButton.Parent = Main
 
 local LOPButton = Instance.new("TextButton")
-LOPButton.Name = "LOP"
-LOPButton.Size = UDim2.fromOffset(135,38)
-LOPButton.Position = UDim2.fromOffset(155,112)
-LOPButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
+LOPButton.Size = UDim2.fromOffset(115,35)
+LOPButton.Position = UDim2.fromOffset(135,75)
+LOPButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
 LOPButton.BorderColor3 = Color3.fromRGB(100,100,100)
 LOPButton.Text = "LOP: OFF"
 LOPButton.TextColor3 = Color3.new(1,1,1)
 LOPButton.TextSize = 14
 LOPButton.Font = Enum.Font.SourceSansBold
-LOPButton.AutoButtonColor = true
-LOPButton.ZIndex = 10
 LOPButton.Parent = Main
 
 local GrabButton = Instance.new("TextButton")
-GrabButton.Name = "AutoGrab5"
 GrabButton.Size = UDim2.new(1,-20,0,35)
-GrabButton.Position = UDim2.fromOffset(10,155)
-GrabButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
+GrabButton.Position = UDim2.fromOffset(10,118)
+GrabButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
 GrabButton.BorderColor3 = Color3.fromRGB(100,100,100)
 GrabButton.Text = "AUTO GRAB x5"
 GrabButton.TextColor3 = Color3.new(1,1,1)
 GrabButton.TextSize = 14
 GrabButton.Font = Enum.Font.SourceSansBold
-GrabButton.ZIndex = 10
 GrabButton.Parent = Main
 
--- Arrastre clásico: se arrastra desde la barra de título.
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1,-20,0,25)
+Status.Position = UDim2.fromOffset(10,158)
+Status.BackgroundTransparency = 1
+Status.Text = "Estado: esperando"
+Status.TextColor3 = Color3.fromRGB(190,190,190)
+Status.TextSize = 13
+Status.Font = Enum.Font.SourceSans
+Status.Parent = Main
+
+-- Arrastre simple por el título.
 local dragging = false
 local dragStart
-local startPosition
+local startPos
 
 Title.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
     or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
-        startPosition = Main.Position
+        startPos = Main.Position
     end
 end)
 
@@ -854,271 +832,60 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if not dragging then return end
     if input.UserInputType ~= Enum.UserInputType.MouseMovement
-    and input.UserInputType ~= Enum.UserInputType.Touch then
-        return
-    end
+    and input.UserInputType ~= Enum.UserInputType.Touch then return end
 
-    local delta = input.Position - dragStart
+    local d = input.Position - dragStart
     Main.Position = UDim2.new(
-        startPosition.X.Scale,
-        startPosition.X.Offset + delta.X,
-        startPosition.Y.Scale,
-        startPosition.Y.Offset + delta.Y
+        startPos.X.Scale,
+        startPos.X.Offset + d.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + d.Y
     )
 end)
 
--- Conectar con las variables de la mecánica existente.
 TPButton.Activated:Connect(function()
     InstaTP = not InstaTP
-
-    if InstaTP then
-        TPButton.Text = "INSTA STEAL: ON"
-        TPButton.BackgroundColor3 = Color3.fromRGB(35,80,55)
-        Status.Text = "ESTADO: ACTIVO"
-    else
-        TPButton.Text = "INSTA STEAL: OFF"
-        TPButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
-        Status.Text = "ESTADO: DETENIDO"
-    end
+    TPButton.Text = InstaTP and "INSTA TP: ON" or "INSTA TP: OFF"
+    Status.Text = InstaTP and "Estado: activo" or "Estado: detenido"
 end)
 
 LOPButton.Activated:Connect(function()
     LOP = not LOP
-
-    if LOP then
-        LOPButton.Text = "LOP: ON"
-        LOPButton.BackgroundColor3 = Color3.fromRGB(35,80,55)
-    else
-        LOPButton.Text = "LOP: OFF"
-        LOPButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
-    end
+    LOPButton.Text = LOP and "LOP: ON" or "LOP: OFF"
 end)
 
--- Botón manual para lanzar una ráfaga de cinco intentos de AutoGrab.
 GrabButton.Activated:Connect(function()
-    if not BestEgg then
-        Status.Text = "ESTADO: NO HAY HUEVO"
-        return
-    end
-
     task.spawn(function()
         for i = 1,5 do
-            if not BestEgg or not BestEgg.Parent then break end
-            pcall(function()
-                AutoGrab(BestEgg)
-            end)
-            task.wait(0.08)
+            if BestEgg then
+                pcall(function()
+                    AutoGrab(BestEgg)
+                end)
+            end
+            task.wait(.08)
         end
     end)
 end)
 
--- Compatibilidad con el actualizador de la mecánica.
+-- Compatibilidad con la lógica existente.
 local EggLabel = EggText
 local StatusLabel = Status
 local EggCard = Main
 
-
 --==============================================================
--- LOOP
---==============================================================
-
-local LOPButton =
-    Instance.new("TextButton")
-
-LOPButton.Size =
-    UDim2.fromOffset(120, 42)
-
-LOPButton.Position =
-    UDim2.fromOffset(175, 128)
-
-LOPButton.BackgroundColor3 =
-    Color3.fromRGB(20, 21, 23)
-
-LOPButton.BackgroundTransparency = 0.28
-LOPButton.BorderSizePixel = 0
-LOPButton.Text =
-    "LOOP  OFF"
-
-LOPButton.Font =
-    Enum.Font.GothamBold
-
-LOPButton.TextSize = 9
-LOPButton.TextColor3 = Color3.fromRGB(150, 153, 158)
-LOPButton.AutoButtonColor = false
-LOPButton.ZIndex = 25
-LOPButton.Parent = Main
-
-local LOPCorner =
-    Instance.new("UICorner")
-
-LOPCorner.CornerRadius =
-    UDim.new(0, 10)
-
-LOPCorner.Parent = LOPButton
-
-local LOPStroke =
-    Instance.new("UIStroke")
-
-LOPStroke.Color =
-    Color3.fromRGB(65, 67, 72)
-
-LOPStroke.Thickness = 1.2
-LOPStroke.Parent = LOPButton
-
--- Seguridad visual: los controles quedan por encima del fondo animado.
-TPButton.Visible = true
-LOPButton.Visible = true
-DiscordButton.ZIndex = 100
-PlusButton.ZIndex = 100
-TPButton.ZIndex = 100
-LOPButton.ZIndex = 100
-EggCard.ZIndex = 90
-EggText.ZIndex = 101
-Status.ZIndex = 101
-TargetLabel.ZIndex = 101
-Arrow.ZIndex = 101
-TPButton.Active = true
-LOPButton.Active = true
-DiscordButton.Visible = true
-PlusButton.Visible = true
-
---==============================================================
--- ANIMACIÓN DEL BORDE
---==============================================================
-
-task.spawn(function()
-
-    local t = 0
-
-    while Main.Parent do
-
-        t += 0.035
-
-        local pulse =
-            0.5 +
-            math.sin(t) * 0.5
-
-        Stroke.Transparency =
-            0.05 + (pulse * 0.18)
-
-        task.wait(0.03)
-
-    end
-
-end)
-
---==============================================================
--- ANIMACIÓN DE BOTONES
---==============================================================
-
-local function ButtonPulse(button)
-
-    local original = button.Size
-
-    TweenService:Create(
-        button,
-        TweenInfo.new(
-            0.08,
-            Enum.EasingStyle.Quad,
-            Enum.EasingDirection.Out
-        ),
-        {
-            Size = UDim2.fromOffset(
-                original.X.Offset - 5,
-                original.Y.Offset - 3
-            )
-        }
-    ):Play()
-
-    task.delay(0.08, function()
-
-        if button.Parent then
-
-            TweenService:Create(
-                button,
-                TweenInfo.new(
-                    0.14,
-                    Enum.EasingStyle.Back,
-                    Enum.EasingDirection.Out
-                ),
-                {
-                    Size = original
-                }
-            ):Play()
-
-        end
-
-    end)
-
-end
-
---==============================================================
--- EFECTO HOVER / TOUCH
---==============================================================
-
-local function AddButtonEffect(button, strokeObject)
-
-    button.MouseEnter:Connect(function()
-
-        TweenService:Create(
-            strokeObject,
-            TweenInfo.new(0.12),
-            {
-                Transparency = 0
-            }
-        ):Play()
-
-    end)
-
-    button.MouseLeave:Connect(function()
-
-        TweenService:Create(
-            strokeObject,
-            TweenInfo.new(0.12),
-            {
-                Transparency = 0.05
-            }
-        ):Play()
-
-    end)
-
-end
-
-AddButtonEffect(TPButton, TPStroke)
-AddButtonEffect(LOPButton, LOPStroke)
-
--- ACTUALIZAR PANEL
+-- MECÁNICA • CICLO LIMPIO
 --==============================================================
 
 local function UpdateUI()
-
     if BestEgg and BestEgg.Parent then
-
-        local data =
-            GetEggData(BestEgg.Name)
-
-        if data then
-
-            EggText.Text =
-                "🥚  MEJOR HUEVO\n"
-                .. BestEgg.Name
-                .. "   •   🍀 Lucky: "
-                .. data.Luck
-
-        end
-
-    else
-
+        local luck = GetDynamicLuck(BestEgg)
         EggText.Text =
-            "🥚  MEJOR HUEVO\nBuscando..."
-
+            "Mejor huevo: " .. tostring(BestEgg.Name)
+            .. " | Luck: " .. tostring(luck or "N/A")
+    else
+        EggText.Text = "Mejor huevo: buscando..."
     end
-
 end
-
---==============================================================
--- CICLO
---==============================================================
 
 local function DoCycle()
 
@@ -1132,36 +899,36 @@ local function DoCycle()
     local egg = BestEgg
 
     if not egg then
-        Status.Text = "● SIN HUEVO"
+        Status.Text = "Estado: no hay huevo"
         return
     end
 
-    Status.Text = "● TELEPORT"
+    Status.Text = "Estado: teleport"
 
     if not TeleportToEgg(egg) then
+        Status.Text = "Estado: fallo TP"
         return
     end
 
-    -- Se congela inmediatamente después del TP; no hay ventana de movimiento.
     Freeze()
 
     if not InstaTP then
         Unfreeze()
+        StopEggLock()
         return
     end
 
-    Status.Text = "● AUTO GRAB"
+    Status.Text = "Estado: agarrando"
 
-    -- Primero intenta agarrar el huevo.
     local grabbed = AutoGrab(egg)
 
     if not grabbed then
-        Status.Text = "● NO SE PUDO AGARRAR"
+        StopEggLock()
         Unfreeze()
+        Status.Text = "Estado: no se pudo agarrar"
         return
     end
 
-    -- Espera breve para que termine el agarre antes de regresar.
     task.wait(0.25)
 
     if not InstaTP then
@@ -1170,76 +937,25 @@ local function DoCycle()
         return
     end
 
-    -- Secuencia: TP al mejor huevo → agarrar → TP al respawn.
-    Status.Text = "● RETURN"
+    Status.Text = "Estado: regresando"
 
-    -- MUY IMPORTANTE:
-    -- primero se libera completamente el bloqueo que mantenía
-    -- al personaje pegado al huevo.
     StopEggLock()
-
-    -- Ahora se permite el movimiento normal antes del TP de regreso.
     Unfreeze()
 
     task.wait(0.05)
 
-    -- TP al respawn/entrada, no a la posición anterior.
     local returned = ReturnSpawn()
 
-    task.wait(0.15)
-
     Status.Text =
-        returned and (LOP and "● LOOP ACTIVE" or "● READY")
-        or "● SPAWN NO GUARDADO"
-
+        returned and (LOP and "Estado: LOOP activo" or "Estado: listo")
+        or "Estado: spawn no encontrado"
 end
 
 --==============================================================
--- LOP
---==============================================================
-
-LOPButton.Activated:Connect(function()
-
-    ButtonPulse(LOPButton)
-
-    LOP = not LOP
-
-    if LOP then
-
-        LOPButton.Text =
-            "LOP  ON"
-
-        LOPButton.TextColor3 =
-            Color3.fromRGB(0, 255, 150)
-
-        LOPStroke.Color =
-            Color3.fromRGB(0, 255, 150)
-
-    else
-
-        LOPButton.Text =
-            "LOP  OFF"
-
-        LOPButton.TextColor3 =
-            Color3.fromRGB(150, 150, 155)
-
-        LOPStroke.Color =
-            Color3.fromRGB(65, 65, 70)
-
-        Status.Text =
-            InstaTP and "● ACTIVE" or "● READY"
-
-    end
-
-end)
-
---==============================================================
--- INSTA TP
+-- BOTÓN INSTA TP
 --==============================================================
 
 TPButton.Activated:Connect(function()
-
-    ButtonPulse(TPButton)
 
     InstaTP = not InstaTP
 
@@ -1247,101 +963,115 @@ TPButton.Activated:Connect(function()
 
         SaveSpawn()
 
-        TPButton.Text =
-            "INSTA STEAL  ON"
+        TPButton.Text = "INSTA TP: ON"
+        TPButton.BackgroundColor3 = Color3.fromRGB(35,80,55)
+        Status.Text = "Estado: activo"
 
-        TPButton.TextColor3 =
-            Color3.fromRGB(0, 255, 150)
+        task.spawn(function()
 
-        TPStroke.Color =
-            Color3.fromRGB(0, 255, 150)
+            if not LOP and not Busy then
+                Busy = true
 
-        if LOP then
+                pcall(function()
+                    DoCycle()
+                end)
 
-            Status.Text =
-                "● LOOP ACTIVE"
+                Busy = false
 
-            task.spawn(function()
-
-                while InstaTP and LOP do
-
-                    if not Busy then
-
-                        Busy = true
-
-                        pcall(function()
-                            DoCycle()
-                        end)
-
-                        Busy = false
-
-                    end
-
-                    task.wait(REFRESH_TIME)
-
+                if not LOP then
+                    InstaTP = false
+                    TPButton.Text = "INSTA TP: OFF"
+                    TPButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
                 end
+            end
 
-            end)
-
-        else
-
-            task.spawn(function()
-
-                if not Busy then
-
-                    Busy = true
-
-                    pcall(function()
-                        DoCycle()
-                    end)
-
-                    Busy = false
-
-                end
-
-                InstaTP = false
-
-                TPButton.Text =
-                    "INSTA STEAL  OFF"
-
-                TPButton.TextColor3 =
-                    Color3.fromRGB(255, 70, 70)
-
-                TPStroke.Color =
-                    Color3.fromRGB(255, 70, 70)
-
-                Status.Text =
-                    "● READY"
-
-            end)
-
-        end
+        end)
 
     else
-
-        InstaTP = false
-
-        TPButton.Text =
-            "INSTA STEAL  OFF"
-
-        TPButton.TextColor3 =
-            Color3.fromRGB(255, 70, 70)
-
-        TPStroke.Color =
-            Color3.fromRGB(255, 70, 70)
-
-        Status.Text =
-            "● READY"
 
         StopEggLock()
         Unfreeze()
 
-    end
+        TPButton.Text = "INSTA TP: OFF"
+        TPButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
+        Status.Text = "Estado: detenido"
 
+    end
 end)
 
 --==============================================================
--- REFRESH DEL MEJOR HUEVO
+-- BOTÓN LOP
+--==============================================================
+
+LOPButton.Activated:Connect(function()
+
+    LOP = not LOP
+
+    if LOP then
+        LOPButton.Text = "LOP: ON"
+        LOPButton.BackgroundColor3 = Color3.fromRGB(35,80,55)
+
+        -- Si se activa LOP antes de INSTA TP, no fuerza el TP.
+        -- El usuario debe activar INSTA TP.
+        Status.Text = InstaTP and "Estado: LOOP activo" or "Estado: activa INSTA TP"
+
+    else
+        LOPButton.Text = "LOP: OFF"
+        LOPButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+        if InstaTP then
+            Status.Text = "Estado: activo"
+        else
+            Status.Text = "Estado: esperando"
+        end
+    end
+end)
+
+--==============================================================
+-- AUTO GRAB x5
+--==============================================================
+
+GrabButton.Activated:Connect(function()
+
+    RefreshBestEgg()
+    UpdateUI()
+
+    if not BestEgg then
+        Status.Text = "Estado: no hay huevo"
+        return
+    end
+
+    task.spawn(function()
+
+        local oldInsta = InstaTP
+        InstaTP = true
+
+        for i = 1,5 do
+
+            if not BestEgg or not BestEgg.Parent then
+                RefreshBestEgg()
+            end
+
+            if BestEgg then
+                pcall(function()
+                    AutoGrab(BestEgg)
+                end)
+            end
+
+            task.wait(0.08)
+        end
+
+        InstaTP = oldInsta
+
+        if not InstaTP then
+            Unfreeze()
+            StopEggLock()
+        end
+    end)
+end)
+
+--==============================================================
+-- ACTUALIZACIÓN DEL MEJOR HUEVO
 --==============================================================
 
 task.spawn(function()
@@ -1352,166 +1082,35 @@ task.spawn(function()
         UpdateUI()
 
         task.wait(REFRESH_TIME)
-
     end
 
 end)
 
 --==============================================================
--- ANIMACIÓN DE ENTRADA
---==============================================================
-
-local originalPosition = Main.Position
-
-Main.Position =
-    UDim2.new(
-        1,
-        -300,
-        0,
-        80
-    )
-
-Main.BackgroundTransparency = 1
-
-TweenService:Create(
-    Main,
-    TweenInfo.new(
-        0.45,
-        Enum.EasingStyle.Back,
-        Enum.EasingDirection.Out
-    ),
-    {
-        Position = originalPosition,
-        BackgroundTransparency = 0.40
-    }
-):Play()
-
---==============================================================
--- INICIO
---==============================================================
-
-RefreshBestEgg()
-UpdateUI()
-
-
---==============================================================
--- GUARDAR INTERFAZ / FOTO PARA ABRIR - V5
---==============================================================
-
-local InterfaceSaved = false
-
--- Botón X en la esquina superior derecha.
--- Al tocarlo, guarda/oculta la interfaz y deja la foto para reabrir.
-local SaveInterfaceButton = Instance.new("TextButton")
-SaveInterfaceButton.Name = "SaveInterfaceButton"
-SaveInterfaceButton.Parent = Top
-SaveInterfaceButton.Size = UDim2.fromOffset(30, 30)
-SaveInterfaceButton.Position = UDim2.new(1, -36, 0.5, -15)
-SaveInterfaceButton.BackgroundTransparency = 1
-SaveInterfaceButton.Text = "×"
-SaveInterfaceButton.TextColor3 = Color3.fromRGB(190, 190, 195)
-SaveInterfaceButton.TextSize = 24
-SaveInterfaceButton.Font = Enum.Font.GothamBold
-SaveInterfaceButton.AutoButtonColor = false
-SaveInterfaceButton.Active = true
-SaveInterfaceButton.ZIndex = 100
-
--- Botón de reapertura usando la imagen solicitada.
-local ReopenButton = Instance.new("ImageButton")
-ReopenButton.Name = "ReopenButton"
-ReopenButton.Parent = ScreenGui
-ReopenButton.Size = UDim2.fromOffset(50, 50)
-ReopenButton.Position = UDim2.new(1, -62, 0, 10)
-ReopenButton.AnchorPoint = Vector2.new(0, 0)
-ReopenButton.BackgroundColor3 = Color3.fromRGB(12, 12, 15)
-ReopenButton.BackgroundTransparency = 0.18
-ReopenButton.Image = "rbxassetid://103645600156879"
-ReopenButton.ScaleType = Enum.ScaleType.Crop
-ReopenButton.Visible = false
-ReopenButton.Active = true
-ReopenButton.AutoButtonColor = true
-ReopenButton.ZIndex = 200
-
-local ReopenCorner = Instance.new("UICorner")
-ReopenCorner.CornerRadius = UDim.new(1, 0)
-ReopenCorner.Parent = ReopenButton
-
-local ReopenStroke = Instance.new("UIStroke")
-ReopenStroke.Color = Color3.fromRGB(105, 105, 110)
-ReopenStroke.Thickness = 1
-ReopenStroke.Transparency = 0
-ReopenStroke.Parent = ReopenButton
-
-local function SaveAndHideInterface()
-    InterfaceSaved = true
-
-    -- Guarda la posición actual antes de ocultar.
-    local savedPosition = Main.Position
-
-    Main.Visible = false
-    ReopenButton.Visible = true
-
-    -- Al reabrir conserva exactamente la posición.
-    ReopenButton:SetAttribute("SavedXScale", savedPosition.X.Scale)
-    ReopenButton:SetAttribute("SavedXOffset", savedPosition.X.Offset)
-    ReopenButton:SetAttribute("SavedYScale", savedPosition.Y.Scale)
-    ReopenButton:SetAttribute("SavedYOffset", savedPosition.Y.Offset)
-end
-
-local function ReopenInterface()
-    if not InterfaceSaved then
-        return
-    end
-
-    local xs = ReopenButton:GetAttribute("SavedXScale") or 0
-    local xo = ReopenButton:GetAttribute("SavedXOffset") or 0
-    local ys = ReopenButton:GetAttribute("SavedYScale") or 0
-    local yo = ReopenButton:GetAttribute("SavedYOffset") or 0
-
-    Main.Position = UDim2.new(xs, xo, ys, yo)
-    Main.Visible = true
-    ReopenButton.Visible = false
-end
-
-SaveInterfaceButton.Activated:Connect(SaveAndHideInterface)
-ReopenButton.Activated:Connect(ReopenInterface)
-
-SaveInterfaceButton.MouseButton1Click:Connect(SaveAndHideInterface)
-ReopenButton.MouseButton1Click:Connect(ReopenInterface)
-
--- Borde gris fino de la interfaz.
-local MainBorder = Main:FindFirstChild("MainBorder")
-if not MainBorder then
-    MainBorder = Instance.new("UIStroke")
-    MainBorder.Name = "MainBorder"
-    MainBorder.Parent = Main
-end
-MainBorder.Color = Color3.fromRGB(105, 105, 110)
-MainBorder.Thickness = 1
-MainBorder.Transparency = 0
-
--- Transparencia media.
-Main.BackgroundTransparency = 0.38
-
--- Asegurar prioridad de interacción.
-Main.ZIndex = 10
-Top.ZIndex = 20
-SaveInterfaceButton.ZIndex = 100
-ReopenButton.ZIndex = 200
-
-
-
---==============================================================
--- LOOP WATCHER • LOP INDEPENDIENTE
+-- LOOP CONTINUO
 --==============================================================
 
 task.spawn(function()
+
     while ScreenGui.Parent do
+
         if InstaTP and LOP and not Busy then
-            Busy=true
-            pcall(DoCycle)
-            Busy=false
+
+            Busy = true
+
+            pcall(function()
+                DoCycle()
+            end)
+
+            Busy = false
         end
+
         task.wait(REFRESH_TIME)
     end
+
 end)
+
+-- Primera actualización.
+RefreshBestEgg()
+UpdateUI()
+
