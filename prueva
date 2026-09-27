@@ -1,11 +1,10 @@
 --==============================================================
 -- KOXTA • RIDE A PET
--- FAST EGG CACHE • LOOP • INSTA TP • BURST x5
--- ProximityPrompt
+-- OPTIMIZED BEST EGG • LOW LAG • INSTA TP
+-- DETECCIÓN EN TIEMPO REAL
 --==============================================================
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
@@ -17,14 +16,12 @@ local Player = Players.LocalPlayer
 local LOOP = false
 local BUSY = false
 
-local BURST_COUNT = 5
-local LOOP_DELAY = 0.60
-local PROMPT_DELAY = 0.035
+local LOOP_DELAY = 0.8
+local PROMPT_DELAY = 0.03
 local EGG_OFFSET = Vector3.new(0, 2, 0)
 
 local LOGO_ID = "rbxassetid://103645600156879"
 
--- Zona excluida
 local EXCLUSION_CENTER = Vector3.new(
     146.87,
     40316.12,
@@ -32,6 +29,15 @@ local EXCLUSION_CENTER = Vector3.new(
 )
 
 local EXCLUSION_RADIUS = 210
+
+--==============================================================
+-- CACHE
+--==============================================================
+
+local EggCache = {}
+local PromptConnections = {}
+
+local CachedPlotPosition = nil
 
 --==============================================================
 -- GUI
@@ -155,12 +161,8 @@ StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatusLabel.Parent = Main
 
-Player.CharacterAdded:Connect(function()
-    CachedPlotPosition = nil
-end)
-
 --==============================================================
--- LOOP
+-- BOTONES
 --==============================================================
 
 local LoopButton = Instance.new("TextButton")
@@ -183,10 +185,6 @@ LoopStroke.Color = Color3.fromRGB(0,0,0)
 LoopStroke.Thickness = 1.5
 LoopStroke.Parent = LoopButton
 
---==============================================================
--- INSTA TP
---==============================================================
-
 local InstaButton = Instance.new("TextButton")
 InstaButton.Size = UDim2.fromOffset(126,34)
 InstaButton.Position = UDim2.fromOffset(148,116)
@@ -207,15 +205,11 @@ InstaStroke.Color = Color3.fromRGB(0,0,0)
 InstaStroke.Thickness = 1.5
 InstaStroke.Parent = InstaButton
 
---==============================================================
--- BURST INDICATOR
---==============================================================
-
 local BurstLabel = Instance.new("TextLabel")
 BurstLabel.Size = UDim2.new(1,-22,0,18)
 BurstLabel.Position = UDim2.fromOffset(11,155)
 BurstLabel.BackgroundTransparency = 1
-BurstLabel.Text = "RÁFAGA: x5  •  HUEVOS: 0"
+BurstLabel.Text = "DETECTADOS: 0"
 BurstLabel.TextColor3 = Color3.fromRGB(150,150,150)
 BurstLabel.TextSize = 9
 BurstLabel.Font = Enum.Font.Gotham
@@ -228,6 +222,7 @@ BurstLabel.Parent = Main
 
 local function GetRoot()
     local Character = Player.Character
+
     if not Character then
         return nil
     end
@@ -236,6 +231,7 @@ local function GetRoot()
 end
 
 local function GetPosition(Object)
+
     if not Object then
         return nil
     end
@@ -245,14 +241,19 @@ local function GetPosition(Object)
     end
 
     if Object:IsA("Model") then
+
         if Object.PrimaryPart then
             return Object.PrimaryPart.Position
         end
 
-        -- One-time fallback. RegisterEgg stores the result, so this is
-        -- not repeated on every selector pass.
-        local Part = Object:FindFirstChildWhichIsA("BasePart", true)
-        return Part and Part.Position
+        local Part = Object:FindFirstChildWhichIsA(
+            "BasePart",
+            true
+        )
+
+        if Part then
+            return Part.Position
+        end
     end
 
     return nil
@@ -276,21 +277,31 @@ local function IsExcluded(Position)
        and Z <= EXCLUSION_RADIUS
 end
 
-local function IsEgg(Object)
-    if not Object then
-        return false
-    end
+--==============================================================
+-- DETECTOR DE HUEVOS
+--==============================================================
 
-    if Object:IsA("ProximityPrompt") then
-        return GetEggFromPrompt(Object) ~= nil
-    end
+local function LooksLikeEggName(Name)
 
-    return LooksLikeEggName(Object.Name)
-        or Object:GetAttribute("IsEgg") == true
-        or Object:GetAttribute("Egg") == true
+    Name = tostring(Name or ""):lower()
+
+    return
+        Name:find("egg",1,true) ~= nil
+        or Name:find("huevo",1,true) ~= nil
+        or Name:find("volcanic",1,true) ~= nil
+        or Name:find("cherub",1,true) ~= nil
+        or Name:find("solaris",1,true) ~= nil
+        or Name:find("solar",1,true) ~= nil
+        or Name:find("blackhole",1,true) ~= nil
+        or (
+            Name:find("black",1,true)
+            and
+            Name:find("hole",1,true)
+        )
 end
 
 local function FindPrompt(Object)
+
     if not Object then
         return nil
     end
@@ -305,42 +316,83 @@ local function FindPrompt(Object)
     )
 end
 
+local function GetEggFromPrompt(Prompt)
+
+    if not Prompt then
+        return nil
+    end
+
+    local Current = Prompt.Parent
+
+    for _ = 1,12 do
+
+        if not Current then
+            break
+        end
+
+        if Current:IsA("Model")
+        or Current:IsA("BasePart") then
+
+            if LooksLikeEggName(Current.Name)
+            or Current:GetAttribute("IsEgg") == true
+            or Current:GetAttribute("Egg") == true then
+
+                return Current
+            end
+        end
+
+        Current = Current.Parent
+    end
+
+    return nil
+end
+
 --==============================================================
--- VALOR
+-- VALOR DEL HUEVO
 --==============================================================
 
 local function GetValue(Object)
+
     if not Object then
         return 0
     end
 
-    -- Prefer direct attributes: cheap and stable.
-    local AttributeNames = {
+    -- atributos
+    local Attributes = {
         "Luck",
         "luck",
         "EggLuck",
         "RarityValue",
         "Value",
-        "Price"
+        "Price",
+        "Worth",
+        "Cost"
     }
 
-    for _, Name in ipairs(AttributeNames) do
+    for _,Name in ipairs(Attributes) do
+
         local Value = Object:GetAttribute(Name)
+
         if typeof(Value) == "number" then
             return Value
         end
     end
 
-    -- Only inspect direct children. Never recursively scan the whole egg
-    -- during the selector loop.
-    for _, Item in ipairs(Object:GetChildren()) do
-        if Item:IsA("NumberValue") or Item:IsA("IntValue") then
+    -- valores directos
+    for _,Item in ipairs(Object:GetChildren()) do
+
+        if Item:IsA("NumberValue")
+        or Item:IsA("IntValue") then
+
             local Name = Item.Name:lower()
 
-            if Name:find("luck", 1, true)
-            or Name:find("rarity", 1, true)
-            or Name:find("value", 1, true)
-            or Name:find("price", 1, true) then
+            if Name:find("luck",1,true)
+            or Name:find("rarity",1,true)
+            or Name:find("value",1,true)
+            or Name:find("price",1,true)
+            or Name:find("worth",1,true)
+            or Name:find("cost",1,true) then
+
                 return Item.Value
             end
         end
@@ -350,128 +402,71 @@ local function GetValue(Object)
 end
 
 --==============================================================
--- PRIORIDAD DE HUEVOS
+-- PRIORIDADES
 --==============================================================
 
 local EggPriority = {
-    ["Volcanic Egg"] = 2500000000000, -- 2.5T
+
+    ["Volcanic Egg"] = 2500000000000,
+
     ["Cherub Egg"] = 1000000000000,
+
     ["Solaris Egg"] = 300000000000,
+
     ["Black Hole Egg"] = 100000000000,
+
     ["Blackhole Egg"] = 100000000000,
 }
 
-local function GetEggPriority(Object)
+local function GetPriority(Object)
+
     if not Object then
         return 0
     end
 
-    local exact = EggPriority[Object.Name]
-    if exact then
-        return exact
+    local Exact = EggPriority[Object.Name]
+
+    if Exact then
+        return Exact
     end
 
-    local name = Object.Name:lower()
+    local Name = Object.Name:lower()
 
-    if name:find("volcanic", 1, true) then
-        return EggPriority["Volcanic Egg"]
-    elseif name:find("cherub", 1, true) then
-        return EggPriority["Cherub Egg"]
-    elseif name:find("solaris", 1, true) then
-        return EggPriority["Solaris Egg"]
-    elseif name:find("blackhole", 1, true)
-        or (name:find("black", 1, true) and name:find("hole", 1, true)) then
-        return EggPriority["Black Hole Egg"]
+    if Name:find("volcanic",1,true) then
+        return 2500000000000
     end
 
-    local Value = GetValue(Object)
-
-    -- Unknown egg with no usable value is not a valid target.
-    if Value <= 0 then
-        return 0
+    if Name:find("cherub",1,true) then
+        return 1000000000000
     end
 
-    return Value
-end
-
-local function LooksLikeEggName(name)
-    name = tostring(name or ""):lower()
-
-    return name:find("egg", 1, true) ~= nil
-        or name:find("huevo", 1, true) ~= nil
-        or name:find("volcanic", 1, true) ~= nil
-        or name:find("solar", 1, true) ~= nil
-        or name:find("cherub", 1, true) ~= nil
-        or name:find("blackhole", 1, true) ~= nil
-        or (name:find("black", 1, true) and name:find("hole", 1, true)) ~= nil
-end
-
-local function GetEggFromPrompt(Prompt)
-    if not Prompt then
-        return nil
+    if Name:find("solaris",1,true) then
+        return 300000000000
     end
 
-    local current = Prompt.Parent
+    if Name:find("blackhole",1,true)
+    or (
+        Name:find("black",1,true)
+        and
+        Name:find("hole",1,true)
+    ) then
 
-    for _ = 1, 10 do
-        if not current then
-            break
-        end
-
-        if current:IsA("Model") or current:IsA("BasePart") then
-            if LooksLikeEggName(current.Name)
-                or current:GetAttribute("IsEgg") == true
-                or current:GetAttribute("Egg") == true then
-                return current
-            end
-        end
-
-        current = current.Parent
+        return 100000000000
     end
 
     -- IMPORTANTE:
-    -- No aceptar automáticamente cualquier modelo con un prompt
-    -- "Grab/Pick/Collect". Eso hacía que otros objetos fueran
-    -- tratados como huevos.
-    return nil
+    -- huevo desconocido = usa su valor
+    return GetValue(Object)
 end
 
 --==============================================================
--- CACHE DE HUEVOS
+-- REGISTRAR HUEVO
 --==============================================================
-
-local EggCache = {}
-local PromptConnections = {}
-local CachedPlotPosition = nil
-local LastPlotSearch = 0
-local PLOT_REFRESH = 30
-
-local function WatchPrompt(Prompt)
-    if not Prompt or not Prompt:IsA("ProximityPrompt") then
-        return
-    end
-
-    if PromptConnections[Prompt] then
-        return
-    end
-
-    PromptConnections[Prompt] =
-        Prompt:GetPropertyChangedSignal("Enabled"):Connect(function()
-            if Prompt.Parent and Prompt.Enabled then
-                task.defer(function()
-                    RegisterEgg(Prompt)
-                end)
-            end
-        end)
-end
-
-
-local function RemoveEgg(Object)
-    EggCache[Object] = nil
-end
 
 local function RegisterEgg(Object)
-    if not Object or not Object.Parent then
+
+    if not Object
+    or not Object.Parent then
         return
     end
 
@@ -485,16 +480,18 @@ local function RegisterEgg(Object)
         return
     end
 
-    -- Strict candidate check: no generic prompt fallback.
     if not LooksLikeEggName(Egg.Name)
-        and Egg:GetAttribute("IsEgg") ~= true
-        and Egg:GetAttribute("Egg") ~= true then
+    and Egg:GetAttribute("IsEgg") ~= true
+    and Egg:GetAttribute("Egg") ~= true then
+
         return
     end
 
     local Position = GetPosition(Egg)
 
-    if not Position or IsExcluded(Position) then
+    if not Position
+    or IsExcluded(Position) then
+
         EggCache[Egg] = nil
         return
     end
@@ -505,95 +502,162 @@ local function RegisterEgg(Object)
         return
     end
 
-    WatchPrompt(Prompt)
+    local Priority = GetPriority(Egg)
+    local Value = GetValue(Egg)
 
-    local Priority = GetEggPriority(Egg)
-
-    -- Do not cache zero-value unknown eggs. Known priority eggs are
-    -- always accepted because GetEggPriority gives them explicit values.
+    -- Si no hay prioridad ni valor,
+    -- todavía lo guardamos si claramente es un huevo.
     if Priority <= 0 then
-        EggCache[Egg] = nil
-        return
+        Priority = 1
     end
 
     EggCache[Egg] = {
         Object = Egg,
         Position = Position,
         Prompt = Prompt,
-        Value = GetValue(Egg),
+        Value = Value,
         Priority = Priority
     }
-end
 
-local function RebuildCache()
-    table.clear(EggCache)
+    -- Detectar si desaparece
+    if not Egg:GetAttribute("KOXTA_WATCHING") then
 
-    -- Single initial scan. Runtime additions are handled by
-    -- DescendantAdded, so Workspace is not repeatedly traversed.
-    for _, Object in ipairs(workspace:GetDescendants()) do
-        if Object:IsA("ProximityPrompt") then
-            RegisterEgg(Object)
-        elseif LooksLikeEggName(Object.Name)
-            or Object:GetAttribute("IsEgg") == true
-            or Object:GetAttribute("Egg") == true then
-            RegisterEgg(Object)
-        end
+        pcall(function()
+            Egg:SetAttribute(
+                "KOXTA_WATCHING",
+                true
+            )
+        end)
     end
 end
 
 --==============================================================
--- EVENTOS DE CACHE
+-- DETECCIÓN EN TIEMPO REAL
 --==============================================================
 
 workspace.DescendantAdded:Connect(function(Object)
+
     if Object:IsA("ProximityPrompt") then
-        WatchPrompt(Object)
+
         task.defer(function()
             RegisterEgg(Object)
         end)
+
         return
     end
 
-    if LooksLikeEggName(Object.Name)
+    if Object:IsA("Model")
+    or Object:IsA("BasePart") then
+
+        if LooksLikeEggName(Object.Name)
         or Object:GetAttribute("IsEgg") == true
         or Object:GetAttribute("Egg") == true then
-        task.defer(function()
-            RegisterEgg(Object)
-        end)
+
+            task.defer(function()
+                RegisterEgg(Object)
+            end)
+        end
     end
 end)
 
 workspace.DescendantRemoving:Connect(function(Object)
+
     if EggCache[Object] then
         EggCache[Object] = nil
     end
 
     if PromptConnections[Object] then
-        PromptConnections[Object]:Disconnect()
+
+        pcall(function()
+            PromptConnections[Object]:Disconnect()
+        end)
+
         PromptConnections[Object] = nil
     end
 end)
 
 --==============================================================
--- MEJOR HUEVO DESDE CACHE
+-- ESCANEO INICIAL
+-- SOLO UNA VEZ
 --==============================================================
 
-local function FindBestEggFast()
+task.spawn(function()
+
+    local Objects = workspace:GetDescendants()
+
+    for _,Object in ipairs(Objects) do
+
+        if Object:IsA("ProximityPrompt") then
+
+            RegisterEgg(Object)
+
+        elseif Object:IsA("Model")
+        or Object:IsA("BasePart") then
+
+            if LooksLikeEggName(Object.Name)
+            or Object:GetAttribute("IsEgg") == true
+            or Object:GetAttribute("Egg") == true then
+
+                RegisterEgg(Object)
+            end
+        end
+
+        -- evita bloquear demasiado tiempo
+        if _ % 150 == 0 then
+            task.wait()
+        end
+    end
+end)
+
+--==============================================================
+-- MEJOR HUEVO
+--==============================================================
+
+local function FindBestEgg()
+
     local Best = nil
     local Highest = -math.huge
 
-    for Object, Data in pairs(EggCache) do
-        if not Object or not Object.Parent then
+    for Object,Data in pairs(EggCache) do
+
+        if not Object
+        or not Object.Parent then
+
             EggCache[Object] = nil
+
         else
+
             local Prompt = Data.Prompt
 
-            if Prompt and Prompt.Parent and Prompt.Enabled then
-                local Priority = Data.Priority or 0
+            if not Prompt
+            or not Prompt.Parent then
 
-                if Priority > 0 and Priority > Highest then
-                    Highest = Priority
-                    Best = Data
+                Prompt = FindPrompt(Object)
+                Data.Prompt = Prompt
+            end
+
+            if Prompt
+            and Prompt.Enabled then
+
+                local Position = GetPosition(Object)
+
+                if Position
+                and not IsExcluded(Position) then
+
+                    Data.Position = Position
+
+                    local Priority =
+                        GetPriority(Object)
+
+                    Data.Priority = Priority
+
+                    local Score = Priority
+
+                    if Score > Highest then
+
+                        Highest = Score
+                        Best = Data
+                    end
                 end
             end
         end
@@ -603,7 +667,7 @@ local function FindBestEggFast()
 end
 
 --==============================================================
--- TP
+-- TELEPORT
 --==============================================================
 
 local function Teleport(Position)
@@ -623,10 +687,10 @@ local function Teleport(Position)
 end
 
 --==============================================================
--- RECOGER x5
+-- RECOGER
 --==============================================================
 
-local function BurstCollect(Egg)
+local function CollectEgg(Egg)
 
     if not Egg
     or not Egg.Object
@@ -644,71 +708,48 @@ local function BurstCollect(Egg)
         return false
     end
 
-    for i = 1, BURST_COUNT do
+    pcall(function()
+        Prompt.HoldDuration = 0
+    end)
 
-        if not Egg.Object.Parent then
-            break
-        end
+    pcall(function()
 
-        Prompt = FindPrompt(Egg.Object)
+        Prompt:InputHoldBegin()
 
-        if not Prompt
-        or not Prompt.Enabled then
-            break
-        end
+        task.wait(PROMPT_DELAY)
 
-        StatusLabel.Text =
-            "Estado: RÁFAGA "
-            .. i
-            .. "/"
-            .. BURST_COUNT
+        Prompt:InputHoldEnd()
 
-        pcall(function()
-            Prompt.HoldDuration = 0
-        end)
-
-        pcall(function()
-
-            Prompt:InputHoldBegin()
-
-            task.wait(
-                PROMPT_DELAY
-            )
-
-            Prompt:InputHoldEnd()
-
-        end)
-
-        task.wait(
-            PROMPT_DELAY
-        )
-    end
+    end)
 
     return true
 end
 
 --==============================================================
--- BUSCAR PLOT
+-- BUSCAR MI PLOT
 --==============================================================
 
 local function IsMyPlot(Object)
 
-    for _,Name in ipairs({
+    local Names = {
         "Owner",
         "owner",
         "OwnerName",
         "ownerName"
-    }) do
+    }
+
+    for _,Name in ipairs(Names) do
 
         local Attribute =
             Object:GetAttribute(Name)
 
         if Attribute ~= nil then
 
-            if tostring(Attribute)
-                == Player.Name
-            or tostring(Attribute)
-                == tostring(Player.UserId) then
+            local Text =
+                tostring(Attribute)
+
+            if Text == Player.Name
+            or Text == tostring(Player.UserId) then
 
                 return true
             end
@@ -746,23 +787,30 @@ local function IsMyPlot(Object)
 end
 
 local function FindMyPlot()
+
     if CachedPlotPosition then
         return CachedPlotPosition
     end
 
-    -- Only the first lookup scans Workspace.
-    for _, Object in ipairs(workspace:GetDescendants()) do
-        local Name = Object.Name:lower()
+    for _,Object in ipairs(workspace:GetDescendants()) do
 
-        if Name:find("plot", 1, true)
-        or Name:find("tycoon", 1, true)
-        or Name:find("base", 1, true) then
+        local Name =
+            Object.Name:lower()
+
+        if Name:find("plot",1,true)
+        or Name:find("tycoon",1,true)
+        or Name:find("base",1,true) then
 
             if IsMyPlot(Object) then
-                local Position = GetPosition(Object)
+
+                local Position =
+                    GetPosition(Object)
 
                 if Position then
-                    CachedPlotPosition = Position
+
+                    CachedPlotPosition =
+                        Position
+
                     return Position
                 end
             end
@@ -773,7 +821,7 @@ local function FindMyPlot()
 end
 
 --==============================================================
--- UN CICLO
+-- CICLO PRINCIPAL
 --==============================================================
 
 local function RunOnce()
@@ -785,10 +833,9 @@ local function RunOnce()
     BUSY = true
 
     StatusLabel.Text =
-        "Estado: BUSCANDO"
+        "Estado: BUSCANDO MEJOR HUEVO"
 
-    local Egg =
-        FindBestEggFast()
+    local Egg = FindBestEgg()
 
     if not Egg then
 
@@ -802,6 +849,7 @@ local function RunOnce()
             "Estado: SIN HUEVO"
 
         BUSY = false
+
         return
     end
 
@@ -809,35 +857,56 @@ local function RunOnce()
         "🏆 Mejor: "
         .. Egg.Object.Name
 
-    if Egg.Object.Name == "Volcanic Egg"
-        or Egg.Object.Name:lower():find("volcanic", 1, true) then
-        ValueLabel.Text = "Valor: 2.5T  •  PRIORIDAD #1"
+    if Egg.Priority >= 2500000000000 then
+
+        ValueLabel.Text =
+            "Valor: 2.5T • PRIORIDAD #1"
+
     else
+
         ValueLabel.Text =
             "Valor: "
-            .. tostring(Egg.Value)
+            .. tostring(Egg.Value or Egg.Priority or 0)
     end
 
-    StatusLabel.Text =
-        "Estado: TP AL HUEVO"
+    --==========================================================
+    -- TP DIRECTO AL MEJOR HUEVO
+    --==========================================================
 
-    if IsExcluded(Egg.Position) then
+    StatusLabel.Text =
+        "Estado: TP AL MEJOR HUEVO"
+
+    local Position =
+        GetPosition(Egg.Object)
+
+    if not Position then
+
         BUSY = false
         return
     end
 
-    Teleport(Egg.Position)
+    Egg.Position = Position
 
-    task.wait(0.08)
+    Teleport(Position)
 
-    if Egg.Object.Parent then
+    -- esperar a que el personaje quede encima
+    task.wait(0.10)
 
-        BurstCollect(Egg)
+    --==========================================================
+    -- RECOGER
+    --==========================================================
 
-        -- Esperar un momento para que el servidor
-        -- procese la interacción.
-        task.wait(0.15)
-    end
+    StatusLabel.Text =
+        "Estado: RECOGIENDO"
+
+    CollectEgg(Egg)
+
+    -- dar tiempo al servidor
+    task.wait(0.18)
+
+    --==========================================================
+    -- PLOT
+    --==========================================================
 
     StatusLabel.Text =
         "Estado: BUSCANDO PLOT"
@@ -852,7 +921,7 @@ local function RunOnce()
 
         Teleport(Plot)
 
-        task.wait(0.25)
+        task.wait(0.20)
 
         StatusLabel.Text =
             "Estado: COMPLETADO"
@@ -877,14 +946,10 @@ LoopButton.MouseButton1Click:Connect(function()
     if LOOP then
 
         LoopButton.Text =
-            "LOOP  •  ON"
+            "LOOP • ON"
 
         LoopButton.BackgroundColor3 =
-            Color3.fromRGB(
-                0,
-                100,
-                50
-            )
+            Color3.fromRGB(0,100,50)
 
         task.spawn(function()
 
@@ -893,9 +958,7 @@ LoopButton.MouseButton1Click:Connect(function()
 
                 pcall(RunOnce)
 
-                task.wait(
-                    LOOP_DELAY
-                )
+                task.wait(LOOP_DELAY)
             end
 
         end)
@@ -903,14 +966,10 @@ LoopButton.MouseButton1Click:Connect(function()
     else
 
         LoopButton.Text =
-            "LOOP  •  OFF"
+            "LOOP • OFF"
 
         LoopButton.BackgroundColor3 =
-            Color3.fromRGB(
-                18,
-                18,
-                18
-            )
+            Color3.fromRGB(18,18,18)
 
         StatusLabel.Text =
             "Estado: LOOP DETENIDO"
@@ -933,86 +992,73 @@ InstaButton.MouseButton1Click:Connect(function()
 end)
 
 --==============================================================
--- MANTENIMIENTO LIGERO
+-- ACTUALIZACIÓN DEL PANEL
+-- MUY LIGERA
 --==============================================================
 
 task.spawn(function()
+
     while Gui.Parent do
-        for Object, Data in pairs(EggCache) do
-            if not Object or not Object.Parent then
-                EggCache[Object] = nil
-            else
-                local Prompt = Data.Prompt
 
-                if not Prompt or not Prompt.Parent then
-                    Prompt = FindPrompt(Object)
-                    Data.Prompt = Prompt
-
-                    if Prompt then
-                        WatchPrompt(Prompt)
-                    end
-                end
-            end
-        end
-
-        task.wait(2.5)
-    end
-end)
-
---==============================================================
--- ACTUALIZACIÓN LIGERA DEL PANEL
---==============================================================
-
-task.spawn(function()
-    while Gui.Parent do
         if not BUSY then
-            local Egg = FindBestEggFast()
+
+            local Egg =
+                FindBestEgg()
 
             if Egg then
+
                 BestLabel.Text =
                     "🏆 Mejor: "
                     .. Egg.Object.Name
 
-                if Egg.Object.Name == "Volcanic Egg"
-                or Egg.Object.Name:lower():find("volcanic", 1, true) then
-                    ValueLabel.Text =
-                        "Valor: 2.5T  •  PRIORIDAD #1"
-                else
-                    ValueLabel.Text =
-                        "Valor: "
-                        .. tostring(Egg.Value or 0)
-                end
+                ValueLabel.Text =
+                    "Valor: "
+                    .. tostring(
+                        Egg.Value
+                        or Egg.Priority
+                        or 0
+                    )
+
             else
-                BestLabel.Text = "🏆 Mejor: NINGUNO"
-                ValueLabel.Text = "Valor: —"
+
+                BestLabel.Text =
+                    "🏆 Mejor: NINGUNO"
+
+                ValueLabel.Text =
+                    "Valor: —"
             end
         end
 
-        -- No construir una tabla temporal solo para contar.
         local Count = 0
+
         for _ in pairs(EggCache) do
             Count += 1
         end
 
         BurstLabel.Text =
-            "RÁFAGA: x5  •  HUEVOS: "
+            "DETECTADOS: "
             .. tostring(Count)
 
-        task.wait(1.0)
+        task.wait(1.5)
     end
 end)
 
 --==============================================================
--- CACHE INICIAL
+-- RESPawn
 --==============================================================
 
-RebuildCache()
+Player.CharacterAdded:Connect(function()
 
-StatusLabel.Text =
-    "Estado: LISTO • DETECTOR ACTIVO"
+    CachedPlotPosition = nil
+
+    task.wait(1)
+
+    StatusLabel.Text =
+        "Estado: DETECTOR ACTIVO"
+end)
 
 --==============================================================
--- MINIMIZAR / RESTAURAR
+-- MINIMIZAR
 --==============================================================
 
 local Minimized = false
@@ -1032,42 +1078,22 @@ MinButton.MouseButton1Click:Connect(function()
 
         Minimized = true
 
-        TweenService:Create(
-            Main,
-            TweenInfo.new(
-                .35,
-                Enum.EasingStyle.Quart,
-                Enum.EasingDirection.Out
-            ),
-            {
-                Size = BarSize,
+        Main.Size = BarSize
 
-                Position =
-                    UDim2.new(
-                        FullPosition.X.Scale,
-                        FullPosition.X.Offset,
-                        0,
-                        10
-                    )
-            }
-        ):Play()
+        Main.Position =
+            UDim2.new(
+                FullPosition.X.Scale,
+                FullPosition.X.Offset,
+                0,
+                10
+            )
 
     else
 
         Minimized = false
 
-        TweenService:Create(
-            Main,
-            TweenInfo.new(
-                .35,
-                Enum.EasingStyle.Quart,
-                Enum.EasingDirection.Out
-            ),
-            {
-                Size = FullSize,
-                Position = FullPosition
-            }
-        ):Play()
+        Main.Size = FullSize
+        Main.Position = FullPosition
     end
 end)
 
@@ -1095,12 +1121,17 @@ TopBar.InputBegan:Connect(function(Input)
 
     if Input.UserInputType ==
         Enum.UserInputType.MouseButton1
-        or Input.UserInputType ==
+        or
+        Input.UserInputType ==
         Enum.UserInputType.Touch then
 
         Dragging = true
-        DragStart = Input.Position
-        StartPosition = Main.Position
+
+        DragStart =
+            Input.Position
+
+        StartPosition =
+            Main.Position
     end
 end)
 
@@ -1108,7 +1139,8 @@ TopBar.InputEnded:Connect(function(Input)
 
     if Input.UserInputType ==
         Enum.UserInputType.MouseButton1
-        or Input.UserInputType ==
+        or
+        Input.UserInputType ==
         Enum.UserInputType.Touch then
 
         Dragging = false
@@ -1123,7 +1155,8 @@ UIS.InputChanged:Connect(function(Input)
 
     if Input.UserInputType ==
         Enum.UserInputType.MouseMovement
-        or Input.UserInputType ==
+        or
+        Input.UserInputType ==
         Enum.UserInputType.Touch then
 
         local Delta =
@@ -1142,3 +1175,10 @@ UIS.InputChanged:Connect(function(Input)
         end
     end
 end)
+
+--==============================================================
+-- LISTO
+--==============================================================
+
+StatusLabel.Text =
+    "Estado: DETECTOR ACTIVO"
