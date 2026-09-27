@@ -393,17 +393,19 @@ end
 -- CACHE DE HUEVOS
 --==============================================================
 
+-- Solo 1 representante por cada tipo de huevo.
+-- Ej.: 10 Volcanic -> se guarda 1 Volcanic.
+local EggByType = {}
 local EggCache = {}
 local CachedPlotPosition = nil
 
 local function RegisterEgg(Object)
     if not Object or not Object.Parent then
-        return
+        return false
     end
 
     local Egg = Object
 
-    -- Only an exact egg object from EggPriority is accepted.
     if Object:IsA("ProximityPrompt") then
         local Current = Object.Parent
 
@@ -424,49 +426,99 @@ local function RegisterEgg(Object)
     if not Egg
     or not Egg.Parent
     or not EggPriority[Egg.Name] then
-        return
+        return false
+    end
+
+    local EggType = Egg.Name
+
+    -- Ya tenemos un representante válido de este tipo.
+    if EggByType[EggType]
+    and EggByType[EggType].Object
+    and EggByType[EggType].Object.Parent then
+        return false
     end
 
     local Position = GetPosition(Egg)
 
     if not Position or IsExcluded(Position) then
-        EggCache[Egg] = nil
-        return
+        return false
     end
 
     local Prompt = FindPrompt(Egg)
 
     if not Prompt then
-        return
+        return false
     end
 
-    local Priority = EggPriority[Egg.Name]
+    local Priority = EggPriority[EggType]
 
-    EggCache[Egg] = {
+    local Data = {
         Object = Egg,
         Position = Position,
         Prompt = Prompt,
         Value = Priority,
-        Priority = Priority
+        Priority = Priority,
+        EggType = EggType
     }
+
+    EggByType[EggType] = Data
+    EggCache[Egg] = Data
+
+    return true
+end
+
+local function RemoveEgg(Egg)
+    if not Egg then
+        return
+    end
+
+    local EggType = Egg.Name
+    local Data = EggByType[EggType]
+
+    if Data and Data.Object == Egg then
+        EggByType[EggType] = nil
+        EggCache[Egg] = nil
+
+        -- Si todavía existe otro del mismo tipo, toma SOLO uno.
+        task.defer(function()
+            if EggByType[EggType] then
+                return
+            end
+
+            for _, Candidate in ipairs(workspace:GetDescendants()) do
+                if Candidate ~= Egg
+                and Candidate.Parent
+                and Candidate.Name == EggType then
+                    if RegisterEgg(Candidate) then
+                        break
+                    end
+                end
+            end
+        end)
+    end
 end
 
 local function RebuildCache()
+    table.clear(EggByType)
     table.clear(EggCache)
 
+    -- Un único escaneo inicial.
+    -- En cuanto ya existe un tipo, los duplicados se ignoran.
     for _, Object in ipairs(workspace:GetDescendants()) do
-        if EggPriority[Object.Name] then
+        if EggPriority[Object.Name]
+        and not EggByType[Object.Name] then
             RegisterEgg(Object)
         end
     end
 end
 
 --==============================================================
--- EVENTOS DE CACHE
+-- EVENTOS: SOLO MANTENER 1 POR TIPO
 --==============================================================
 
 workspace.DescendantAdded:Connect(function(Object)
-    if EggPriority[Object.Name] then
+    if EggPriority[Object.Name]
+    and not EggByType[Object.Name] then
         task.defer(function()
             RegisterEgg(Object)
         end)
@@ -474,24 +526,38 @@ workspace.DescendantAdded:Connect(function(Object)
 end)
 
 workspace.DescendantRemoving:Connect(function(Object)
-    EggCache[Object] = nil
+    if EggByType[Object.Name]
+    and EggByType[Object.Name].Object == Object then
+        RemoveEgg(Object)
+    end
 end)
 
 --==============================================================
 -- MEJOR HUEVO DESDE CACHE
 --==============================================================
 
+local function GetDetectedTypeCount()
+    local Count = 0
+    for _ in pairs(EggByType) do
+        Count += 1
+    end
+    return Count
+end
+
 local function FindBestEggFast()
     local Best = nil
     local Highest = -math.huge
 
-    for Object, Data in pairs(EggCache) do
+    for EggType, Data in pairs(EggByType) do
+        local Object = Data.Object
+
         if not Object or not Object.Parent then
+            EggByType[EggType] = nil
             EggCache[Object] = nil
         else
-            local Priority = EggPriority[Object.Name]
+            local Priority = EggPriority[EggType] or 0
 
-            if Priority and Priority > Highest then
+            if Priority > Highest then
                 local Prompt = Data.Prompt
 
                 if not Prompt or not Prompt.Parent then
@@ -534,65 +600,80 @@ end
 -- RECOGER x5
 --==============================================================
 
-local function BurstCollect(Egg)
+local function ActivatePrompt(Prompt)
+    if not Prompt or not Prompt.Parent or not Prompt.Enabled then
+        return false
+    end
 
+    -- In supported executor environments this is the most direct way
+    -- to activate a ProximityPrompt.
+    if typeof(fireproximityprompt) == "function" then
+        local ok = pcall(function()
+            Prompt.HoldDuration = 0
+            fireproximityprompt(Prompt)
+        end)
+
+        if ok then
+            return true
+        end
+    end
+
+    -- Fallback for normal LocalScript-compatible prompt input.
+    local ok = pcall(function()
+        Prompt.HoldDuration = 0
+        Prompt:InputHoldBegin()
+        task.wait(PROMPT_DELAY)
+        Prompt:InputHoldEnd()
+    end)
+
+    return ok
+end
+
+local function BurstCollect(Egg)
     if not Egg
     or not Egg.Object
     or not Egg.Object.Parent then
-
         return false
     end
 
-    local Prompt =
-        FindPrompt(Egg.Object)
+    local Prompt = Egg.Prompt
 
-    if not Prompt
-    or not Prompt.Enabled then
+    if not Prompt or not Prompt.Parent then
+        Prompt = FindPrompt(Egg.Object)
+        Egg.Prompt = Prompt
+    end
 
+    if not Prompt or not Prompt.Enabled then
         return false
     end
+
+    local Activated = false
 
     for i = 1, BURST_COUNT do
-
         if not Egg.Object.Parent then
             break
         end
 
-        Prompt = FindPrompt(Egg.Object)
+        if not Prompt or not Prompt.Parent then
+            Prompt = FindPrompt(Egg.Object)
+            Egg.Prompt = Prompt
+        end
 
-        if not Prompt
-        or not Prompt.Enabled then
+        if not Prompt or not Prompt.Enabled then
             break
         end
 
         StatusLabel.Text =
-            "Estado: RÁFAGA "
-            .. i
-            .. "/"
-            .. BURST_COUNT
+            "Estado: RÁFAGA " .. i .. "/" .. BURST_COUNT
 
-        pcall(function()
-            Prompt.HoldDuration = 0
-        end)
+        if ActivatePrompt(Prompt) then
+            Activated = true
+        end
 
-        pcall(function()
-
-            Prompt:InputHoldBegin()
-
-            task.wait(
-                PROMPT_DELAY
-            )
-
-            Prompt:InputHoldEnd()
-
-        end)
-
-        task.wait(
-            PROMPT_DELAY
-        )
+        task.wait(PROMPT_DELAY)
     end
 
-    return true
+    return Activated
 end
 
 --==============================================================
@@ -685,93 +766,78 @@ end
 --==============================================================
 
 local function RunOnce()
-
     if BUSY then
-        return
+        return false
     end
 
     BUSY = true
 
-    StatusLabel.Text =
-        "Estado: BUSCANDO"
+    StatusLabel.Text = "Estado: BUSCANDO"
 
-    local Egg =
-        FindBestEggFast()
+    local Egg = FindBestEggFast()
 
     if not Egg then
-
-        BestLabel.Text =
-            "🏆 Mejor: NINGUNO"
-
-        ValueLabel.Text =
-            "Valor: —"
-
-        StatusLabel.Text =
-            "Estado: SIN HUEVO"
-
+        BestLabel.Text = "🏆 Mejor: NINGUNO"
+        ValueLabel.Text = "Valor: —"
+        StatusLabel.Text = "Estado: SIN HUEVO"
         BUSY = false
-        return
+        return false
     end
 
-    BestLabel.Text =
-        "🏆 Mejor: "
-        .. Egg.Object.Name
+    BestLabel.Text = "🏆 Mejor: " .. Egg.Object.Name
 
-    if Egg.Object.Name == "Volcanic Egg"
-        or Egg.Object.Name:lower():find("volcanic", 1, true) then
+    if Egg.Object.Name == "Volcanic Egg" then
         ValueLabel.Text = "Valor: 2.5T  •  PRIORIDAD #1"
     else
-        ValueLabel.Text =
-            "Valor: "
-            .. tostring(Egg.Value)
+        ValueLabel.Text = "Valor: " .. tostring(Egg.Value)
     end
-
-    StatusLabel.Text =
-        "Estado: TP AL HUEVO"
 
     if IsExcluded(Egg.Position) then
+        StatusLabel.Text = "Estado: HUEVO EXCLUIDO"
         BUSY = false
-        return
+        return false
     end
 
-    Teleport(Egg.Position)
-
-    task.wait(0.08)
-
-    if Egg.Object.Parent then
-
-        BurstCollect(Egg)
-
-        -- Esperar un momento para que el servidor
-        -- procese la interacción.
-        task.wait(0.15)
+    -- Refresh the cached position once before TP.
+    local Position = GetPosition(Egg.Object)
+    if Position then
+        Egg.Position = Position
     end
 
-    StatusLabel.Text =
-        "Estado: BUSCANDO PLOT"
+    StatusLabel.Text = "Estado: TP AL HUEVO"
 
-    local Plot =
-        FindMyPlot()
+    if not Teleport(Egg.Position) then
+        StatusLabel.Text = "Estado: TP FALLÓ"
+        BUSY = false
+        return false
+    end
+
+    task.wait(0.10)
+
+    -- Activate the prompt immediately after arriving.
+    local Collected = BurstCollect(Egg)
+
+    task.wait(0.10)
+
+    StatusLabel.Text = "Estado: BUSCANDO PLOT"
+
+    local Plot = FindMyPlot()
 
     if Plot then
-
-        StatusLabel.Text =
-            "Estado: TP AL PLOT"
-
+        StatusLabel.Text = "Estado: TP AL PLOT"
         Teleport(Plot)
-
-        task.wait(0.25)
-
-        StatusLabel.Text =
-            "Estado: COMPLETADO"
-
+        task.wait(0.20)
+        StatusLabel.Text = Collected
+            and "Estado: COMPLETADO"
+            or "Estado: TP COMPLETADO"
     else
-
-        StatusLabel.Text =
-            "Estado: PLOT NO ENCONTRADO"
+        StatusLabel.Text = Collected
+            and "Estado: HUEVO RECOGIDO"
+            or "Estado: HUEVO NO CONFIRMADO"
     end
 
     BUSY = false
+    return true
 end
 
 --==============================================================
@@ -799,11 +865,9 @@ LoopButton.MouseButton1Click:Connect(function()
             while LOOP
             and Gui.Parent do
 
-                pcall(RunOnce)
+                RunOnce()
 
-                task.wait(
-                    LOOP_DELAY
-                )
+                task.wait(LOOP_DELAY)
             end
 
         end)
@@ -830,14 +894,11 @@ end)
 --==============================================================
 
 InstaButton.MouseButton1Click:Connect(function()
-
     if BUSY then
         return
     end
 
-    task.spawn(function()
-        pcall(RunOnce)
-    end)
+    task.spawn(RunOnce)
 end)
 
 --==============================================================
@@ -870,7 +931,7 @@ task.spawn(function()
         end
 
         -- No construir una tabla temporal solo para contar.
-        BurstLabel.Text = "RÁFAGA: x5  •  DETECTOR ACTIVO"
+        BurstLabel.Text = "RÁFAGA: x5  •  TIPOS: " .. tostring(GetDetectedTypeCount())
 
         task.wait(1.0)
     end
