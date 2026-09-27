@@ -18,7 +18,7 @@ local LOOP = false
 local BUSY = false
 
 local BURST_COUNT = 5
-local LOOP_DELAY = 0.25
+local LOOP_DELAY = 0.45
 local PROMPT_DELAY = 0.035
 local EGG_OFFSET = Vector3.new(0, 2, 0)
 
@@ -232,20 +232,22 @@ local function GetRoot()
 end
 
 local function GetPosition(Object)
+    if not Object then
+        return nil
+    end
 
     if Object:IsA("BasePart") then
         return Object.Position
     end
 
     if Object:IsA("Model") then
+        if Object.PrimaryPart then
+            return Object.PrimaryPart.Position
+        end
 
-        local Part =
-            Object.PrimaryPart
-            or Object:FindFirstChildWhichIsA(
-                "BasePart",
-                true
-            )
-
+        -- One-time fallback. RegisterEgg stores the result, so this is
+        -- not repeated on every selector pass.
+        local Part = Object:FindFirstChildWhichIsA("BasePart", true)
         return Part and Part.Position
     end
 
@@ -304,7 +306,11 @@ end
 --==============================================================
 
 local function GetValue(Object)
+    if not Object then
+        return 0
+    end
 
+    -- Prefer direct attributes: cheap and stable.
     local AttributeNames = {
         "Luck",
         "luck",
@@ -314,31 +320,23 @@ local function GetValue(Object)
         "Price"
     }
 
-    for _,Name in ipairs(AttributeNames) do
-
-        local Value =
-            Object:GetAttribute(Name)
-
+    for _, Name in ipairs(AttributeNames) do
+        local Value = Object:GetAttribute(Name)
         if typeof(Value) == "number" then
             return Value
         end
     end
 
-    for _,Item in ipairs(
-        Object:GetDescendants()
-    ) do
+    -- Only inspect direct children. Never recursively scan the whole egg
+    -- during the selector loop.
+    for _, Item in ipairs(Object:GetChildren()) do
+        if Item:IsA("NumberValue") or Item:IsA("IntValue") then
+            local Name = Item.Name:lower()
 
-        if Item:IsA("NumberValue")
-        or Item:IsA("IntValue") then
-
-            local Name =
-                Item.Name:lower()
-
-            if Name:find("luck")
-            or Name:find("rarity")
-            or Name:find("value")
-            or Name:find("price") then
-
+            if Name:find("luck", 1, true)
+            or Name:find("rarity", 1, true)
+            or Name:find("value", 1, true)
+            or Name:find("price", 1, true) then
                 return Item.Value
             end
         end
@@ -382,7 +380,14 @@ local function GetEggPriority(Object)
         return EggPriority["Black Hole Egg"]
     end
 
-    return GetValue(Object)
+    local Value = GetValue(Object)
+
+    -- Unknown egg with no usable value is not a valid target.
+    if Value <= 0 then
+        return 0
+    end
+
+    return Value
 end
 
 local function LooksLikeEggName(name)
@@ -452,6 +457,9 @@ end
 
 local EggCache = {}
 local PromptConnections = {}
+local CachedPlotPosition = nil
+local LastPlotSearch = 0
+local PLOT_REFRESH = 8
 
 local function WatchPrompt(Prompt)
     if not Prompt or not Prompt:IsA("ProximityPrompt") then
@@ -608,35 +616,20 @@ local function FindBestEggFast()
     local Highest = -math.huge
 
     for Object, Data in pairs(EggCache) do
-        if not Object.Parent then
+        if not Object or not Object.Parent then
             EggCache[Object] = nil
         else
-            local Position = GetPosition(Object)
+            local Prompt = Data.Prompt
 
-            if not Position or IsExcluded(Position) then
+            if not Prompt or not Prompt.Parent then
                 EggCache[Object] = nil
-            else
-                local Prompt = FindPrompt(Object)
+            elseif Prompt.Enabled then
+                -- Use cached priority/value. This is the hot path.
+                local Priority = Data.Priority or 0
 
-                if Prompt then
-                    WatchPrompt(Prompt)
-
-                    if Prompt.Enabled then
-                        local Value = GetValue(Object)
-                    local Priority = GetEggPriority(Object)
-
-                    Data.Position = Position
-                    Data.Prompt = Prompt
-                    Data.Value = Value
-                    Data.Priority = Priority
-
-                        if Priority > Highest then
-                            Highest = Priority
-                            Best = Data
-                        end
-                    end
-                else
-                    EggCache[Object] = nil
+                if Priority > Highest then
+                    Highest = Priority
+                    Best = Data
                 end
             end
         end
@@ -789,31 +782,34 @@ local function IsMyPlot(Object)
 end
 
 local function FindMyPlot()
+    local Now = os.clock()
 
-    for _,Object in ipairs(
-        workspace:GetDescendants()
-    ) do
+    if CachedPlotPosition
+    and (Now - LastPlotSearch) < PLOT_REFRESH then
+        return CachedPlotPosition
+    end
 
-        local Name =
-            Object.Name:lower()
+    LastPlotSearch = Now
 
-        if Name:find("plot")
-        or Name:find("tycoon")
-        or Name:find("base") then
+    for _, Object in ipairs(workspace:GetDescendants()) do
+        local Name = Object.Name:lower()
+
+        if Name:find("plot", 1, true)
+        or Name:find("tycoon", 1, true)
+        or Name:find("base", 1, true) then
 
             if IsMyPlot(Object) then
-
-                local Position =
-                    GetPosition(Object)
+                local Position = GetPosition(Object)
 
                 if Position then
+                    CachedPlotPosition = Position
                     return Position
                 end
             end
         end
     end
 
-    return nil
+    return CachedPlotPosition
 end
 
 --==============================================================
@@ -977,92 +973,72 @@ InstaButton.MouseButton1Click:Connect(function()
 end)
 
 --==============================================================
--- RESCAN DE PROMPTS / HUEVOS
--- Re-registra huevos cuyos prompts vuelven a habilitarse
--- después de una recogida.
+-- MANTENIMIENTO LIGERO
 --==============================================================
 
 task.spawn(function()
     while Gui.Parent do
-        -- Safety refresh lento: no recorrer Workspace constantemente.
-        -- Los huevos nuevos ya se registran mediante DescendantAdded.
         for Object, Data in pairs(EggCache) do
-            if Object and Object.Parent then
-                local Prompt = FindPrompt(Object)
+            if not Object or not Object.Parent then
+                EggCache[Object] = nil
+            else
+                local Prompt = Data.Prompt
 
-                if Prompt then
-                    WatchPrompt(Prompt)
+                if not Prompt or not Prompt.Parent then
+                    Prompt = FindPrompt(Object)
+                    Data.Prompt = Prompt
 
-                    if Prompt.Enabled then
-                        Data.Position = GetPosition(Object)
-                        Data.Value = GetValue(Object)
-                        Data.Priority = GetEggPriority(Object)
-                        Data.Prompt = Prompt
+                    if Prompt then
+                        WatchPrompt(Prompt)
                     end
                 end
-            else
-                EggCache[Object] = nil
             end
         end
 
-        task.wait(2)
+        task.wait(2.5)
     end
 end)
 
 --==============================================================
--- ACTUALIZACIÓN ULTRA RÁPIDA DEL PANEL
+-- ACTUALIZACIÓN LIGERA DEL PANEL
 --==============================================================
 
 task.spawn(function()
-
     while Gui.Parent do
-
         if not BUSY then
-
-            local Egg =
-                FindBestEggFast()
+            local Egg = FindBestEggFast()
 
             if Egg then
-
                 BestLabel.Text =
                     "🏆 Mejor: "
                     .. Egg.Object.Name
 
                 if Egg.Object.Name == "Volcanic Egg"
-                    or Egg.Object.Name:lower():find("volcanic", 1, true) then
+                or Egg.Object.Name:lower():find("volcanic", 1, true) then
                     ValueLabel.Text =
                         "Valor: 2.5T  •  PRIORIDAD #1"
                 else
                     ValueLabel.Text =
                         "Valor: "
-                        .. tostring(Egg.Value)
+                        .. tostring(Egg.Value or 0)
                 end
-
             else
-
-                BestLabel.Text =
-                    "🏆 Mejor: NINGUNO"
-
-                ValueLabel.Text =
-                    "Valor: —"
+                BestLabel.Text = "🏆 Mejor: NINGUNO"
+                ValueLabel.Text = "Valor: —"
             end
+        end
+
+        -- No construir una tabla temporal solo para contar.
+        local Count = 0
+        for _ in pairs(EggCache) do
+            Count += 1
         end
 
         BurstLabel.Text =
             "RÁFAGA: x5  •  HUEVOS: "
-            .. tostring(
-                #(
-                    (function()
-                        local T = {}
-                        for _ in pairs(EggCache) do
-                            T[#T+1] = true
-                        end
-                        return T
-                    end)()
-                )
-            )
+            .. tostring(Count)
 
-        task.wait(0.35)
+        task.wait(0.75)
     end
 end)
 
