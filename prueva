@@ -259,21 +259,8 @@ local function GetPosition(Object)
 end
 
 local function IsExcluded(Position)
-
-    if not Position then
-        return true
-    end
-
-    local X = math.abs(
-        Position.X - EXCLUSION_CENTER.X
-    )
-
-    local Z = math.abs(
-        Position.Z - EXCLUSION_CENTER.Z
-    )
-
-    return X <= EXCLUSION_RADIUS
-       and Z <= EXCLUSION_RADIUS
+    -- No excluir zonas: el objetivo es detectar todos los huevos.
+    return false
 end
 
 local function IsEgg(Object)
@@ -354,117 +341,101 @@ end
 --==============================================================
 
 local EggPriority = {
-    ["Volcanic Egg"] = 2500000000000, -- 2.5T
-    ["Cherub Egg"] = 1000000000000,
-    ["Solaris Egg"] = 300000000000,
+    ["White Egg"] = 1,
+    ["Brown Egg"] = 5,
+    ["Cracked Egg"] = 30,
+    ["Easter Egg"] = 50,
+    ["Stone Egg"] = 100,
+    ["Leaf Egg"] = 200,
+    ["Mushroom Egg"] = 500,
+    ["Flower Egg"] = 750,
+    ["Slime Egg"] = 1000,
+    ["Ice Egg"] = 3000,
+    ["Glass Egg"] = 10000,
+    ["Golden Egg"] = 30000,
+    ["Crystal Egg"] = 150000,
+    ["Skull Egg"] = 250000,
+    ["Dominus Egg"] = 700000,
+    ["Flaming Egg"] = 1000000,
+    ["Sinister Egg"] = 3000000,
+    ["Soul Egg"] = 7000000,
+    ["Aurora Egg"] = 300000000,
+    ["Galaxy Egg"] = 1500000000,
     ["Black Hole Egg"] = 100000000000,
-    ["Blackhole Egg"] = 100000000000,
+    ["Solaris Egg"] = 300000000000,
+    ["Cherub Egg"] = 1000000000000,
+    ["Volcanic Egg"] = 2500000000000,
 }
 
 local function GetEggPriority(Object)
-    if not Object then
-        return 0
+    if not Object then return 0 end
+
+    local raw = tostring(Object.Name or "")
+    local name = raw:lower():gsub("_", " "):gsub("-", " ")
+
+    if name:find("volcanic",1,true) then return 2500000000000 end
+    if name:find("cherub",1,true) then return 1000000000000 end
+    if name:find("solaris",1,true) then return 300000000000 end
+    if name:find("black hole",1,true) or name:find("blackhole",1,true) then return 100000000000 end
+
+    for eggName, value in pairs(EggPriority) do
+        local normalized = eggName:lower()
+        if name == normalized or name:find(normalized,1,true) then
+            return value
+        end
     end
 
-    local exact = EggPriority[Object.Name]
-    if exact then
-        return exact
+    -- Solo usar Luck/HatchLuck/Rarity como fallback; nunca Price/Value.
+    for _, attr in ipairs({"Luck","luck","HatchLuck","Hatch_Luck","EggLuck","Egg_Luck","RarityValue"}) do
+        local v = Object:GetAttribute(attr)
+        if typeof(v) == "number" and v > 0 then return v end
     end
 
-    local name = Object.Name:lower()
-
-    if name:find("volcanic", 1, true) then
-        return EggPriority["Volcanic Egg"]
-    elseif name:find("cherub", 1, true) then
-        return EggPriority["Cherub Egg"]
-    elseif name:find("solaris", 1, true) then
-        return EggPriority["Solaris Egg"]
-    elseif name:find("blackhole", 1, true)
-        or (name:find("black", 1, true) and name:find("hole", 1, true)) then
-        return EggPriority["Black Hole Egg"]
+    for _, item in ipairs(Object:GetChildren()) do
+        if item:IsA("NumberValue") or item:IsA("IntValue") then
+            local n = item.Name:lower()
+            if (n:find("luck",1,true) or n:find("rarity",1,true)) and item.Value > 0 then
+                return item.Value
+            end
+        end
     end
 
-    local Value = GetValue(Object)
-
-    -- Unknown eggs are still valid candidates. If the game does not expose
-    -- Luck locally, keep them in the cache instead of reporting zero eggs.
-    if Value <= 0 then
-        return 1
-    end
-
-    return Value
+    -- Huevo detectado pero sin Luck publicado: queda como candidato de respaldo.
+    return 0.1
 end
 
 local function LooksLikeEggName(name)
-    name = tostring(name or ""):lower()
-
-    return name:find("egg", 1, true) ~= nil
-        or name:find("huevo", 1, true) ~= nil
-        or name:find("volcanic", 1, true) ~= nil
-        or name:find("solar", 1, true) ~= nil
-        or name:find("cherub", 1, true) ~= nil
-        or name:find("blackhole", 1, true) ~= nil
-        or (name:find("black", 1, true) and name:find("hole", 1, true)) ~= nil
-end
-
-local function PromptLooksLikeEgg(Prompt)
-    if not Prompt then
-        return false
+    name = tostring(name or ""):lower():gsub("_", " "):gsub("-", " ")
+    if name:find("egg",1,true) or name:find("huevo",1,true) then return true end
+    for eggName in pairs(EggPriority) do
+        local n = eggName:lower()
+        if name == n or name:find(n,1,true) then return true end
     end
-
-    local Text = table.concat({
-        tostring(Prompt.Name or ""),
-        tostring(Prompt.ActionText or ""),
-        tostring(Prompt.ObjectText or "")
-    }, " "):lower()
-
-    local Keys = {
-        "egg", "huevo", "hatch",
-        "grab egg", "collect egg", "pick egg",
-        "pick up egg", "take egg"
-    }
-
-    for _, Key in ipairs(Keys) do
-        if Text:find(Key, 1, true) then
-            return true
-        end
-    end
-
-    return false
+    return name:find("volcanic",1,true) ~= nil
+        or name:find("solar",1,true) ~= nil
+        or name:find("cherub",1,true) ~= nil
+        or name:find("blackhole",1,true) ~= nil
+        or (name:find("black",1,true) and name:find("hole",1,true)) ~= nil
 end
 
 local function GetEggFromPrompt(Prompt)
-    if not Prompt then
-        return nil
-    end
+    if not Prompt then return nil end
+    local current = Prompt.Parent
+    local promptText = ((Prompt.ActionText or "") .. " " .. (Prompt.ObjectText or "")):lower()
+    local promptLooksEgg = promptText:find("egg",1,true) or promptText:find("hatch",1,true) or promptText:find("huevo",1,true)
 
-    local Current = Prompt.Parent
-
-    for _ = 1, 12 do
-        if not Current then
-            break
-        end
-
-        if Current:IsA("Model") or Current:IsA("BasePart") then
-            if LooksLikeEggName(Current.Name)
-                or Current:GetAttribute("IsEgg") == true
-                or Current:GetAttribute("Egg") == true then
-                return Current
+    for _ = 1, 14 do
+        if not current then break end
+        if current:IsA("Model") or current:IsA("BasePart") then
+            if LooksLikeEggName(current.Name)
+                or current:GetAttribute("IsEgg") == true
+                or current:GetAttribute("Egg") == true
+                or promptLooksEgg then
+                return current
             end
         end
-
-        Current = Current.Parent
+        current = current.Parent
     end
-
-    -- Algunos huevos no tienen "Egg" en el nombre interno.
-    -- En esos casos usamos el texto del ProximityPrompt.
-    if PromptLooksLikeEgg(Prompt) then
-        local Parent = Prompt.Parent
-        if Parent and (Parent:IsA("Model") or Parent:IsA("BasePart")) then
-            return Parent
-        end
-    end
-
     return nil
 end
 
@@ -517,11 +488,13 @@ local function RegisterEgg(Object)
         return
     end
 
-    -- Aceptar nombres conocidos, atributos o prompts que indiquen huevo.
+    -- Aceptar nombres conocidos, atributos o un prompt claramente relacionado con huevo.
+    local promptText = Prompt and ((Prompt.ActionText or "") .. " " .. (Prompt.ObjectText or "")):lower() or ""
+    local promptEgg = promptText:find("egg",1,true) or promptText:find("hatch",1,true) or promptText:find("huevo",1,true)
     if not LooksLikeEggName(Egg.Name)
         and Egg:GetAttribute("IsEgg") ~= true
         and Egg:GetAttribute("Egg") ~= true
-        and not (Object:IsA("ProximityPrompt") and PromptLooksLikeEgg(Object)) then
+        and not promptEgg then
         return
     end
 
@@ -542,12 +515,8 @@ local function RegisterEgg(Object)
 
     local Priority = GetEggPriority(Egg)
 
-    -- Do not cache zero-value unknown eggs. Known priority eggs are
-    -- always accepted because GetEggPriority gives them explicit values.
-    if Priority <= 0 then
-        EggCache[Egg] = nil
-        return
-    end
+    -- Los desconocidos también se guardan como candidatos de respaldo.
+    -- Si tienen Luck real, ese valor manda; si no, los conocidos ganan.
 
     EggCache[Egg] = {
         Object = Egg,
@@ -559,19 +528,10 @@ local function RegisterEgg(Object)
 end
 
 local function RebuildCache()
-    -- No table.clear here: events can register eggs while the initial scan runs.
-    -- Walk the hierarchy in small batches so execution stays responsive.
-    local Stack = {}
-    local Processed = 0
-
-    for _, Child in ipairs(workspace:GetChildren()) do
-        Stack[#Stack + 1] = Child
-    end
-
-    while #Stack > 0 do
-        local Object = table.remove(Stack)
-
-        if Object and Object.Parent then
+    table.clear(EggCache)
+    task.spawn(function()
+        local objects = workspace:GetDescendants()
+        for i, Object in ipairs(objects) do
             if Object:IsA("ProximityPrompt") then
                 RegisterEgg(Object)
             elseif LooksLikeEggName(Object.Name)
@@ -579,17 +539,10 @@ local function RebuildCache()
                 or Object:GetAttribute("Egg") == true then
                 RegisterEgg(Object)
             end
-
-            for _, Child in ipairs(Object:GetChildren()) do
-                Stack[#Stack + 1] = Child
-            end
+            -- Yield frecuente: detecta rápido sin congelar el cliente.
+            if i % 100 == 0 then task.wait() end
         end
-
-        Processed += 1
-        if Processed % 80 == 0 then
-            task.wait()
-        end
-    end
+    end)
 end
 
 --==============================================================
@@ -801,7 +754,11 @@ local function FindMyPlot()
         return CachedPlotPosition
     end
 
-    -- Only the first lookup scans Workspace.
+    if os.clock() - LastPlotSearch < PLOT_REFRESH then
+        return nil
+    end
+    LastPlotSearch = os.clock()
+
     for _, Object in ipairs(workspace:GetDescendants()) do
         local Name = Object.Name:lower()
 
@@ -840,6 +797,10 @@ local function RunOnce()
 
     local Egg =
         FindBestEggFast()
+
+    -- Una sola segunda comprobación, sin escanear Workspace.
+    local Latest = FindBestEggFast()
+    if Latest then Egg = Latest end
 
     if not Egg then
 
@@ -1006,7 +967,7 @@ task.spawn(function()
             end
         end
 
-        task.wait(2.5)
+        task.wait(5)
     end
 end)
 
@@ -1056,16 +1017,11 @@ end)
 --==============================================================
 -- CACHE INICIAL
 --==============================================================
--- Arranca en segundo plano para que la interfaz responda de inmediato.
--- Los eventos DescendantAdded ya están activos, así que no se pierden
--- huevos que aparezcan mientras se termina este primer recorrido.
-task.spawn(function()
-    RebuildCache()
-    if Gui.Parent then
-        StatusLabel.Text =
-            "Estado: LISTO • DETECTOR ACTIVO"
-    end
-end)
+
+RebuildCache()
+
+StatusLabel.Text =
+    "Estado: LISTO • DETECTOR ACTIVO"
 
 --==============================================================
 -- MINIMIZAR / RESTAURAR
