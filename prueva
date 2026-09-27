@@ -18,7 +18,7 @@ local LOOP = false
 local BUSY = false
 
 local BURST_COUNT = 5
-local LOOP_DELAY = 0.45
+local LOOP_DELAY = 0.60
 local PROMPT_DELAY = 0.035
 local EGG_OFFSET = Vector3.new(0, 2, 0)
 
@@ -154,6 +154,10 @@ StatusLabel.TextSize = 10
 StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatusLabel.Parent = Main
+
+Player.CharacterAdded:Connect(function()
+    CachedPlotPosition = nil
+end)
 
 --==============================================================
 -- LOOP
@@ -425,29 +429,10 @@ local function GetEggFromPrompt(Prompt)
         current = current.Parent
     end
 
-    -- Si el prompt está dentro de un modelo sin "Egg" en el nombre,
-    -- usar el modelo más cercano como candidato solamente cuando
-    -- la acción/texto del prompt parece de recogida.
-    local action = tostring(Prompt.ActionText or ""):lower()
-    local objectText = tostring(Prompt.ObjectText or ""):lower()
-
-    local pickupWords =
-        action:find("grab", 1, true)
-        or action:find("pick", 1, true)
-        or action:find("collect", 1, true)
-        or action:find("recoger", 1, true)
-        or action:find("agarrar", 1, true)
-        or action:find("tomar", 1, true)
-        or objectText:find("egg", 1, true)
-        or objectText:find("huevo", 1, true)
-
-    if pickupWords then
-        local model = Prompt:FindFirstAncestorOfClass("Model")
-        if model then
-            return model
-        end
-    end
-
+    -- IMPORTANTE:
+    -- No aceptar automáticamente cualquier modelo con un prompt
+    -- "Grab/Pick/Collect". Eso hacía que otros objetos fueran
+    -- tratados como huevos.
     return nil
 end
 
@@ -459,7 +444,7 @@ local EggCache = {}
 local PromptConnections = {}
 local CachedPlotPosition = nil
 local LastPlotSearch = 0
-local PLOT_REFRESH = 8
+local PLOT_REFRESH = 30
 
 local function WatchPrompt(Prompt)
     if not Prompt or not Prompt:IsA("ProximityPrompt") then
@@ -492,7 +477,6 @@ local function RegisterEgg(Object)
 
     local Egg = Object
 
-    -- Si viene de un prompt, encontrar el modelo real del huevo.
     if Object:IsA("ProximityPrompt") then
         Egg = GetEggFromPrompt(Object)
     end
@@ -501,32 +485,11 @@ local function RegisterEgg(Object)
         return
     end
 
+    -- Strict candidate check: no generic prompt fallback.
     if not LooksLikeEggName(Egg.Name)
         and Egg:GetAttribute("IsEgg") ~= true
         and Egg:GetAttribute("Egg") ~= true then
-
-        -- Aceptar un modelo que contenga un prompt de recogida.
-        local PromptCandidate = FindPrompt(Egg)
-        if not PromptCandidate then
-            return
-        end
-
-        local action = tostring(PromptCandidate.ActionText or ""):lower()
-        local objectText = tostring(PromptCandidate.ObjectText or ""):lower()
-
-        local pickup =
-            action:find("grab", 1, true)
-            or action:find("pick", 1, true)
-            or action:find("collect", 1, true)
-            or action:find("recoger", 1, true)
-            or action:find("agarrar", 1, true)
-            or action:find("tomar", 1, true)
-            or objectText:find("egg", 1, true)
-            or objectText:find("huevo", 1, true)
-
-        if not pickup then
-            return
-        end
+        return
     end
 
     local Position = GetPosition(Egg)
@@ -544,29 +507,33 @@ local function RegisterEgg(Object)
 
     WatchPrompt(Prompt)
 
+    local Priority = GetEggPriority(Egg)
+
+    -- Do not cache zero-value unknown eggs. Known priority eggs are
+    -- always accepted because GetEggPriority gives them explicit values.
+    if Priority <= 0 then
+        EggCache[Egg] = nil
+        return
+    end
+
     EggCache[Egg] = {
         Object = Egg,
         Position = Position,
         Prompt = Prompt,
         Value = GetValue(Egg),
-        Priority = GetEggPriority(Egg)
+        Priority = Priority
     }
 end
 
 local function RebuildCache()
     table.clear(EggCache)
 
-    -- Buscar prompts primero: esto permite detectar huevos aunque
-    -- el modelo no tenga "Egg" en su nombre.
+    -- Single initial scan. Runtime additions are handled by
+    -- DescendantAdded, so Workspace is not repeatedly traversed.
     for _, Object in ipairs(workspace:GetDescendants()) do
         if Object:IsA("ProximityPrompt") then
             RegisterEgg(Object)
-        end
-    end
-
-    -- Y después revisar objetos que sí tienen nombres reconocibles.
-    for _, Object in ipairs(workspace:GetDescendants()) do
-        if LooksLikeEggName(Object.Name)
+        elseif LooksLikeEggName(Object.Name)
             or Object:GetAttribute("IsEgg") == true
             or Object:GetAttribute("Egg") == true then
             RegisterEgg(Object)
@@ -621,13 +588,10 @@ local function FindBestEggFast()
         else
             local Prompt = Data.Prompt
 
-            if not Prompt or not Prompt.Parent then
-                EggCache[Object] = nil
-            elseif Prompt.Enabled then
-                -- Use cached priority/value. This is the hot path.
+            if Prompt and Prompt.Parent and Prompt.Enabled then
                 local Priority = Data.Priority or 0
 
-                if Priority > Highest then
+                if Priority > 0 and Priority > Highest then
                     Highest = Priority
                     Best = Data
                 end
@@ -782,15 +746,11 @@ local function IsMyPlot(Object)
 end
 
 local function FindMyPlot()
-    local Now = os.clock()
-
-    if CachedPlotPosition
-    and (Now - LastPlotSearch) < PLOT_REFRESH then
+    if CachedPlotPosition then
         return CachedPlotPosition
     end
 
-    LastPlotSearch = Now
-
+    -- Only the first lookup scans Workspace.
     for _, Object in ipairs(workspace:GetDescendants()) do
         local Name = Object.Name:lower()
 
@@ -809,7 +769,7 @@ local function FindMyPlot()
         end
     end
 
-    return CachedPlotPosition
+    return nil
 end
 
 --==============================================================
@@ -1038,7 +998,7 @@ task.spawn(function()
             "RÁFAGA: x5  •  HUEVOS: "
             .. tostring(Count)
 
-        task.wait(0.75)
+        task.wait(1.0)
     end
 end)
 
