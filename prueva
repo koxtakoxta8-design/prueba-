@@ -18,7 +18,7 @@ local LOOP = false
 local BUSY = false
 
 local BURST_COUNT = 5
-local LOOP_DELAY = 0.25
+local LOOP_DELAY = 0.75
 local PROMPT_DELAY = 0.035
 local EGG_OFFSET = Vector3.new(0, 2, 0)
 
@@ -259,8 +259,21 @@ local function GetPosition(Object)
 end
 
 local function IsExcluded(Position)
-    -- No excluir zonas: el objetivo es detectar todos los huevos.
-    return false
+
+    if not Position then
+        return true
+    end
+
+    local X = math.abs(
+        Position.X - EXCLUSION_CENTER.X
+    )
+
+    local Z = math.abs(
+        Position.Z - EXCLUSION_CENTER.Z
+    )
+
+    return X <= EXCLUSION_RADIUS
+       and Z <= EXCLUSION_RADIUS
 end
 
 local function IsEgg(Object)
@@ -341,237 +354,153 @@ end
 --==============================================================
 
 local EggPriority = {
-    ["White Egg"] = 1,
-    ["Brown Egg"] = 5,
-    ["Cracked Egg"] = 30,
-    ["Easter Egg"] = 50,
-    ["Stone Egg"] = 100,
-    ["Leaf Egg"] = 200,
-    ["Mushroom Egg"] = 500,
-    ["Flower Egg"] = 750,
-    ["Slime Egg"] = 1000,
-    ["Ice Egg"] = 3000,
-    ["Glass Egg"] = 10000,
-    ["Golden Egg"] = 30000,
-    ["Crystal Egg"] = 150000,
-    ["Skull Egg"] = 250000,
-    ["Dominus Egg"] = 700000,
-    ["Flaming Egg"] = 1000000,
-    ["Sinister Egg"] = 3000000,
-    ["Soul Egg"] = 7000000,
-    ["Aurora Egg"] = 300000000,
-    ["Galaxy Egg"] = 1500000000,
-    ["Black Hole Egg"] = 100000000000,
-    ["Solaris Egg"] = 300000000000,
-    ["Cherub Egg"] = 1000000000000,
-    ["Volcanic Egg"] = 2500000000000,
+    ["White Egg"] = 1, ["Brown Egg"] = 5, ["Cracked Egg"] = 30,
+    ["Easter Egg"] = 50, ["Stone Egg"] = 100, ["Leaf Egg"] = 200,
+    ["Mushroom Egg"] = 500, ["Flower Egg"] = 750, ["Slime Egg"] = 1000,
+    ["Ice Egg"] = 3000, ["Glass Egg"] = 10000, ["Golden Egg"] = 30000,
+    ["Crystal Egg"] = 150000, ["Skull Egg"] = 250000,
+    ["Dominus Egg"] = 700000, ["Flaming Egg"] = 1000000,
+    ["Sinister Egg"] = 3000000, ["Soul Egg"] = 7000000,
+    ["Aurora Egg"] = 300000000, ["Galaxy Egg"] = 1500000000,
+    ["Blackhole Egg"] = 100000000000, ["Solaris Egg"] = 300000000000,
+    ["Cherub Egg"] = 1000000000000, ["Volcanic Egg"] = 2500000000000
 }
 
 local function GetEggPriority(Object)
-    if not Object then return 0 end
-
-    local raw = tostring(Object.Name or "")
-    local name = raw:lower():gsub("_", " "):gsub("-", " ")
-
-    if name:find("volcanic",1,true) then return 2500000000000 end
-    if name:find("cherub",1,true) then return 1000000000000 end
-    if name:find("solaris",1,true) then return 300000000000 end
-    if name:find("black hole",1,true) or name:find("blackhole",1,true) then return 100000000000 end
-
-    for eggName, value in pairs(EggPriority) do
-        local normalized = eggName:lower()
-        if name == normalized or name:find(normalized,1,true) then
-            return value
-        end
-    end
-
-    -- Solo usar Luck/HatchLuck/Rarity como fallback; nunca Price/Value.
-    for _, attr in ipairs({"Luck","luck","HatchLuck","Hatch_Luck","EggLuck","Egg_Luck","RarityValue"}) do
-        local v = Object:GetAttribute(attr)
-        if typeof(v) == "number" and v > 0 then return v end
-    end
-
-    for _, item in ipairs(Object:GetChildren()) do
-        if item:IsA("NumberValue") or item:IsA("IntValue") then
-            local n = item.Name:lower()
-            if (n:find("luck",1,true) or n:find("rarity",1,true)) and item.Value > 0 then
-                return item.Value
-            end
-        end
-    end
-
-    -- Huevo detectado pero sin Luck publicado: queda como candidato de respaldo.
-    return 0.1
+    return Object and EggPriority[Object.Name] or 0
 end
 
 local function LooksLikeEggName(name)
-    name = tostring(name or ""):lower():gsub("_", " "):gsub("-", " ")
-    if name:find("egg",1,true) or name:find("huevo",1,true) then return true end
-    for eggName in pairs(EggPriority) do
-        local n = eggName:lower()
-        if name == n or name:find(n,1,true) then return true end
-    end
-    return name:find("volcanic",1,true) ~= nil
-        or name:find("solar",1,true) ~= nil
-        or name:find("cherub",1,true) ~= nil
-        or name:find("blackhole",1,true) ~= nil
-        or (name:find("black",1,true) and name:find("hole",1,true)) ~= nil
+    return EggPriority[tostring(name or "")] ~= nil
 end
 
 local function GetEggFromPrompt(Prompt)
     if not Prompt then return nil end
     local current = Prompt.Parent
-    local promptText = ((Prompt.ActionText or "") .. " " .. (Prompt.ObjectText or "")):lower()
-    local promptLooksEgg = promptText:find("egg",1,true) or promptText:find("hatch",1,true) or promptText:find("huevo",1,true)
 
-    for _ = 1, 14 do
+    for _ = 1, 12 do
         if not current then break end
-        if current:IsA("Model") or current:IsA("BasePart") then
-            if LooksLikeEggName(current.Name)
-                or current:GetAttribute("IsEgg") == true
-                or current:GetAttribute("Egg") == true
-                or promptLooksEgg then
-                return current
-            end
+        if LooksLikeEggName(current.Name) then
+            return current
         end
         current = current.Parent
     end
+
     return nil
 end
 
 --==============================================================
--- CACHE DE HUEVOS • PROXIMITYPROMPT SERVICE
--- SIN GetDescendants() PARA DETECTAR HUEVOS
+-- CACHE DE HUEVOS
 --==============================================================
-
-local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local EggCache = {}
 local PromptConnections = {}
+local CachedPlotPosition = nil
+local LastPlotSearch = 0
+local PLOT_REFRESH = 30
 
-local function RemoveEgg(Object)
-    if EggCache[Object] then
-        EggCache[Object] = nil
+local function WatchPrompt(Prompt)
+    if not Prompt or not Prompt:IsA("ProximityPrompt") then
+        return
     end
+
+    if PromptConnections[Prompt] then
+        return
+    end
+
+    PromptConnections[Prompt] =
+        Prompt:GetPropertyChangedSignal("Enabled"):Connect(function()
+            if Prompt.Parent and Prompt.Enabled then
+                task.defer(function()
+                    RegisterEgg(Prompt)
+                end)
+            end
+        end)
 end
 
-local function RegisterEggFromPrompt(Prompt)
-    if not Prompt or not Prompt.Parent then
-        return
+
+local function RemoveEgg(Object)
+    EggCache[Object] = nil
+end
+
+local function RegisterEgg(Object)
+    if not Object or not Object.Parent then return end
+
+    local Egg = Object
+    if Object:IsA("ProximityPrompt") then
+        Egg = GetEggFromPrompt(Object)
     end
 
-    local Egg = GetEggFromPrompt(Prompt)
-    if not Egg then
-        return
-    end
+    if not Egg or not LooksLikeEggName(Egg.Name) then return end
 
     local Position = GetPosition(Egg)
-    if not Position then
+    if not Position or IsExcluded(Position) then
+        EggCache[Egg] = nil
         return
     end
 
-    local Priority = GetEggPriority(Egg)
+    local Prompt = FindPrompt(Egg)
+    if not Prompt then return end
+
+    WatchPrompt(Prompt)
+
+    local Priority = EggPriority[Egg.Name]
 
     EggCache[Egg] = {
         Object = Egg,
         Position = Position,
         Prompt = Prompt,
-        Value = GetValue(Egg),
-        Priority = Priority,
-        LastSeen = os.clock()
+        Value = Priority,
+        Priority = Priority
     }
 end
 
--- PromptShown es muy ligero: Roblox nos avisa cuando un prompt
--- realmente entra en el sistema de interacción del cliente.
-ProximityPromptService.PromptShown:Connect(function(Prompt)
-    if not Prompt or not Prompt:IsA("ProximityPrompt") then
-        return
-    end
+local function RebuildCache()
+    table.clear(EggCache)
 
-    task.defer(function()
-        RegisterEggFromPrompt(Prompt)
-    end)
-end)
-
-ProximityPromptService.PromptHidden:Connect(function(Prompt)
-    -- No borramos inmediatamente: puede ocultarse durante un cambio
-    -- de cámara/movimiento aunque el huevo siga existiendo.
-    if not Prompt then
-        return
-    end
-end)
-
--- Si el prompt se activa, refrescamos únicamente ese huevo.
-ProximityPromptService.PromptTriggered:Connect(function(Prompt)
-    if not Prompt or not Prompt:IsA("ProximityPrompt") then
-        return
-    end
-
-    task.defer(function()
-        RegisterEggFromPrompt(Prompt)
-    end)
-end)
-
--- Detectar destrucción de un huevo sin escanear Workspace.
-local function WatchEgg(Egg, Prompt)
-    if not Egg or PromptConnections[Egg] then
-        return
-    end
-
-    PromptConnections[Egg] = Egg.AncestryChanged:Connect(function(_, Parent)
-        if not Parent then
-            RemoveEgg(Egg)
-
-            local Connection = PromptConnections[Egg]
-            if Connection then
-                Connection:Disconnect()
-                PromptConnections[Egg] = nil
-            end
+    -- Single initial scan. Runtime additions are handled by
+    -- DescendantAdded, so Workspace is not repeatedly traversed.
+    for _, Object in ipairs(workspace:GetDescendants()) do
+        if Object:IsA("ProximityPrompt") then
+            RegisterEgg(Object)
+        elseif LooksLikeEggName(Object.Name)
+            or Object:GetAttribute("IsEgg") == true
+            or Object:GetAttribute("Egg") == true then
+            RegisterEgg(Object)
         end
-    end)
+    end
 end
 
--- Cuando aparece un prompt, solo trabajamos con ESE prompt.
--- No se recorren descendientes del mapa.
-local function RegisterPrompt(Prompt)
-    if not Prompt or not Prompt:IsA("ProximityPrompt") then
+--==============================================================
+-- EVENTOS DE CACHE
+--==============================================================
+
+workspace.DescendantAdded:Connect(function(Object)
+    if Object:IsA("ProximityPrompt") then
+        WatchPrompt(Object)
+        task.defer(function()
+            RegisterEgg(Object)
+        end)
         return
     end
 
-    task.defer(function()
-        RegisterEggFromPrompt(Prompt)
+    if LooksLikeEggName(Object.Name)
+        or Object:GetAttribute("IsEgg") == true
+        or Object:GetAttribute("Egg") == true then
+        task.defer(function()
+            RegisterEgg(Object)
+        end)
+    end
+end)
 
-        local Egg = GetEggFromPrompt(Prompt)
-        if Egg then
-            WatchEgg(Egg, Prompt)
-        end
-    end)
-end
+workspace.DescendantRemoving:Connect(function(Object)
+    if EggCache[Object] then
+        EggCache[Object] = nil
+    end
 
-ProximityPromptService.PromptShown:Connect(RegisterPrompt)
-
--- También mantenemos actualizado únicamente el prompt que ya conocemos.
-task.spawn(function()
-    while Gui.Parent do
-        for Egg, Data in pairs(EggCache) do
-            if not Egg or not Egg.Parent then
-                RemoveEgg(Egg)
-            elseif Data.Prompt and Data.Prompt.Parent then
-                local Position = GetPosition(Egg)
-                if Position then
-                    Data.Position = Position
-                end
-
-                -- Volcanic/Cherub/etc. se recalculan solo para candidatos
-                -- ya conocidos; nunca se recorre el mapa.
-                Data.Priority = GetEggPriority(Egg)
-            else
-                RemoveEgg(Egg)
-            end
-        end
-
-        task.wait(1)
+    if PromptConnections[Object] then
+        PromptConnections[Object]:Disconnect()
+        PromptConnections[Object] = nil
     end
 end)
 
@@ -590,7 +519,7 @@ local function FindBestEggFast()
             local Prompt = Data.Prompt
 
             if Prompt and Prompt.Parent and Prompt.Enabled then
-                local Priority = Data.Priority or 0
+                local Priority = EggPriority[Object.Name] or 0
 
                 if Priority > Highest then
                     Highest = Priority
@@ -751,11 +680,7 @@ local function FindMyPlot()
         return CachedPlotPosition
     end
 
-    if os.clock() - LastPlotSearch < PLOT_REFRESH then
-        return nil
-    end
-    LastPlotSearch = os.clock()
-
+    -- Only the first lookup scans Workspace.
     for _, Object in ipairs(workspace:GetDescendants()) do
         local Name = Object.Name:lower()
 
@@ -794,10 +719,6 @@ local function RunOnce()
 
     local Egg =
         FindBestEggFast()
-
-    -- Una sola segunda comprobación, sin escanear Workspace.
-    local Latest = FindBestEggFast()
-    if Latest then Egg = Latest end
 
     if not Egg then
 
@@ -942,7 +863,7 @@ InstaButton.MouseButton1Click:Connect(function()
 end)
 
 --==============================================================
--- MANTENIMIENTO LIGERO
+-- MANTENIMIENTO ULTRA LIGERO
 --==============================================================
 
 task.spawn(function()
@@ -950,21 +871,14 @@ task.spawn(function()
         for Object, Data in pairs(EggCache) do
             if not Object or not Object.Parent then
                 EggCache[Object] = nil
-            else
-                local Prompt = Data.Prompt
-
-                if not Prompt or not Prompt.Parent then
-                    Prompt = FindPrompt(Object)
-                    Data.Prompt = Prompt
-
-                    if Prompt then
-                        WatchPrompt(Prompt)
-                    end
+            elseif not Data.Prompt or not Data.Prompt.Parent then
+                Data.Prompt = FindPrompt(Object)
+                if Data.Prompt then
+                    WatchPrompt(Data.Prompt)
                 end
             end
         end
-
-        task.wait(5)
+        task.wait(3)
     end
 end)
 
@@ -1015,7 +929,7 @@ end)
 -- CACHE INICIAL
 --==============================================================
 
--- Sin escaneo inicial de Workspace: detección por ProximityPromptService.
+RebuildCache()
 
 StatusLabel.Text =
     "Estado: LISTO • DETECTOR ACTIVO"
