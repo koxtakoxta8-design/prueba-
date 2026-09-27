@@ -325,15 +325,42 @@ end)
 -- VALIDAR HUEVO
 --==============================================================
 
+local function HasGrabPrompt(obj)
+    if not obj then
+        return false
+    end
+
+    for _, p in ipairs(obj:GetDescendants()) do
+        if p:IsA("ProximityPrompt") then
+            local text = string.lower(
+                tostring(p.ActionText) .. " " .. tostring(p.ObjectText)
+            )
+
+            if string.find(text,"grab",1,true)
+            or string.find(text,"pick",1,true)
+            or string.find(text,"collect",1,true)
+            or string.find(text,"recoger",1,true)
+            or string.find(text,"agarrar",1,true)
+            or string.find(text,"tomar",1,true) then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
 local function IsValidEgg(obj)
 
     if not obj or not obj.Parent then
         return false
     end
 
-    local data = GetEggData(obj.Name)
+    -- No exigir que el nombre esté en EggData.
+    -- Los huevos nuevos pueden traer Luck como atributo/Value.
+    local luck = GetDynamicLuck(obj)
 
-    if not data then
+    if not luck or luck <= 0 then
         return false
     end
 
@@ -349,15 +376,18 @@ local function IsValidEgg(obj)
         return false
     end
 
-    if (
-        position - BASE_EXCLUSION_CENTER
-    ).Magnitude <= BASE_EXCLUSION_RADIUS then
+    -- Nunca seleccionar nada dentro de los 210 studs del centro excluido.
+    if (position - BASE_EXCLUSION_CENTER).Magnitude <= BASE_EXCLUSION_RADIUS then
         return false
     end
 
-    if (
-        position - root.Position
-    ).Magnitude > DETECTION_DISTANCE then
+    if (position - root.Position).Magnitude > DETECTION_DISTANCE then
+        return false
+    end
+
+    -- Evita seleccionar modelos/zonas decorativas que simplemente
+    -- contienen "Egg" en algún nombre pero no pueden recogerse.
+    if not HasGrabPrompt(obj) then
         return false
     end
 
@@ -843,30 +873,6 @@ UserInputService.InputChanged:Connect(function(input)
     )
 end)
 
-TPButton.Activated:Connect(function()
-    InstaTP = not InstaTP
-    TPButton.Text = InstaTP and "INSTA TP: ON" or "INSTA TP: OFF"
-    Status.Text = InstaTP and "Estado: activo" or "Estado: detenido"
-end)
-
-LOPButton.Activated:Connect(function()
-    LOP = not LOP
-    LOPButton.Text = LOP and "LOP: ON" or "LOP: OFF"
-end)
-
-GrabButton.Activated:Connect(function()
-    task.spawn(function()
-        for i = 1,5 do
-            if BestEgg then
-                pcall(function()
-                    AutoGrab(BestEgg)
-                end)
-            end
-            task.wait(.08)
-        end
-    end)
-end)
-
 -- Compatibilidad con la lógica existente.
 local EggLabel = EggText
 local StatusLabel = Status
@@ -898,12 +904,18 @@ local function DoCycle()
 
     local egg = BestEgg
 
+    if not egg or not IsValidEgg(egg) then
+        RefreshBestEgg()
+        UpdateUI()
+        egg = BestEgg
+    end
+
     if not egg then
-        Status.Text = "Estado: no hay huevo"
+        Status.Text = "Estado: no hay huevo válido"
         return
     end
 
-    Status.Text = "Estado: teleport"
+    Status.Text = "Estado: TP a " .. tostring(egg.Name)
 
     if not TeleportToEgg(egg) then
         Status.Text = "Estado: fallo TP"
