@@ -18,7 +18,7 @@ local LOOP = false
 local BUSY = false
 
 local BURST_COUNT = 5
-local LOOP_DELAY = 0.75
+local LOOP_DELAY = 1.0
 local PROMPT_DELAY = 0.035
 local EGG_OFFSET = Vector3.new(0, 2, 0)
 
@@ -394,55 +394,51 @@ end
 --==============================================================
 
 local EggCache = {}
-local PromptConnections = {}
 local CachedPlotPosition = nil
-local LastPlotSearch = 0
-local PLOT_REFRESH = 30
-
-local function WatchPrompt(Prompt)
-    if not Prompt or not Prompt:IsA("ProximityPrompt") then
-        return
-    end
-
-    if PromptConnections[Prompt] then
-        return
-    end
-
-    PromptConnections[Prompt] =
-        Prompt:GetPropertyChangedSignal("Enabled"):Connect(function()
-            if Prompt.Parent and Prompt.Enabled then
-                task.defer(function()
-                    RegisterEgg(Prompt)
-                end)
-            end
-        end)
-end
-
-
-local function RemoveEgg(Object)
-    EggCache[Object] = nil
-end
 
 local function RegisterEgg(Object)
-    if not Object or not Object.Parent then return end
-
-    local Egg = Object
-    if Object:IsA("ProximityPrompt") then
-        Egg = GetEggFromPrompt(Object)
+    if not Object or not Object.Parent then
+        return
     end
 
-    if not Egg or not LooksLikeEggName(Egg.Name) then return end
+    local Egg = Object
+
+    -- Only an exact egg object from EggPriority is accepted.
+    if Object:IsA("ProximityPrompt") then
+        local Current = Object.Parent
+
+        for _ = 1, 12 do
+            if not Current then
+                break
+            end
+
+            if EggPriority[Current.Name] then
+                Egg = Current
+                break
+            end
+
+            Current = Current.Parent
+        end
+    end
+
+    if not Egg
+    or not Egg.Parent
+    or not EggPriority[Egg.Name] then
+        return
+    end
 
     local Position = GetPosition(Egg)
+
     if not Position or IsExcluded(Position) then
         EggCache[Egg] = nil
         return
     end
 
     local Prompt = FindPrompt(Egg)
-    if not Prompt then return end
 
-    WatchPrompt(Prompt)
+    if not Prompt then
+        return
+    end
 
     local Priority = EggPriority[Egg.Name]
 
@@ -458,14 +454,8 @@ end
 local function RebuildCache()
     table.clear(EggCache)
 
-    -- Single initial scan. Runtime additions are handled by
-    -- DescendantAdded, so Workspace is not repeatedly traversed.
     for _, Object in ipairs(workspace:GetDescendants()) do
-        if Object:IsA("ProximityPrompt") then
-            RegisterEgg(Object)
-        elseif LooksLikeEggName(Object.Name)
-            or Object:GetAttribute("IsEgg") == true
-            or Object:GetAttribute("Egg") == true then
+        if EggPriority[Object.Name] then
             RegisterEgg(Object)
         end
     end
@@ -476,17 +466,7 @@ end
 --==============================================================
 
 workspace.DescendantAdded:Connect(function(Object)
-    if Object:IsA("ProximityPrompt") then
-        WatchPrompt(Object)
-        task.defer(function()
-            RegisterEgg(Object)
-        end)
-        return
-    end
-
-    if LooksLikeEggName(Object.Name)
-        or Object:GetAttribute("IsEgg") == true
-        or Object:GetAttribute("Egg") == true then
+    if EggPriority[Object.Name] then
         task.defer(function()
             RegisterEgg(Object)
         end)
@@ -494,14 +474,7 @@ workspace.DescendantAdded:Connect(function(Object)
 end)
 
 workspace.DescendantRemoving:Connect(function(Object)
-    if EggCache[Object] then
-        EggCache[Object] = nil
-    end
-
-    if PromptConnections[Object] then
-        PromptConnections[Object]:Disconnect()
-        PromptConnections[Object] = nil
-    end
+    EggCache[Object] = nil
 end)
 
 --==============================================================
@@ -516,12 +489,17 @@ local function FindBestEggFast()
         if not Object or not Object.Parent then
             EggCache[Object] = nil
         else
-            local Prompt = Data.Prompt
+            local Priority = EggPriority[Object.Name]
 
-            if Prompt and Prompt.Parent and Prompt.Enabled then
-                local Priority = EggPriority[Object.Name] or 0
+            if Priority and Priority > Highest then
+                local Prompt = Data.Prompt
 
-                if Priority > Highest then
+                if not Prompt or not Prompt.Parent then
+                    Prompt = FindPrompt(Object)
+                    Data.Prompt = Prompt
+                end
+
+                if Prompt and Prompt.Enabled then
                     Highest = Priority
                     Best = Data
                 end
@@ -863,26 +841,6 @@ InstaButton.MouseButton1Click:Connect(function()
 end)
 
 --==============================================================
--- MANTENIMIENTO ULTRA LIGERO
---==============================================================
-
-task.spawn(function()
-    while Gui.Parent do
-        for Object, Data in pairs(EggCache) do
-            if not Object or not Object.Parent then
-                EggCache[Object] = nil
-            elseif not Data.Prompt or not Data.Prompt.Parent then
-                Data.Prompt = FindPrompt(Object)
-                if Data.Prompt then
-                    WatchPrompt(Data.Prompt)
-                end
-            end
-        end
-        task.wait(3)
-    end
-end)
-
---==============================================================
 -- ACTUALIZACIÓN LIGERA DEL PANEL
 --==============================================================
 
@@ -912,14 +870,7 @@ task.spawn(function()
         end
 
         -- No construir una tabla temporal solo para contar.
-        local Count = 0
-        for _ in pairs(EggCache) do
-            Count += 1
-        end
-
-        BurstLabel.Text =
-            "RÁFAGA: x5  •  HUEVOS: "
-            .. tostring(Count)
+        BurstLabel.Text = "RÁFAGA: x5  •  DETECTOR ACTIVO"
 
         task.wait(1.0)
     end
