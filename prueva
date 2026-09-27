@@ -451,6 +451,27 @@ end
 --==============================================================
 
 local EggCache = {}
+local PromptConnections = {}
+
+local function WatchPrompt(Prompt)
+    if not Prompt or not Prompt:IsA("ProximityPrompt") then
+        return
+    end
+
+    if PromptConnections[Prompt] then
+        return
+    end
+
+    PromptConnections[Prompt] =
+        Prompt:GetPropertyChangedSignal("Enabled"):Connect(function()
+            if Prompt.Parent and Prompt.Enabled then
+                task.defer(function()
+                    RegisterEgg(Prompt)
+                end)
+            end
+        end)
+end
+
 
 local function RemoveEgg(Object)
     EggCache[Object] = nil
@@ -513,6 +534,8 @@ local function RegisterEgg(Object)
         return
     end
 
+    WatchPrompt(Prompt)
+
     EggCache[Egg] = {
         Object = Egg,
         Position = Position,
@@ -549,6 +572,7 @@ end
 
 workspace.DescendantAdded:Connect(function(Object)
     if Object:IsA("ProximityPrompt") then
+        WatchPrompt(Object)
         task.defer(function()
             RegisterEgg(Object)
         end)
@@ -567,6 +591,11 @@ end)
 workspace.DescendantRemoving:Connect(function(Object)
     if EggCache[Object] then
         EggCache[Object] = nil
+    end
+
+    if PromptConnections[Object] then
+        PromptConnections[Object]:Disconnect()
+        PromptConnections[Object] = nil
     end
 end)
 
@@ -589,8 +618,11 @@ local function FindBestEggFast()
             else
                 local Prompt = FindPrompt(Object)
 
-                if Prompt and Prompt.Enabled then
-                    local Value = GetValue(Object)
+                if Prompt then
+                    WatchPrompt(Prompt)
+
+                    if Prompt.Enabled then
+                        local Value = GetValue(Object)
                     local Priority = GetEggPriority(Object)
 
                     Data.Position = Position
@@ -598,9 +630,10 @@ local function FindBestEggFast()
                     Data.Value = Value
                     Data.Priority = Priority
 
-                    if Priority > Highest then
-                        Highest = Priority
-                        Best = Data
+                        if Priority > Highest then
+                            Highest = Priority
+                            Best = Data
+                        end
                     end
                 else
                     EggCache[Object] = nil
@@ -944,6 +977,30 @@ InstaButton.MouseButton1Click:Connect(function()
 end)
 
 --==============================================================
+-- RESCAN DE PROMPTS / HUEVOS
+-- Re-registra huevos cuyos prompts vuelven a habilitarse
+-- después de una recogida.
+--==============================================================
+
+task.spawn(function()
+    while Gui.Parent do
+        for _, Object in ipairs(workspace:GetDescendants()) do
+            if Object:IsA("ProximityPrompt") then
+                WatchPrompt(Object)
+
+                if Object.Enabled then
+                    task.defer(function()
+                        RegisterEgg(Object)
+                    end)
+                end
+            end
+        end
+
+        task.wait(0.35)
+    end
+end)
+
+--==============================================================
 -- ACTUALIZACIÓN ULTRA RÁPIDA DEL PANEL
 --==============================================================
 
@@ -962,9 +1019,15 @@ task.spawn(function()
                     "🏆 Mejor: "
                     .. Egg.Object.Name
 
-                ValueLabel.Text =
-                    "Valor: "
-                    .. tostring(Egg.Value)
+                if Egg.Object.Name == "Volcanic Egg"
+                    or Egg.Object.Name:lower():find("volcanic", 1, true) then
+                    ValueLabel.Text =
+                        "Valor: 2.5T  •  PRIORIDAD #1"
+                else
+                    ValueLabel.Text =
+                        "Valor: "
+                        .. tostring(Egg.Value)
+                end
 
             else
 
