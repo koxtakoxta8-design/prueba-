@@ -133,15 +133,10 @@ BestLabel.Font = Enum.Font.GothamBold
 BestLabel.TextXAlignment = Enum.TextXAlignment.Left
 BestLabel.Parent = Main
 
+-- El valor se usa internamente para elegir el mejor huevo,
+-- pero NO se muestra en la interfaz.
 local ValueLabel = Instance.new("TextLabel")
-ValueLabel.Size = UDim2.new(1,-22,0,19)
-ValueLabel.Position = UDim2.fromOffset(11,66)
-ValueLabel.BackgroundTransparency = 1
-ValueLabel.Text = "Valor: —"
-ValueLabel.TextColor3 = Color3.fromRGB(180,180,180)
-ValueLabel.TextSize = 10
-ValueLabel.Font = Enum.Font.Gotham
-ValueLabel.TextXAlignment = Enum.TextXAlignment.Left
+ValueLabel.Visible = false
 ValueLabel.Parent = Main
 
 local StatusLabel = Instance.new("TextLabel")
@@ -777,19 +772,16 @@ local function RunOnce()
     local Egg = FindBestEggFast()
 
     if not Egg then
-        BestLabel.Text = "🏆 Mejor: NINGUNO"
-        ValueLabel.Text = "Valor: —"
+        BestLabel.Text = "🏆 Mejor huevo: NINGUNO"
         StatusLabel.Text = "Estado: SIN HUEVO"
         BUSY = false
         return false
     end
 
-    BestLabel.Text = "🏆 Mejor: " .. Egg.Object.Name
+    BestLabel.Text = "🏆 Mejor huevo: " .. Egg.Object.Name
 
     if Egg.Object.Name == "Volcanic Egg" then
-        ValueLabel.Text = "Valor: 2.5T  •  PRIORIDAD #1"
     else
-        ValueLabel.Text = "Valor: " .. tostring(Egg.Value)
     end
 
     if IsExcluded(Egg.Position) then
@@ -912,26 +904,23 @@ task.spawn(function()
 
             if Egg then
                 BestLabel.Text =
-                    "🏆 Mejor: "
+                    "🏆 Mejor huevo: "
                     .. Egg.Object.Name
 
                 if Egg.Object.Name == "Volcanic Egg"
                 or Egg.Object.Name:lower():find("volcanic", 1, true) then
-                    ValueLabel.Text =
-                        "Valor: 2.5T  •  PRIORIDAD #1"
                 else
                     ValueLabel.Text =
                         "Valor: "
                         .. tostring(Egg.Value or 0)
                 end
             else
-                BestLabel.Text = "🏆 Mejor: NINGUNO"
-                ValueLabel.Text = "Valor: —"
+                BestLabel.Text = "🏆 Mejor huevo: NINGUNO"
             end
         end
 
         -- No construir una tabla temporal solo para contar.
-        BurstLabel.Text = "RÁFAGA: x5  •  TIPOS: " .. tostring(GetDetectedTypeCount())
+        BurstLabel.Text = "RÁFAGA: x5"
 
         task.wait(1.0)
     end
