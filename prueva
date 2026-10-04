@@ -1,6 +1,12 @@
---// RIDE A PET - BEST EGG AUTO ROUTE
---// MEJOR HUEVO -> TP -> AGARRAR -> CENTRO -> SOLTAR
---// -> AGARRAR -> DESPLAZAMIENTO 1000 -> PLOT -> SOLTAR
+--// RIDE A PET - BEST EGG ROUTE
+--// 1. MEJOR HUEVO
+--// 2. TP + AGARRAR
+--// 3. TP AL CENTRO
+--// 4. DROP
+--// 5. BUSCAR EL HUEVO NUEVAMENTE
+--// 6. TP + AGARRAR
+--// 7. DESPLAZAMIENTO AL PLOT A 1000
+--// 8. DROP
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,7 +16,7 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 --==================================================
--- CONFIGURACIÓN
+-- CONFIG
 --==================================================
 
 local CENTER = Vector3.new(
@@ -23,7 +29,7 @@ local EXCLUSION_RADIUS = 210
 local PLOT_SPEED = 1000
 
 --==================================================
--- VALORES DE HUEVOS
+-- VALORES
 --==================================================
 
 local EggValues = {
@@ -58,10 +64,14 @@ local EggValues = {
 --==================================================
 
 local function getRoot()
-    local character = Player.Character
+
+    local character =
+        Player.Character
         or Player.CharacterAdded:Wait()
 
-    return character:FindFirstChild("HumanoidRootPart")
+    return character:FindFirstChild(
+        "HumanoidRootPart"
+    )
 end
 
 --==================================================
@@ -69,13 +79,32 @@ end
 --==================================================
 
 local function isEgg(obj)
-    local name = obj.Name:lower()
 
-    return name:find("egg", 1, true) ~= nil
-        or name:find("huevo", 1, true) ~= nil
+    local name =
+        obj.Name:lower()
+
+    return name:find(
+        "egg",
+        1,
+        true
+    ) ~= nil
+    or name:find(
+        "huevo",
+        1,
+        true
+    ) ~= nil
 end
 
+--==================================================
+-- PARTE DEL HUEVO
+--==================================================
+
 local function getEggPart(egg)
+
+    if not egg then
+        return nil
+    end
+
     if egg:IsA("BasePart") then
         return egg
     end
@@ -87,25 +116,32 @@ local function getEggPart(egg)
 end
 
 --==================================================
--- VALOR DEL HUEVO
+-- VALOR
 --==================================================
 
 local function getEggValue(egg)
 
-    local name = egg.Name:lower()
+    local name =
+        egg.Name:lower()
+
     local value = 0
 
     for eggName, eggValue in pairs(EggValues) do
+
         if name:find(
             eggName:lower(),
             1,
             true
         ) then
-            value = math.max(value, eggValue)
+
+            value =
+                math.max(
+                    value,
+                    eggValue
+                )
         end
     end
 
-    -- Buscar valores internos
     for _, obj in ipairs(
         egg:GetDescendants()
     ) do
@@ -113,16 +149,18 @@ local function getEggValue(egg)
         if obj:IsA("NumberValue")
             or obj:IsA("IntValue") then
 
-            local n = obj.Name:lower()
+            local n =
+                obj.Name:lower()
 
             if n:find("luck", 1, true)
                 or n:find("value", 1, true)
                 or n:find("worth", 1, true) then
 
-                value = math.max(
-                    value,
-                    obj.Value
-                )
+                value =
+                    math.max(
+                        value,
+                        obj.Value
+                    )
             end
         end
     end
@@ -131,22 +169,23 @@ local function getEggValue(egg)
 end
 
 --==================================================
--- EXCLUSIÓN DE 210 STUDS
+-- EXCLUSIÓN
 --==================================================
 
 local function isInsideExclusion(position)
+
     return (
         position - CENTER
     ).Magnitude <= EXCLUSION_RADIUS
 end
 
 --==================================================
--- BUSCAR MEJOR HUEVO
+-- MEJOR HUEVO
 --==================================================
 
 local function findBestEgg()
 
-    local bestEgg = nil
+    local bestEgg
     local bestValue = -1
 
     for _, obj in ipairs(
@@ -155,7 +194,8 @@ local function findBestEgg()
 
         if isEgg(obj) then
 
-            local part = getEggPart(obj)
+            local part =
+                getEggPart(obj)
 
             if part
                 and not isInsideExclusion(
@@ -166,8 +206,10 @@ local function findBestEgg()
                     getEggValue(obj)
 
                 if value > bestValue then
+
                     bestValue = value
                     bestEgg = obj
+
                 end
             end
         end
@@ -182,65 +224,82 @@ end
 
 local function teleportTo(position)
 
-    local root = getRoot()
+    local root =
+        getRoot()
 
     if not root then
         return false
     end
 
-    root.CFrame = CFrame.new(position)
+    root.CFrame =
+        CFrame.new(position)
 
     return true
 end
 
 --==================================================
--- DESPLAZAMIENTO A 1000
+-- MOVIMIENTO 1000
 --==================================================
 
 local function moveTo(position)
 
-    local root = getRoot()
+    local root =
+        getRoot()
 
     if not root then
         return false
     end
 
-    local startPosition = root.Position
+    local startPosition =
+        root.Position
 
     local distance =
-        (position - startPosition).Magnitude
+        (
+            position
+            - startPosition
+        ).Magnitude
 
     if distance <= 1 then
-        root.CFrame = CFrame.new(position)
+
+        root.CFrame =
+            CFrame.new(position)
+
         return true
     end
 
     local duration =
         distance / PLOT_SPEED
 
-    local startTime = os.clock()
+    local startTime =
+        os.clock()
 
     while true do
 
-        root = getRoot()
+        root =
+            getRoot()
 
         if not root then
             return false
         end
 
-        local alpha = math.clamp(
-            (os.clock() - startTime)
-                / duration,
-            0,
-            1
-        )
+        local alpha =
+            math.clamp(
+                (
+                    os.clock()
+                    - startTime
+                ) / duration,
+                0,
+                1
+            )
 
-        root.CFrame = CFrame.new(
+        local current =
             startPosition:Lerp(
                 position,
                 alpha
             )
-        )
+
+        root.CFrame =
+            CFrame.new(current)
 
         if alpha >= 1 then
             break
@@ -253,7 +312,7 @@ local function moveTo(position)
 end
 
 --==================================================
--- AGARRAR HUEVO
+-- AGARRAR
 --==================================================
 
 local function grabEgg(egg)
@@ -266,13 +325,17 @@ local function grabEgg(egg)
         egg:GetDescendants()
     ) do
 
-        if obj:IsA("ProximityPrompt") then
+        if obj:IsA(
+            "ProximityPrompt"
+        ) then
 
             pcall(function()
                 fireproximityprompt(obj)
             end)
 
-        elseif obj:IsA("ClickDetector") then
+        elseif obj:IsA(
+            "ClickDetector"
+        ) then
 
             pcall(function()
                 fireclickdetector(obj)
@@ -284,7 +347,7 @@ local function grabEgg(egg)
 end
 
 --==================================================
--- SOLTAR - SISTEMA PRINCIPAL
+-- DROP EGG
 --==================================================
 
 local function triggerDropEggButton()
@@ -310,15 +373,17 @@ local function triggerDropEggButton()
                 ) then
 
                 if gui.Visible then
+
                     foundButton = gui
                     break
+
                 end
             end
         end
     end
 
     --==============================================
-    -- MÉTODO 1: DropEgg
+    -- BOTÓN
     --==============================================
 
     if foundButton then
@@ -334,7 +399,9 @@ local function triggerDropEggButton()
                     foundButton.Activated
                 )
             ) do
+
                 connection:Fire()
+
             end
 
         end)
@@ -346,18 +413,18 @@ local function triggerDropEggButton()
                     foundButton.MouseButton1Click
                 )
             ) do
+
                 connection:Fire()
+
             end
 
         end)
-
-        print("📦 DropEgg activado")
 
         return true
     end
 
     --==============================================
-    -- MÉTODO 2: REMOTE DEL JUEGO
+    -- REMOTE
     --==============================================
 
     local packages =
@@ -379,125 +446,91 @@ local function triggerDropEggButton()
 
     if remote then
 
-        local success = pcall(function()
+        local success =
+            pcall(function()
 
-            remote:InvokeServer({
-                Reason = "PlayerRequest"
-            })
+                remote:InvokeServer({
+                    Reason = "PlayerRequest"
+                })
 
-        end)
+            end)
 
         if success then
-            print("📦 Remote Drop activado")
             return true
         end
     end
-
-    --==============================================
-    -- MÉTODO 3: RESPALDO MULTIIDIOMA
-    --==============================================
-
-    local words = {
-
-        -- Español
-        "soltar",
-        "liberar",
-        "dejar",
-
-        -- Inglés
-        "drop",
-        "release",
-        "discard",
-        "throw",
-
-        -- Portugués
-        "soltar",
-        "liberar",
-
-        -- Francés
-        "lacher",
-        "liberer",
-
-        -- Italiano
-        "lascia",
-        "rilascia",
-
-        -- Alemán
-        "ablegen",
-        "loslassen",
-
-        -- Holandés
-        "laten",
-        "loslaten",
-
-        -- Ruso transliterado
-        "otpus",
-
-        -- Japonés
-        "drop",
-
-        -- Coreano
-        "drop",
-
-        -- Chino
-        "drop"
-    }
-
-    for _, gui in ipairs(
-        PlayerGui:GetDescendants()
-    ) do
-
-        if gui:IsA("TextButton")
-            or gui:IsA("ImageButton") then
-
-            if gui.Visible then
-
-                local text =
-                    tostring(
-                        gui.Text or ""
-                    ):lower()
-
-                local name =
-                    gui.Name:lower()
-
-                for _, word in ipairs(words) do
-
-                    if text:find(
-                        word,
-                        1,
-                        true
-                    )
-                    or name:find(
-                        word,
-                        1,
-                        true
-                    ) then
-
-                        pcall(function()
-                            gui:Activate()
-                        end)
-
-                        print(
-                            "📦 Botón detectado:",
-                            gui.Name
-                        )
-
-                        return true
-                    end
-                end
-            end
-        end
-    end
-
-    warn(
-        "⚠️ No se encontró método para soltar."
-    )
 
     return false
 end
 
 --==================================================
--- BUSCAR PLOT
+-- BUSCAR HUEVO CERCA DEL CENTRO
+--==================================================
+
+local function findEggNearCenter()
+
+    local closestEgg = nil
+    local closestDistance = math.huge
+
+    for _, obj in ipairs(
+        workspace:GetDescendants()
+    ) do
+
+        if isEgg(obj) then
+
+            local part =
+                getEggPart(obj)
+
+            if part then
+
+                local distance =
+                    (
+                        part.Position
+                        - CENTER
+                    ).Magnitude
+
+                if distance < closestDistance then
+
+                    closestDistance =
+                        distance
+
+                    closestEgg =
+                        obj
+
+                end
+            end
+        end
+    end
+
+    return closestEgg
+end
+
+--==================================================
+-- ESPERAR HUEVO EN CENTRO
+--==================================================
+
+local function waitForEggNearCenter()
+
+    local timeout = 5
+    local start = os.clock()
+
+    while os.clock() - start < timeout do
+
+        local egg =
+            findEggNearCenter()
+
+        if egg then
+            return egg
+        end
+
+        task.wait(0.1)
+    end
+
+    return nil
+end
+
+--==================================================
+-- PLOT
 --==================================================
 
 local function findMyPlot()
@@ -537,8 +570,8 @@ local function findMyPlot()
             plotNames
         ) do
 
-            if objectName
-                == plotName:lower() then
+            if objectName ==
+                plotName:lower() then
 
                 for _, attribute in ipairs(
                     ownerAttributes
@@ -559,11 +592,11 @@ local function findMyPlot()
                             ) then
 
                             return obj
+
                         end
                     end
                 end
 
-                -- ObjectValue
                 for _, child in ipairs(
                     obj:GetDescendants()
                 ) do
@@ -585,7 +618,7 @@ local function findMyPlot()
 end
 
 --==================================================
--- POSICIÓN DEL PLOT
+-- POSICIÓN PLOT
 --==================================================
 
 local function getPlotPosition(plot)
@@ -594,7 +627,7 @@ local function getPlotPosition(plot)
         return nil
     end
 
-    local spawnNames = {
+    local names = {
         "Spawn",
         "SpawnLocation",
         "PlotSpawn",
@@ -604,9 +637,7 @@ local function getPlotPosition(plot)
         "EggDrop"
     }
 
-    for _, name in ipairs(
-        spawnNames
-    ) do
+    for _, name in ipairs(names) do
 
         local obj =
             plot:FindFirstChild(
@@ -615,11 +646,10 @@ local function getPlotPosition(plot)
             )
 
         if obj
-            and obj:IsA(
-                "BasePart"
-            ) then
+            and obj:IsA("BasePart") then
 
             return obj.Position
+
         end
     end
 
@@ -629,20 +659,23 @@ local function getPlotPosition(plot)
             true
         )
 
-    if part then
-        return part.Position
-    end
-
-    return nil
+    return part
+        and part.Position
 end
 
 --==================================================
--- CICLO PRINCIPAL
+-- CICLO
 --==================================================
 
 local function start()
 
-    print("🔎 Buscando mejor huevo...")
+    --==============================================
+    -- 1. MEJOR HUEVO
+    --==============================================
+
+    print(
+        "🔎 Buscando mejor huevo..."
+    )
 
     local egg, value =
         findBestEgg()
@@ -650,79 +683,148 @@ local function start()
     if not egg then
 
         warn(
-            "❌ No encontré huevo fuera de los 210 studs."
+            "❌ No encontré huevo."
         )
 
         return
     end
 
-    local eggPart =
+    local part =
         getEggPart(egg)
 
-    if not eggPart then
+    if not part then
         return
     end
 
     print(
-        "🥚 Mejor huevo:",
+        "🥚",
         egg.Name,
-        "| Valor:",
+        "|",
         value
     )
 
     --==============================================
-    -- 1. TP AL MEJOR HUEVO
+    -- 2. TP AL HUEVO
     --==============================================
 
     teleportTo(
-        eggPart.Position
+        part.Position
     )
 
     task.wait(0.2)
 
     --==============================================
-    -- 2. AGARRAR
+    -- 3. AGARRAR
     --==============================================
 
     grabEgg(egg)
 
-    task.wait(0.4)
+    task.wait(0.5)
 
     --==============================================
-    -- 3. TP AL CENTRO
+    -- 4. TP CENTRO
     --==============================================
 
-    print("📍 TP al centro")
+    print("📍 TP CENTRO")
 
     teleportTo(CENTER)
 
-    task.wait(0.4)
+    task.wait(0.5)
 
     --==============================================
-    -- 4. SOLTAR
+    -- 5. DROP
     --==============================================
 
-    print("📦 Soltando en centro")
+    print("📦 DROP")
 
     triggerDropEggButton()
 
-    task.wait(0.5)
+    task.wait(0.8)
 
     --==============================================
-    -- 5. VOLVER A AGARRAR
+    -- 6. BUSCAR NUEVA REFERENCIA
     --==============================================
 
-    print("✋ Agarrando nuevamente")
+    print(
+        "🔎 Buscando huevo después del drop..."
+    )
 
-    grabEgg(egg)
+    local newEgg =
+        waitForEggNearCenter()
 
-    task.wait(0.5)
+    if not newEgg then
+
+        warn(
+            "❌ No encontré el huevo después de soltarlo."
+        )
+
+        return
+    end
+
+    local newPart =
+        getEggPart(newEgg)
+
+    if not newPart then
+
+        warn(
+            "❌ El nuevo huevo no tiene parte."
+        )
+
+        return
+    end
+
+    print(
+        "🥚 Encontrado nuevamente:",
+        newEgg.Name
+    )
 
     --==============================================
-    -- 6. BUSCAR PLOT
+    -- 7. TP AL HUEVO DROPEADO
     --==============================================
 
-    print("🏠 Buscando plot")
+    teleportTo(
+        newPart.Position
+    )
+
+    task.wait(0.2)
+
+    --==============================================
+    -- 8. AGARRAR NUEVAMENTE
+    --==============================================
+
+    print(
+        "✋ AGARRANDO NUEVAMENTE..."
+    )
+
+    grabEgg(newEgg)
+
+    task.wait(0.8)
+
+    --==============================================
+    -- 9. COMPROBAR QUE SIGUE CERCA DEL JUGADOR
+    --==============================================
+
+    local root =
+        getRoot()
+
+    if not root then
+        return
+    end
+
+    local distance =
+        (
+            newPart.Position
+            - root.Position
+        ).Magnitude
+
+    print(
+        "📏 Distancia:",
+        math.floor(distance)
+    )
+
+    --==============================================
+    -- 10. PLOT
+    --==============================================
 
     local plot =
         findMyPlot()
@@ -742,36 +844,44 @@ local function start()
     if not plotPosition then
 
         warn(
-            "❌ No encontré la posición del plot."
+            "❌ No encontré posición del plot."
         )
 
         return
     end
 
     --==============================================
-    -- 7. DESPLAZAMIENTO A 1000
+    -- 11. DESPLAZAMIENTO 1000
     --==============================================
 
     print(
-        "🚀 Desplazamiento al plot: 1000"
+        "🚀 DESPLAZAMIENTO 1000"
     )
 
     moveTo(
         plotPosition
-            + Vector3.new(0, 3, 0)
+            + Vector3.new(
+                0,
+                3,
+                0
+            )
     )
 
     task.wait(0.5)
 
     --==============================================
-    -- 8. SOLTAR EN PLOT
+    -- 12. DROP FINAL
     --==============================================
 
-    print("📦 Soltando en plot")
+    print(
+        "📦 DROP FINAL"
+    )
 
     triggerDropEggButton()
 
-    print("✅ CICLO COMPLETADO")
+    print(
+        "✅ TERMINADO"
+    )
 end
 
 start()
