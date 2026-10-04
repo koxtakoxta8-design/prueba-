@@ -512,52 +512,121 @@ local function interactWithPrompt(object)
 end
 
 local function triggerDropEggButton()
+    -- Detecta el botón de soltar tanto por NAME como por TEXT.
+    -- También busca en PlayerGui y CoreGui.
     local foundBtn = nil
-    local possibleNames = {
-        "dropegg", "drop", "releaseegg", "release",
-        "dropbutton", "dropeggbutton", "eggdrop"
+
+    local function normalizeText(value)
+        value = string.lower(tostring(value or ""))
+        value = value:gsub("á", "a"):gsub("é", "e"):gsub("í", "i")
+        value = value:gsub("ó", "o"):gsub("ú", "u"):gsub("ü", "u")
+        value = value:gsub("[%s_%-%p]+", "")
+        return value
+    end
+
+    local validWords = {
+        "dropegg",
+        "drop",
+        "soltar",
+        "soltaregg",
+        "dropbutton",
+        "dropeggbutton",
+        "eggdrop",
+        "release",
+        "releaseegg"
     }
 
-    for _, gui in ipairs(PlayerGui:GetDescendants()) do
-        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-            local n = string.lower(gui.Name)
-            n = string.gsub(n, "%s+", "")
-            for _, wanted in ipairs(possibleNames) do
-                local w = string.gsub(wanted, "%s+", "")
-                if n == w or string.find(n, w, 1, true) then
-                    foundBtn = gui
-                    break
-                end
+    local function matchesDropButton(gui)
+        if not (gui:IsA("TextButton") or gui:IsA("ImageButton")) then
+            return false
+        end
+
+        local nameText = normalizeText(gui.Name)
+        local visibleText = ""
+
+        if gui:IsA("TextButton") then
+            visibleText = normalizeText(gui.Text)
+        end
+
+        -- Revisar Name y Text.
+        for _, word in ipairs(validWords) do
+            local w = normalizeText(word)
+
+            if nameText == w
+                or visibleText == w
+                or string.find(nameText, w, 1, true)
+                or string.find(visibleText, w, 1, true) then
+                return true
             end
-            if foundBtn then break end
+        end
+
+        return false
+    end
+
+    local roots = {PlayerGui}
+
+    -- CoreGui puede contener el botón si el juego lo coloca fuera de PlayerGui.
+    pcall(function()
+        local CoreGui = game:GetService("CoreGui")
+        table.insert(roots, CoreGui)
+    end)
+
+    for _, rootGui in ipairs(roots) do
+        for _, gui in ipairs(rootGui:GetDescendants()) do
+            if matchesDropButton(gui) then
+                foundBtn = gui
+                break
+            end
+        end
+
+        if foundBtn then
+            break
         end
     end
 
-    if foundBtn and type(getconnections) == "function" then
-        local fired = false
+    if not foundBtn then
+        warn("JK HUB: no encontré botón DropEgg/Soltar/Drop/Release")
+    else
+        -- Primero intentar Activate(), que es la forma normal de activar un botón.
         pcall(function()
-            for _, conn in ipairs(getconnections(foundBtn.MouseButton1Click)) do
-                conn:Fire()
-                fired = true
-            end
+            foundBtn:Activate()
         end)
-        pcall(function()
-            for _, conn in ipairs(getconnections(foundBtn.Activated)) do
-                conn:Fire()
-                fired = true
-            end
-        end)
-        if fired then return true end
+
+        -- También disparar las conexiones para juegos que manejan el botón por conexiones.
+        if type(getconnections) == "function" then
+            pcall(function()
+                for _, conn in ipairs(getconnections(foundBtn.MouseButton1Click)) do
+                    conn:Fire()
+                end
+            end)
+
+            pcall(function()
+                for _, conn in ipairs(getconnections(foundBtn.Activated)) do
+                    conn:Fire()
+                end
+            end)
+
+            pcall(function()
+                for _, conn in ipairs(getconnections(foundBtn.MouseButton1Down)) do
+                    conn:Fire()
+                end
+            end)
+        end
+
+        return true
     end
 
+    -- Último fallback: Remote conocido del script original.
     local ok, foundRemote = pcall(function()
         local packages = ReplicatedStorage:FindFirstChild("Packages")
         local networking = packages and packages:FindFirstChild("Networking")
         local remote = networking and networking:FindFirstChild("RF/EggWorld/AskFieldEggDrop")
+
         if remote then
             remote:InvokeServer({Reason = "PlayerRequest"})
             return true
         end
+
         return false
     end)
 
@@ -665,12 +734,16 @@ local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
     end
 
     -- Soltar exactamente donde estamos.
-    triggerDropEggButton()
+    local dropButtonFound = triggerDropEggButton()
+
+    if not dropButtonFound then
+        warn("JK HUB: no se encontró el botón para soltar el huevo")
+    end
 
     local dropStart = tick()
     local dropped = false
 
-    while tick() - dropStart < 3 do
+    while tick() - dropStart < 4 do
         if not characterHasEgg() then
             dropped = true
             break
