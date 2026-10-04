@@ -328,7 +328,7 @@ local function getDropPositionNearHome()
                 local plotCF = plot:IsA("Model") and plot:GetPivot() or plot.CFrame
 
                 if plotCF then
-                    -- 10 studs hacia un lado del plot.
+                    -- 50 studs hacia un lado del plot.
                     return (plotCF * CFrame.new(10, 3, 0)).Position
                 end
             end
