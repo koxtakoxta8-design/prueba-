@@ -1,4 +1,3 @@
-📋 COPIAR SCRIPT
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -357,26 +356,99 @@ local function findDroppedEggNear(position, eggName)
     return best
 end
 
+local TRAVEL_SPEED = 1000
+local RISE_STUDS = 100
+
+local function moveToPlotFast(plotCF)
+    local root = getRoot()
+    if not root or not plotCF then return false end
+
+    -- Movimiento hacia el plot a una velocidad equivalente a 1000 studs/s.
+    local target = plotCF.Position
+    local startPos = root.Position
+    local distance = (target - startPos).Magnitude
+    local duration = distance / TRAVEL_SPEED
+
+    if duration <= 0.01 then
+        root.CFrame = plotCF
+        return true
+    end
+
+    local started = tick()
+    while root.Parent and (tick() - started) < duration do
+        local alpha = math.clamp((tick() - started) / duration, 0, 1)
+        root.CFrame = CFrame.new(startPos:Lerp(target, alpha))
+        RunService.Heartbeat:Wait()
+    end
+
+    root.CFrame = plotCF
+    return true
+end
+
 local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
-    -- 1. Buscar un punto EXACTAMENTE a 50 studs fuera del plot.
-    local dropCF = getDropPosition50Studs()
-    if not dropCF then return false end
+    -- 1. Subir 100 studs instantáneamente con el huevo.
+    local root = getRoot()
+    if root then
+        root.CFrame = root.CFrame + Vector3.new(0, RISE_STUDS, 0)
+    end
+    task.wait(0.03)
 
-    -- 2. TP a los 50 studs, NO al plot.
-    teleportToCF(dropCF)
-    task.wait(0.20)
+    -- 2. Obtener el plot del jugador.
+    local plots = Workspace:FindFirstChild("Plots")
+    local myPlotCF = nil
 
-    -- 3. Soltar el huevo en ese punto.
-    triggerDropEggButton()
-    task.wait(0.25)
+    if plots then
+        for _, plot in ipairs(plots:GetChildren()) do
+            local data = plot:FindFirstChild("Data")
+            local owner = data and data:FindFirstChild("Owner")
+            if owner then
+                local isOwner = false
+                if owner:IsA("StringValue") then
+                    isOwner = owner.Value == LocalPlayer.Name
+                elseif owner:IsA("ObjectValue") then
+                    isOwner = owner.Value == LocalPlayer
+                else
+                    isOwner = tostring(owner.Value) == LocalPlayer.Name
+                end
 
-    -- 4. Buscar el huevo recién soltado y volver a agarrarlo.
-    local droppedEgg = nil
-    for _ = 1, 20 do
-        droppedEgg = findDroppedEggNear(dropCF.Position, eggName)
-        if droppedEgg and droppedEgg.Parent then
-            break
+                if isOwner then
+                    myPlotCF = plot:IsA("Model") and plot:GetPivot() or plot.CFrame
+                    break
+                end
+            end
         end
+    end
+
+    if myPlotCF then
+        -- 3. Desplazarse hacia el plot a 1000 studs/s.
+        moveToPlotFast(myPlotCF)
+    end
+    task.wait(0.05)
+
+    -- 4. Soltar el huevo.
+    triggerDropEggButton()
+    task.wait(0.12)
+
+    -- 5. Volver a localizar y agarrar el huevo soltado.
+    if eggObj and eggObj.Parent then
+        local eggCF = eggObj:IsA("Model") and eggObj:GetPivot() or eggObj.CFrame
+        if eggCF then
+            teleportToCF(eggCF)
+            task.wait(0.05)
+            interactWithPrompt(eggObj)
+            task.wait(0.1)
+        end
+    end
+
+    addStealHistory(eggName, rarity, cost)
+
+    -- 6. Después de agarrarlo otra vez, TP final al plot.
+    unequipEggs()
+    task.wait(0.05)
+    teleportToHome()
+    task.wait(0.1)
+    unequipEggs()
+end
         task.wait(0.05)
     end
 
