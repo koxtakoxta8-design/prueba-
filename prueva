@@ -271,41 +271,34 @@ local function characterHasEgg()
 end
 
 local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
-    -- 1. TP al punto anti-cheat
+    -- 1. Teletransportarse a las coordenadas indicadas
     teleportToVector(ANTI_CHEAT_POS)
     task.wait(0.15)
 
-    -- 2. Soltar el huevo
+    -- 2. Activar el botón DropEgg automáticamente
     triggerDropEggButton()
-    task.wait(0.15)
+    task.wait(0.1)
 
-    -- 3. SIN HACER TP: volver a activar el Auto Grab desde esta misma posición
-    --    Se intenta varias veces hasta confirmar que el huevo volvió al personaje.
-    local grabbedAgain = false
-    local startTime = tick()
-
-    while tick() - startTime < 2 do
-        if characterHasEgg() then
-            grabbedAgain = true
-            break
-        end
-
-        if eggObj and eggObj.Parent then
+    -- 3. Al instante volver a agarrarlo automáticamente si sigue disponible o mediante el prompt
+    if eggObj and eggObj.Parent then
+        local eggCF = eggObj:IsA("Model") and eggObj:GetPivot() or eggObj.CFrame
+        if eggCF then
+            teleportToCF(eggCF)
+            task.wait(0.05)
             interactWithPrompt(eggObj)
+            task.wait(0.1)
         end
-
-        task.wait(0.05)
     end
 
-    -- 4. Solo después del segundo Auto Grab se registra y se hace TP al Plot
-    if grabbedAgain then
-        addStealHistory(eggName, rarity, cost)
-        unequipEggs()
-        task.wait(0.05)
-        teleportToHome()
-        task.wait(0.1)
-        unequipEggs()
-    end
+    -- Registrar en historial de steals
+    addStealHistory(eggName, rarity, cost)
+
+    -- 4. Desequipar y hacer TP final al plot de la casa
+    unequipEggs()
+    task.wait(0.05)
+    teleportToHome()
+    task.wait(0.1)
+    unequipEggs()
 end
 
 local function getTop10EggsInServer()
