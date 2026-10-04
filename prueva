@@ -1,11 +1,12 @@
-
 --// RIDE A PET - AUTO BEST EGG
---// SINGLE LOCALSCRIPT
+--// SINGLE LOCAL SCRIPT
 --// ON / OFF
+--// BEST EGG -> GRAB -> CONFIRM -> CENTER -> DROP
+--// -> FIND EGG -> GRAB -> CONFIRM -> PLOT @ 500
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
 
@@ -14,7 +15,11 @@ local EXCLUSION_RADIUS = 210
 local PLOT_SPEED = 500
 
 local Enabled = false
-local Running = false
+local Busy = false
+
+--------------------------------------------------
+-- EGG VALUES
+--------------------------------------------------
 
 local EggValues = {
 	["White Egg"] = 1,
@@ -60,21 +65,20 @@ end
 -- EGG POSITION
 --------------------------------------------------
 
-local function getEggPosition(Egg)
-	if not Egg or not Egg.Parent then
+local function getPosition(Object)
+	if not Object or not Object.Parent then
 		return nil
 	end
 
-	if Egg:IsA("BasePart") then
-		return Egg.Position
+	if Object:IsA("BasePart") then
+		return Object.Position
 	end
 
-	if Egg:IsA("Model") then
-		return Egg:GetPivot().Position
+	if Object:IsA("Model") then
+		return Object:GetPivot().Position
 	end
 
-	local Part = Egg:FindFirstChildWhichIsA("BasePart", true)
-
+	local Part = Object:FindFirstChildWhichIsA("BasePart", true)
 	return Part and Part.Position
 end
 
@@ -82,7 +86,7 @@ end
 -- EGG VALUE
 --------------------------------------------------
 
-local function getEggValue(Egg)
+local function getValue(Egg)
 	if EggValues[Egg.Name] then
 		return EggValues[Egg.Name]
 	end
@@ -97,10 +101,10 @@ local function getEggValue(Egg)
 end
 
 --------------------------------------------------
--- CENTER BLOCK
+-- CENTER EXCLUSION
 --------------------------------------------------
 
-local function isInsideCenter(Position)
+local function forbidden(Position)
 	return (Position - CENTER).Magnitude <= EXCLUSION_RADIUS
 end
 
@@ -110,7 +114,7 @@ end
 
 local function findBestEgg()
 
-	local BestEgg = nil
+	local Best = nil
 	local BestValue = -math.huge
 
 	for _, Object in ipairs(workspace:GetDescendants()) do
@@ -119,23 +123,23 @@ local function findBestEgg()
 			return nil
 		end
 
-		local Value = getEggValue(Object)
+		local Value = getValue(Object)
 
 		if Value then
 
-			local Position = getEggPosition(Object)
+			local Position = getPosition(Object)
 
-			if Position and not isInsideCenter(Position) then
+			if Position and not forbidden(Position) then
 
 				if Value > BestValue then
+					Best = Object
 					BestValue = Value
-					BestEgg = Object
 				end
 			end
 		end
 	end
 
-	return BestEgg
+	return Best
 end
 
 --------------------------------------------------
@@ -181,7 +185,7 @@ local GrabWords = {
 
 local function findGrabPrompt(Egg)
 
-	if not Egg then
+	if not Egg or not Egg.Parent then
 		return nil
 	end
 
@@ -211,7 +215,7 @@ end
 -- GRAB
 --------------------------------------------------
 
-local function grabEgg(Egg)
+local function grab(Egg)
 
 	local Prompt = findGrabPrompt(Egg)
 
@@ -225,6 +229,7 @@ local function grabEgg(Egg)
 
 	pcall(function()
 		Prompt:InputHoldBegin()
+		task.wait()
 		Prompt:InputHoldEnd()
 	end)
 
@@ -232,10 +237,10 @@ local function grabEgg(Egg)
 end
 
 --------------------------------------------------
--- DETECT HOLDING
+-- CHECK IF EGG IS NOW CARRIED
 --------------------------------------------------
 
-local function isHoldingEgg()
+local function carriedEggFound()
 
 	local Character = Player.Character
 
@@ -243,6 +248,7 @@ local function isHoldingEgg()
 		return false
 	end
 
+	-- Atributos si el juego los usa
 	if Character:GetAttribute("HoldingEgg") == true then
 		return true
 	end
@@ -251,7 +257,12 @@ local function isHoldingEgg()
 		return true
 	end
 
+	-- Huevo convertido en objeto del personaje
 	for _, Object in ipairs(Character:GetDescendants()) do
+
+		if getValue(Object) then
+			return true
+		end
 
 		if Object:GetAttribute("IsEgg") == true then
 			return true
@@ -260,41 +271,83 @@ local function isHoldingEgg()
 		if Object:GetAttribute("HoldingEgg") == true then
 			return true
 		end
-
-		if EggValues[Object.Name] then
-			return true
-		end
 	end
 
 	return false
 end
 
 --------------------------------------------------
--- GRAB UNTIL CONFIRMED
+-- CONFIRM GRAB
 --------------------------------------------------
 
-local function grabUntilConfirmed(Egg)
+local function confirmGrab(Egg)
 
-	for _ = 1, 40 do
+	-- Primera comprobación
+	if carriedEggFound() then
+		return true
+	end
+
+	-- Comprobar si el huevo original dejó de estar
+	-- en su posición original después del grab.
+	local OldPosition = getPosition(Egg)
+
+	for _ = 1, 30 do
 
 		if not Enabled then
 			return false
 		end
 
-		if isHoldingEgg() then
+		if carriedEggFound() then
 			return true
 		end
 
-		grabEgg(Egg)
+		if not Egg.Parent then
+			return true
+		end
+
+		local NewPosition = getPosition(Egg)
+
+		if OldPosition and NewPosition then
+
+			local Character, Root = getCharacter()
+
+			if Root and (NewPosition - Root.Position).Magnitude < 15 then
+				return true
+			end
+		end
 
 		task.wait(0.05)
-
-		if isHoldingEgg() then
-			return true
-		end
 	end
 
-	return isHoldingEgg()
+	return carriedEggFound()
+end
+
+--------------------------------------------------
+-- GRAB + CONFIRM + RETRY
+--------------------------------------------------
+
+local function grabAndConfirm(Egg)
+
+	for _ = 1, 50 do
+
+		if not Enabled then
+			return false
+		end
+
+		if carriedEggFound() then
+			return true
+		end
+
+		grab(Egg)
+
+		if confirmGrab(Egg) then
+			return true
+		end
+
+		task.wait(0.05)
+	end
+
+	return carriedEggFound()
 end
 
 --------------------------------------------------
@@ -319,7 +372,12 @@ local function dropEgg()
 			(Gui:IsA("TextButton") or Gui:IsA("ImageButton"))
 			and (
 				string.lower(Gui.Name) == "dropegg"
-				or string.find(string.lower(Gui.Name), "dropegg", 1, true)
+				or string.find(
+					string.lower(Gui.Name),
+					"dropegg",
+					1,
+					true
+				)
 			)
 		then
 
@@ -332,6 +390,28 @@ local function dropEgg()
 	end
 
 	return false
+end
+
+--------------------------------------------------
+-- WAIT UNTIL DROPPED
+--------------------------------------------------
+
+local function waitDrop()
+
+	for _ = 1, 30 do
+
+		if not Enabled then
+			return false
+		end
+
+		if not carriedEggFound() then
+			return true
+		end
+
+		task.wait(0.05)
+	end
+
+	return not carriedEggFound()
 end
 
 --------------------------------------------------
@@ -348,7 +428,7 @@ local function findMyPlot()
 
 		if Object:IsA("Model") or Object:IsA("Folder") then
 
-			local Names = {
+			local Attributes = {
 				"Owner",
 				"OwnerName",
 				"Player",
@@ -357,7 +437,7 @@ local function findMyPlot()
 				"UserName",
 			}
 
-			for _, Attribute in ipairs(Names) do
+			for _, Attribute in ipairs(Attributes) do
 
 				local Value = Object:GetAttribute(Attribute)
 
@@ -391,16 +471,14 @@ local function getPlotPosition(Plot)
 		return nil
 	end
 
-	local Names = {
+	for _, Name in ipairs({
 		"Spawn",
 		"SpawnLocation",
 		"EggDrop",
 		"DropEgg",
 		"Drop",
 		"Base",
-	}
-
-	for _, Name in ipairs(Names) do
+	}) do
 
 		local Object = Plot:FindFirstChild(Name, true)
 
@@ -427,7 +505,7 @@ end
 -- MOVE 500 STUDS/S
 --------------------------------------------------
 
-local function moveToPlot(Position)
+local function moveToPlot(Destination)
 
 	local Character, Root = getCharacter()
 
@@ -436,25 +514,27 @@ local function moveToPlot(Position)
 	end
 
 	local Start = Root.Position
-	local Distance = (Position - Start).Magnitude
+	local Distance = (Destination - Start).Magnitude
 
 	if Distance <= 1 then
 		return true
 	end
 
 	local Duration = Distance / PLOT_SPEED
-	local StartTime = os.clock()
+	local Started = os.clock()
 
 	while Enabled do
 
 		local Alpha = math.clamp(
-			(os.clock() - StartTime) / Duration,
+			(os.clock() - Started) / Duration,
 			0,
 			1
 		)
 
 		Character:PivotTo(
-			CFrame.new(Start:Lerp(Position, Alpha))
+			CFrame.new(
+				Start:Lerp(Destination, Alpha)
+			)
 		)
 
 		if Alpha >= 1 then
@@ -468,20 +548,23 @@ local function moveToPlot(Position)
 end
 
 --------------------------------------------------
--- MAIN LOOP
+-- MAIN
 --------------------------------------------------
 
-local function start()
+local function Main()
 
-	if Running then
+	if Busy then
 		return
 	end
 
-	Running = true
+	Busy = true
 
 	while Enabled do
 
-		-- BEST EGG
+		-- ==========================================
+		-- 1. MEJOR HUEVO
+		-- ==========================================
+
 		local Egg = findBestEgg()
 
 		if not Egg then
@@ -489,61 +572,108 @@ local function start()
 			continue
 		end
 
-		local Position = getEggPosition(Egg)
+		local Position = getPosition(Egg)
 
 		if not Position then
 			continue
 		end
 
-		-- TP
+		-- ==========================================
+		-- 2. TP AL MEJOR HUEVO
+		-- ==========================================
+
 		teleport(Position)
 
 		task.wait()
 
-		-- GRAB
-		if not grabUntilConfirmed(Egg) then
+		-- ==========================================
+		-- 3. GRAB + CONFIRMAR
+		-- ==========================================
+
+		local Grabbed = grabAndConfirm(Egg)
+
+		-- Si NO lo agarró:
+		-- NO va al centro.
+		if not Grabbed then
 			continue
 		end
 
-		-- CENTER
+		-- ==========================================
+		-- 4. TP CENTRO
+		-- ==========================================
+
 		teleport(CENTER)
 
 		task.wait()
 
-		-- DROP
+		-- ==========================================
+		-- 5. DROP
+		-- ==========================================
+
 		dropEgg()
 
-		task.wait(0.2)
+		waitDrop()
 
-		-- SECOND BEST EGG
-		local Egg2 = findBestEgg()
+		task.wait(0.15)
+
+		-- ==========================================
+		-- 6. BUSCAR HUEVO NUEVAMENTE
+		-- ==========================================
+
+		local Egg2
+
+		for _ = 1, 40 do
+
+			if not Enabled then
+				break
+			end
+
+			Egg2 = findBestEgg()
+
+			if Egg2 then
+				break
+			end
+
+			task.wait(0.05)
+		end
 
 		if not Egg2 then
 			continue
 		end
 
-		local Position2 = getEggPosition(Egg2)
+		local Position2 = getPosition(Egg2)
 
 		if not Position2 then
 			continue
 		end
 
-		-- NEVER PICK INSIDE 210
-		if isInsideCenter(Position2) then
+		-- NUNCA recoger dentro de 210
+		if forbidden(Position2) then
 			continue
 		end
 
-		-- TP
+		-- ==========================================
+		-- 7. TP AL SEGUNDO HUEVO
+		-- ==========================================
+
 		teleport(Position2)
 
 		task.wait()
 
-		-- GRAB AGAIN
-		if not grabUntilConfirmed(Egg2) then
+		-- ==========================================
+		-- 8. GRAB + CONFIRMAR
+		-- ==========================================
+
+		local Grabbed2 = grabAndConfirm(Egg2)
+
+		if not Grabbed2 then
 			continue
 		end
 
-		-- MY PLOT
+		-- ==========================================
+		-- 9. BUSCAR MI PLOT
+		-- ==========================================
+
 		local Plot = findMyPlot()
 
 		if not Plot then
@@ -557,20 +687,28 @@ local function start()
 			continue
 		end
 
-		-- 500 STUDS/S
+		-- ==========================================
+		-- 10. IR A 500 STUDS/S
+		-- ==========================================
+
 		if not moveToPlot(PlotPosition) then
 			break
 		end
 
-		-- FINAL DROP
-		if Enabled then
+		-- ==========================================
+		-- 11. DROP FINAL
+		-- ==========================================
+
+		if Enabled and carriedEggFound() then
 			dropEgg()
 		end
 
-		task.wait(0.25)
+		waitDrop()
+
+		task.wait(0.2)
 	end
 
-	Running = false
+	Busy = false
 end
 
 --------------------------------------------------
@@ -582,14 +720,14 @@ Gui.Name = "RideAPetAutoEgg"
 Gui.ResetOnSpawn = false
 Gui.Parent = Player:WaitForChild("PlayerGui")
 
-local Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(250, 145)
-Main.Position = UDim2.new(0.5, -125, 0.5, -72)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-Main.BorderSizePixel = 0
-Main.Parent = Gui
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.fromOffset(260, 155)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -77)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = Gui
 
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 15)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 16)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 42)
@@ -597,31 +735,31 @@ Title.BackgroundTransparency = 1
 Title.Text = "RIDE A PET"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.Parent = Main
+Title.TextSize = 21
+Title.Parent = MainFrame
 
 local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1, 0, 0, 25)
-Status.Position = UDim2.fromOffset(0, 38)
+Status.Size = UDim2.new(1, 0, 0, 24)
+Status.Position = UDim2.fromOffset(0, 40)
 Status.BackgroundTransparency = 1
 Status.Text = "OFF"
 Status.TextColor3 = Color3.fromRGB(255, 70, 70)
 Status.Font = Enum.Font.GothamBold
 Status.TextSize = 14
-Status.Parent = Main
+Status.Parent = MainFrame
 
 local Toggle = Instance.new("TextButton")
-Toggle.Size = UDim2.new(1, -30, 0, 52)
-Toggle.Position = UDim2.fromOffset(15, 78)
+Toggle.Size = UDim2.new(1, -30, 0, 55)
+Toggle.Position = UDim2.fromOffset(15, 82)
 Toggle.BackgroundColor3 = Color3.fromRGB(170, 40, 40)
+Toggle.BorderSizePixel = 0
 Toggle.Text = "AUTO EGG: OFF"
 Toggle.TextColor3 = Color3.new(1, 1, 1)
 Toggle.Font = Enum.Font.GothamBold
 Toggle.TextSize = 18
-Toggle.BorderSizePixel = 0
-Toggle.Parent = Main
+Toggle.Parent = MainFrame
 
-Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 11)
+Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 12)
 
 Toggle.MouseButton1Click:Connect(function()
 
@@ -635,7 +773,7 @@ Toggle.MouseButton1Click:Connect(function()
 		Status.Text = "ACTIVO"
 		Status.TextColor3 = Color3.fromRGB(80, 255, 120)
 
-		task.spawn(start)
+		task.spawn(Main)
 
 	else
 
@@ -648,7 +786,7 @@ Toggle.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------
--- DRAG UI
+-- DRAG
 --------------------------------------------------
 
 local Dragging = false
@@ -662,7 +800,7 @@ Title.InputBegan:Connect(function(Input)
 
 		Dragging = true
 		DragStart = Input.Position
-		StartPosition = Main.Position
+		StartPosition = MainFrame.Position
 	end
 end)
 
@@ -675,7 +813,7 @@ Title.InputEnded:Connect(function(Input)
 	end
 end)
 
-UserInputService.InputChanged:Connect(function(Input)
+UIS.InputChanged:Connect(function(Input)
 
 	if not Dragging then
 		return
@@ -688,7 +826,7 @@ UserInputService.InputChanged:Connect(function(Input)
 
 	local Delta = Input.Position - DragStart
 
-	Main.Position = UDim2.new(
+	MainFrame.Position = UDim2.new(
 		StartPosition.X.Scale,
 		StartPosition.X.Offset + Delta.X,
 		StartPosition.Y.Scale,
