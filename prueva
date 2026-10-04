@@ -325,40 +325,40 @@ local function executeAntiCheatAutoGrab(maxTime)
 end
 
 local function performAntiCheatAndReturn(eggName, rarity, cost)
-    -- 1. TP a la zona anti-cheat
+    -- 1. MISMO punto anti-cheat del script original
     teleportToVector(ANTI_CHEAT_POS)
     task.wait(0.05)
 
     -- 2. Soltar el huevo
     triggerDropEggButton()
 
-    -- 3. Esperar solamente hasta detectar que el huevo fue agarrado
-    --    nuevamente, sin esperas fijas innecesarias.
+    -- 3. Volver a agarrarlo sin las esperas largas del original
     local startTime = tick()
-    local maxWait = 2.0
+    local maxTime = 2.0
 
-    while (tick() - startTime) < maxWait do
+    while (tick() - startTime) < maxTime do
         if characterHasEgg() then
             break
         end
 
-        executeAntiCheatAutoGrab(0.05)
-        task.wait(0.01)
+        executeAntiCheatAutoGrab(0.03)
+
+        if characterHasEgg() then
+            break
+        end
+
+        task.wait(0.005)
     end
 
-    -- 4. Registrar si se recuperó el huevo
+    -- 4. En cuanto vuelva a tener el huevo, registrar y TP inmediato al plot
     if characterHasEgg() then
         addStealHistory(eggName, rarity, cost)
+        teleportToHome()
     end
 
-    -- 5. TP inmediato al plot
-    teleportToHome()
-
-    -- 6. Desequipar después de llegar
-    task.wait(0.03)
+    -- 5. Mantener el desequipado del original
     unequipEggs()
 end
-
 
 local function getTop10EggsInServer()
     local containers = {
