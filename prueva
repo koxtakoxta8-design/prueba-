@@ -13,6 +13,8 @@ local DISCORD_IMAGE = "rbxassetid://93628638506572"
 local DISCORD_INVITE = "https://discord.gg/4TmDcDpztN"
 
 -- Coordenadas de anti-cheat para la parada intermedia
+local ANTI_CHEAT_POS = Vector3.new(217.306, 40315.734, 847.810)
+
 local EggDatabase = {
     ["White Egg"]       = {Rank = 1,  Rarity = "Common",      Cost = "1"},
     ["Brown Egg"]       = {Rank = 2,  Rarity = "Common",      Cost = "5"},
@@ -162,319 +164,33 @@ end
 
 local function teleportToVector(vector3Pos)
     local root = getRoot()
-    if not root or not vector3Pos then
-        return false
-    end
-
-    -- TP fuerte y confirmado al punto anti-cheat.
-    for _ = 1, 6 do
-        root = getRoot()
-        if not root then return false end
-
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
+    if root and vector3Pos then
         root.CFrame = CFrame.new(vector3Pos)
-
-        task.wait(0.06)
-
-        if (root.Position - vector3Pos).Magnitude <= 8 then
-            return true
-        end
     end
-
-    return false
 end
 
 local function teleportToHome()
-    local root = getRoot()
-    if not root then return false end
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then return false end
 
-    -- Busca exclusivamente el plot/base que pertenece al jugador.
-    local containers = {
-        Workspace:FindFirstChild("Plots"),
-        Workspace:FindFirstChild("plots"),
-        Workspace:FindFirstChild("Plot"),
-        Workspace:FindFirstChild("plot"),
-        Workspace:FindFirstChild("Bases"),
-        Workspace:FindFirstChild("bases"),
-        Workspace:FindFirstChild("Base"),
-        Workspace:FindFirstChild("base"),
-        Workspace:FindFirstChild("Tycoons"),
-        Workspace:FindFirstChild("tycoons"),
-        Workspace:FindFirstChild("Tycoon"),
-        Workspace:FindFirstChild("tycoon"),
-        Workspace:FindFirstChild("PlayerPlots"),
-        Workspace:FindFirstChild("PlayerBases"),
-        Workspace:FindFirstChild("PlayerHomes"),
-        Workspace:FindFirstChild("Homes"),
-        Workspace:FindFirstChild("Houses"),
-        Workspace:FindFirstChild("Islands"),
-        Workspace:FindFirstChild("Claims"),
-        Workspace:FindFirstChild("ClaimedPlots"),
-        Workspace:FindFirstChild("PlayerTycoons")
-    }
+    for _, plot in ipairs(plots:GetChildren()) do
+        local data = plot:FindFirstChild("Data")
+        if data then
+            local owner = data:FindFirstChild("Owner")
+            if owner then
+                local isOwner = false
+                if owner:IsA("StringValue") then isOwner = (owner.Value == LocalPlayer.Name)
+                elseif owner:IsA("ObjectValue") then isOwner = (owner.Value == LocalPlayer)
+                else isOwner = (tostring(owner.Value) == LocalPlayer.Name) end
 
-    local ownerNames = {
-        "Owner","OwnerName","OwnerId","OwnerID","OwnerUserId",
-        "Player","PlayerName","PlayerId","PlayerID","PlayerUserId",
-        "User","UserName","Username","UserId","UserID",
-        "ClaimedBy","ClaimOwner","PlotOwner","BaseOwner",
-        "TycoonOwner","OwnerValue","OwnerTag","ClaimedPlayer",
-        "ClaimedUser","PlotUser","BaseUser","TycoonUser"
-    }
-
-    local function normalize(v)
-        return string.lower(string.gsub(tostring(v or ""), "[%s_%-]", ""))
-    end
-
-    local myName = normalize(LocalPlayer.Name)
-    local myDisplay = normalize(LocalPlayer.DisplayName)
-    local myId = tostring(LocalPlayer.UserId)
-
-    local function matchesMe(v)
-        if v == nil then return false end
-
-        if typeof(v) == "Instance" then
-            if v == LocalPlayer then return true end
-            local ok, n = pcall(function() return v.Name end)
-            if ok then
-                n = normalize(n)
-                return n == myName or n == myDisplay
-            end
-            return false
-        end
-
-        local s = tostring(v)
-        local n = normalize(s)
-
-        return n == myName or n == myDisplay or s == myId
-    end
-
-    local function ownershipScore(obj)
-        if not obj then return 0 end
-
-        local score = 0
-
-        for _, name in ipairs(ownerNames) do
-            local ok, attr = pcall(function()
-                return obj:GetAttribute(name)
-            end)
-
-            if ok and matchesMe(attr) then
-                score = math.max(score, 100)
-            end
-
-            local child = obj:FindFirstChild(name)
-            if child then
-                if child:IsA("ObjectValue") and child.Value == LocalPlayer then
-                    score = math.max(score, 100)
-                end
-
-                local ok2, value = pcall(function()
-                    return child.Value
-                end)
-
-                if ok2 and matchesMe(value) then
-                    score = math.max(score, 100)
-                end
-            end
-        end
-
-        for _, d in ipairs(obj:GetDescendants()) do
-            local n = string.lower(d.Name)
-
-            if n:find("owner",1,true)
-                or n:find("player",1,true)
-                or n:find("userid",1,true)
-                or n:find("username",1,true)
-                or n == "user"
-                or n == "claimedby" then
-
-                if d:IsA("ObjectValue") and d.Value == LocalPlayer then
-                    score = math.max(score, 80)
-                end
-
-                local ok, value = pcall(function()
-                    return d.Value
-                end)
-
-                if ok and matchesMe(value) then
-                    score = math.max(score, 80)
-                end
-            end
-        end
-
-        return score
-    end
-
-    local function isPlotLike(obj)
-        if not obj then return false end
-        local n = string.lower(obj.Name)
-
-        return n:find("plot",1,true)
-            or n:find("base",1,true)
-            or n:find("tycoon",1,true)
-            or n:find("farm",1,true)
-            or n:find("house",1,true)
-            or n:find("home",1,true)
-            or n:find("island",1,true)
-            or n:find("claim",1,true)
-    end
-
-    local function getSpawn(plot)
-        if not plot then return nil end
-
-        local exact = {
-            "PlotSpawn","PlayerSpawn","HomeSpawn","BaseSpawn",
-            "FarmSpawn","TycoonSpawn","HouseSpawn","ClaimSpawn",
-            "SpawnPoint","SpawnPart","SpawnLocationPart",
-            "TeleportPoint","Teleport","HomePoint","Home",
-            "Spawn","SpawnLocation"
-        }
-
-        for _, name in ipairs(exact) do
-            local obj = plot:FindFirstChild(name, true)
-
-            if obj then
-                if obj:IsA("BasePart") then
-                    return obj.CFrame + Vector3.new(0,3,0)
-                elseif obj:IsA("Model") then
-                    return obj:GetPivot() + Vector3.new(0,3,0)
-                end
-            end
-        end
-
-        for _, obj in ipairs(plot:GetDescendants()) do
-            if obj:IsA("SpawnLocation") then
-                return obj.CFrame + Vector3.new(0,3,0)
-            end
-        end
-
-        for _, obj in ipairs(plot:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local n = string.lower(obj.Name)
-
-                if n:find("spawn",1,true)
-                    or n:find("home",1,true)
-                    or n:find("teleport",1,true) then
-                    return obj.CFrame + Vector3.new(0,3,0)
-                end
-            end
-        end
-
-        local ok, pivot = pcall(function()
-            return plot:GetPivot()
-        end)
-
-        if ok and pivot then
-            return pivot + Vector3.new(0,3,0)
-        end
-
-        return nil
-    end
-
-    local candidates = {}
-    local seen = {}
-
-    local function addCandidate(plot, score)
-        if not plot or seen[plot] or score <= 0 then return end
-        seen[plot] = true
-
-        local spawnCF = getSpawn(plot)
-        if spawnCF then
-            table.insert(candidates, {
-                Plot = plot,
-                OwnerScore = score,
-                SpawnCF = spawnCF
-            })
-        end
-    end
-
-    for _, container in ipairs(containers) do
-        if container then
-            for _, obj in ipairs(container:GetChildren()) do
-                local score = ownershipScore(obj)
-
-                if score > 0 then
-                    addCandidate(obj, score)
-                else
-                    for _, d in ipairs(obj:GetDescendants()) do
-                        local childScore = ownershipScore(d)
-                        if childScore > 0 then
-                            addCandidate(obj, childScore)
-                            break
-                        end
-                    end
+                if isOwner then
+                    local targetCF = plot:IsA("Model") and plot:GetPivot() or plot.CFrame
+                    teleportToCF(targetCF)
+                    return true
                 end
             end
         end
     end
-
-    if #candidates == 0 then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            local n = string.lower(obj.Name)
-
-            if n:find("owner",1,true)
-                or n:find("player",1,true)
-                or n:find("userid",1,true)
-                or n:find("username",1,true)
-                or n == "claimedby" then
-
-                local score = 0
-
-                if obj:IsA("ObjectValue") and obj.Value == LocalPlayer then
-                    score = 100
-                else
-                    local ok, value = pcall(function()
-                        return obj.Value
-                    end)
-
-                    if ok and matchesMe(value) then
-                        score = 90
-                    end
-                end
-
-                if score > 0 then
-                    local current = obj.Parent
-
-                    for _ = 1, 15 do
-                        if not current then break end
-
-                        if isPlotLike(current) then
-                            addCandidate(current, score)
-                            break
-                        end
-
-                        current = current.Parent
-                    end
-                end
-            end
-        end
-    end
-
-    table.sort(candidates, function(a,b)
-        return a.OwnerScore > b.OwnerScore
-    end)
-
-    local chosen = candidates[1]
-
-    if not chosen then
-        warn("JK HUB: no se encontró el plot de "..LocalPlayer.Name)
-        return false
-    end
-
-    for _ = 1, 8 do
-        local currentRoot = getRoot()
-        if not currentRoot then return false end
-
-        currentRoot.CFrame = chosen.SpawnCF
-        task.wait(0.10)
-
-        if (currentRoot.Position - chosen.SpawnCF.Position).Magnitude <= 15 then
-            return true
-        end
-    end
-
     return false
 end
 
@@ -512,125 +228,35 @@ local function interactWithPrompt(object)
 end
 
 local function triggerDropEggButton()
-    -- Detecta el botón de soltar tanto por NAME como por TEXT.
-    -- También busca en PlayerGui y CoreGui.
+    -- Buscar dinámicamente el botón DropEgg en la interfaz del jugador o del juego
     local foundBtn = nil
-
-    local function normalizeText(value)
-        value = string.lower(tostring(value or ""))
-        value = value:gsub("á", "a"):gsub("é", "e"):gsub("í", "i")
-        value = value:gsub("ó", "o"):gsub("ú", "u"):gsub("ü", "u")
-        value = value:gsub("[%s_%-%p]+", "")
-        return value
-    end
-
-    local validWords = {
-        "dropegg",
-        "drop",
-        "soltar",
-        "soltaregg",
-        "dropbutton",
-        "dropeggbutton",
-        "eggdrop",
-        "release",
-        "releaseegg"
-    }
-
-    local function matchesDropButton(gui)
-        if not (gui:IsA("TextButton") or gui:IsA("ImageButton")) then
-            return false
-        end
-
-        local nameText = normalizeText(gui.Name)
-        local visibleText = ""
-
-        if gui:IsA("TextButton") then
-            visibleText = normalizeText(gui.Text)
-        end
-
-        -- Revisar Name y Text.
-        for _, word in ipairs(validWords) do
-            local w = normalizeText(word)
-
-            if nameText == w
-                or visibleText == w
-                or string.find(nameText, w, 1, true)
-                or string.find(visibleText, w, 1, true) then
-                return true
-            end
-        end
-
-        return false
-    end
-
-    local roots = {PlayerGui}
-
-    -- CoreGui puede contener el botón si el juego lo coloca fuera de PlayerGui.
-    pcall(function()
-        local CoreGui = game:GetService("CoreGui")
-        table.insert(roots, CoreGui)
-    end)
-
-    for _, rootGui in ipairs(roots) do
-        for _, gui in ipairs(rootGui:GetDescendants()) do
-            if matchesDropButton(gui) then
-                foundBtn = gui
-                break
-            end
-        end
-
-        if foundBtn then
+    
+    -- Búsqueda en PlayerGui
+    for _, gui in ipairs(PlayerGui:GetDescendants()) do
+        if (gui:IsA("TextButton") or gui:IsA("ImageButton")) and (string.lower(gui.Name) == "dropegg" or string.find(string.lower(gui.Name), "dropegg")) then
+            foundBtn = gui
             break
         end
     end
 
-    if not foundBtn then
-        warn("JK HUB: no encontré botón DropEgg/Soltar/Drop/Release")
+    if foundBtn then
+        for _, conn in ipairs(getconnections(foundBtn.MouseButton1Click)) do
+            conn:Fire()
+        end
+        for _, conn in ipairs(getconnections(foundBtn.Activated)) do
+            conn:Fire()
+        end
     else
-        -- Primero intentar Activate(), que es la forma normal de activar un botón.
+        -- Fallback mediante remotos si estuviera disponible
         pcall(function()
-            foundBtn:Activate()
+            local remote = ReplicatedStorage:FindFirstChild("Packages") 
+                and ReplicatedStorage.Packages:FindFirstChild("Networking") 
+                and ReplicatedStorage.Packages.Networking:FindFirstChild("RF/EggWorld/AskFieldEggDrop")
+            if remote then
+                remote:InvokeServer({ Reason = "PlayerRequest" })
+            end
         end)
-
-        -- También disparar las conexiones para juegos que manejan el botón por conexiones.
-        if type(getconnections) == "function" then
-            pcall(function()
-                for _, conn in ipairs(getconnections(foundBtn.MouseButton1Click)) do
-                    conn:Fire()
-                end
-            end)
-
-            pcall(function()
-                for _, conn in ipairs(getconnections(foundBtn.Activated)) do
-                    conn:Fire()
-                end
-            end)
-
-            pcall(function()
-                for _, conn in ipairs(getconnections(foundBtn.MouseButton1Down)) do
-                    conn:Fire()
-                end
-            end)
-        end
-
-        return true
     end
-
-    -- Último fallback: Remote conocido del script original.
-    local ok, foundRemote = pcall(function()
-        local packages = ReplicatedStorage:FindFirstChild("Packages")
-        local networking = packages and packages:FindFirstChild("Networking")
-        local remote = networking and networking:FindFirstChild("RF/EggWorld/AskFieldEggDrop")
-
-        if remote then
-            remote:InvokeServer({Reason = "PlayerRequest"})
-            return true
-        end
-
-        return false
-    end)
-
-    return ok and foundRemote
 end
 
 local function characterHasEgg()
@@ -644,25 +270,8 @@ local function characterHasEgg()
     return false
 end
 
-local function getObjectCFrame(obj)
-    if not obj or not obj.Parent then return nil end
-    if obj:IsA("Model") then
-        return obj:GetPivot()
-    elseif obj:IsA("BasePart") then
-        return obj.CFrame
-    end
-    return nil
-end
-
-local function findEggNearPlayer(eggName, maxDistance)
-    local root = getRoot()
-    if not root then return nil end
-
-    local limit = maxDistance or 45
-    local bestEgg = nil
-    local bestDistance = limit
-
-    -- Primero revisa los contenedores normales.
+-- Busca el huevo que acabamos de soltar cerca de la posición indicada.
+local function findDroppedEggNear(position, eggName, radius)
     local containers = {
         Workspace:FindFirstChild("RenderedEggs"),
         Workspace:FindFirstChild("Shop"),
@@ -670,52 +279,24 @@ local function findEggNearPlayer(eggName, maxDistance)
         Workspace:FindFirstChild("Eggs")
     }
 
-    local checked = {}
-
-    local function checkObject(obj)
-        if not obj or checked[obj] then return end
-        checked[obj] = true
-
-        if not (obj:IsA("Model") or obj:IsA("BasePart")) then
-            return
-        end
-
-        local sameName =
-            obj.Name == eggName
-            or string.find(string.lower(obj.Name), string.lower(eggName), 1, true)
-
-        if not sameName then return end
-
-        local cf = getObjectCFrame(obj)
-        if not cf then return end
-
-        local distance = (cf.Position - root.Position).Magnitude
-
-        if distance <= bestDistance then
-            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-
-            if prompt then
-                bestEgg = obj
-                bestDistance = distance
-            end
-        end
-    end
+    local bestEgg = nil
+    local bestDistance = radius or 35
 
     for _, container in ipairs(containers) do
         if container then
-            for _, obj in ipairs(container:GetDescendants()) do
-                checkObject(obj)
-            end
-        end
-    end
+            for _, obj in ipairs(container:GetChildren()) do
+                if (obj:IsA("Model") or obj:IsA("BasePart"))
+                    and string.lower(obj.Name) == string.lower(eggName) then
 
-    -- IMPORTANTE:
-    -- Después de soltar el huevo puede aparecer fuera de RenderedEggs/Eggs.
-    -- Por eso también se revisa Workspace completo.
-    if not bestEgg then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("Model") or obj:IsA("BasePart") then
-                checkObject(obj)
+                    local cf = obj:IsA("Model") and obj:GetPivot() or obj.CFrame
+                    if cf then
+                        local distance = (cf.Position - position).Magnitude
+                        if distance <= bestDistance then
+                            bestDistance = distance
+                            bestEgg = obj
+                        end
+                    end
+                end
             end
         end
     end
@@ -723,120 +304,112 @@ local function findEggNearPlayer(eggName, maxDistance)
     return bestEgg
 end
 
+-- Obtiene una posición unos studs fuera del plot del jugador.
+local function getDropPositionNearHome()
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then return nil end
+
+    for _, plot in ipairs(plots:GetChildren()) do
+        local data = plot:FindFirstChild("Data")
+        local owner = data and data:FindFirstChild("Owner")
+
+        if owner then
+            local isOwner = false
+
+            if owner:IsA("StringValue") then
+                isOwner = (owner.Value == LocalPlayer.Name)
+            elseif owner:IsA("ObjectValue") then
+                isOwner = (owner.Value == LocalPlayer)
+            else
+                isOwner = (tostring(owner.Value) == LocalPlayer.Name)
+            end
+
+            if isOwner then
+                local plotCF = plot:IsA("Model") and plot:GetPivot() or plot.CFrame
+
+                if plotCF then
+                    -- 10 studs hacia un lado del plot.
+                    return (plotCF * CFrame.new(10, 3, 0)).Position
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
 local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
-    -- TP al huevo -> primer Auto Grab -> soltar EN EL MISMO LUGAR
-    -- -> Auto Grab del huevo soltado -> TP al Plot.
-    -- No se usa ninguna coordenada intermedia.
+    -- 1. Buscar un punto cercano al plot del jugador.
+    local dropPosition = getDropPositionNearHome()
 
-    if not characterHasEgg() then
-        warn("JK HUB: se llamó al regrab sin tener el huevo")
-        return false
+    if not dropPosition then
+        -- Si no se pudo localizar el plot, usar la posición configurada
+        -- como respaldo.
+        dropPosition = ANTI_CHEAT_POS
     end
 
-    -- Soltar exactamente donde estamos.
-    local dropButtonFound = triggerDropEggButton()
+    -- 2. Ir a unos metros del plot mientras seguimos llevando el huevo.
+    teleportToVector(dropPosition)
+    task.wait(0.20)
 
-    if not dropButtonFound then
-        warn("JK HUB: no se encontró el botón para soltar el huevo")
-    end
+    -- 3. Soltar el huevo usando DropEgg.
+    triggerDropEggButton()
+    task.wait(0.20)
 
-    local dropStart = tick()
-    local dropped = false
-
-    while tick() - dropStart < 4 do
-        if not characterHasEgg() then
-            dropped = true
-            break
-        end
-        task.wait(0.05)
-    end
-
-    if not dropped then
-        warn("JK HUB: el huevo no se pudo soltar")
-        return false
-    end
-
-    -- Buscar y volver a agarrar el huevo con su ProximityPrompt.
+    -- 4. Buscar nuevamente el huevo que acabamos de soltar.
     local droppedEgg = nil
-    local grabbedAgain = false
-    local grabStart = tick()
 
-    while tick() - grabStart < 6 do
-        if not droppedEgg or not droppedEgg.Parent then
-            if eggObj and eggObj.Parent then
-                local cf = getObjectCFrame(eggObj)
-                local rootNow = getRoot()
-                if cf and rootNow
-                    and (cf.Position - rootNow.Position).Magnitude <= 80
-                    and eggObj:FindFirstChildWhichIsA("ProximityPrompt", true) then
-                    droppedEgg = eggObj
-                end
-            end
-
-            if not droppedEgg then
-                droppedEgg = findEggNearPlayer(eggName, 80)
-            end
-        end
-
-        if droppedEgg and droppedEgg.Parent then
-            local prompt = droppedEgg:FindFirstChildWhichIsA("ProximityPrompt", true)
-
-            if prompt and prompt.Enabled ~= false then
-                pcall(function()
-                    prompt.HoldDuration = 0
-                end)
-
-                if type(fireproximityprompt) == "function" then
-                    pcall(function()
-                        fireproximityprompt(prompt)
-                    end)
-                else
-                    pcall(function()
-                        prompt:InputHoldBegin()
-                        task.wait(math.max(prompt.HoldDuration, 0.03))
-                        prompt:InputHoldEnd()
-                    end)
-                end
-            end
-        end
-
-        task.wait(0.08)
-
-        if characterHasEgg() then
-            grabbedAgain = true
-            break
-        end
-
-        if droppedEgg and not droppedEgg.Parent then
-            droppedEgg = nil
+    -- Primero intentamos usar la misma referencia.
+    if eggObj and eggObj.Parent then
+        local currentCF = eggObj:IsA("Model") and eggObj:GetPivot() or eggObj.CFrame
+        if currentCF and (currentCF.Position - dropPosition).Magnitude <= 35 then
+            droppedEgg = eggObj
         end
     end
 
-    if not grabbedAgain then
-        warn("JK HUB: no se confirmó el segundo Auto Grab")
-        return false
+    -- Si la referencia cambió al hacer DropEgg, localizarlo por nombre.
+    local searchStart = tick()
+    while not droppedEgg and tick() - searchStart < 2 do
+        droppedEgg = findDroppedEggNear(dropPosition, eggName, 35)
+        if not droppedEgg then
+            task.wait(0.08)
+        end
     end
 
-    -- Segundo grab confirmado: ahora sí volver al Plot.
+    -- 5. Volver a agarrar el mismo huevo.
+    if droppedEgg and droppedEgg.Parent then
+        local eggCF = droppedEgg:IsA("Model") and droppedEgg:GetPivot() or droppedEgg.CFrame
+
+        if eggCF then
+            teleportToCF(eggCF)
+            task.wait(0.12)
+
+            local grabStart = tick()
+
+            while tick() - grabStart < 2 do
+                if characterHasEgg() then
+                    break
+                end
+
+                if droppedEgg and droppedEgg.Parent then
+                    interactWithPrompt(droppedEgg)
+                end
+
+                task.wait(0.08)
+            end
+        end
+    end
+
+    -- 6. Registrar el huevo.
     addStealHistory(eggName, rarity, cost)
 
-    local wentHome = false
-    for _ = 1, 8 do
-        if teleportToHome() then
-            wentHome = true
-            break
-        end
-        task.wait(0.20)
-    end
+    -- 7. Llevar el huevo nuevamente al plot del jugador.
+    task.wait(0.10)
+    teleportToHome()
+    task.wait(0.15)
 
-    if wentHome then
-        task.wait(0.15)
-        unequipEggs()
-    else
-        warn("JK HUB: segundo grab confirmado, pero no se pudo hacer TP al plot")
-    end
-
-    return wentHome
+    -- Solo desequipar al final, después de haber vuelto al plot.
+    unequipEggs()
 end
 
 local function getTop10EggsInServer()
