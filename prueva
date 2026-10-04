@@ -270,29 +270,82 @@ local function characterHasEgg()
     return false
 end
 
+local function getObjectCFrame(obj)
+    if not obj or not obj.Parent then return nil end
+    if obj:IsA("Model") then
+        return obj:GetPivot()
+    elseif obj:IsA("BasePart") then
+        return obj.CFrame
+    end
+    return nil
+end
+
+local function findEggNearPlayer(eggName, maxDistance)
+    local root = getRoot()
+    if not root then return nil end
+
+    local containers = {
+        Workspace:FindFirstChild("RenderedEggs"),
+        Workspace:FindFirstChild("Shop"),
+        Workspace:FindFirstChild("ShopEggs"),
+        Workspace:FindFirstChild("Eggs")
+    }
+
+    local bestEgg = nil
+    local bestDistance = maxDistance or 40
+
+    for _, container in ipairs(containers) do
+        if container then
+            for _, obj in ipairs(container:GetDescendants()) do
+                if (obj:IsA("Model") or obj:IsA("BasePart")) then
+                    local sameName = obj.Name == eggName or string.find(string.lower(obj.Name), string.lower(eggName), 1, true)
+                    if sameName then
+                        local cf = getObjectCFrame(obj)
+                        if cf then
+                            local distance = (cf.Position - root.Position).Magnitude
+                            if distance <= bestDistance and obj:FindFirstChildWhichIsA("ProximityPrompt", true) then
+                                bestEgg = obj
+                                bestDistance = distance
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return bestEgg
+end
+
 local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
     -- 1. TP a la nueva posicion intermedia
     teleportToVector(ANTI_CHEAT_POS)
     task.wait(0.15)
 
-    -- 2. Activar DropEgg
+    -- 2. Soltar el huevo
     triggerDropEggButton()
     task.wait(0.15)
 
-    -- 3. SIN hacer TP al huevo: volver a activar el Auto Grab desde esta posicion
-    --    y esperar hasta confirmar que el huevo volvio al personaje.
-    local grabbedAgain = characterHasEgg()
+    -- 3. NO hacer TP al huevo. Buscar el huevo que acaba de soltarse
+    --    cerca de la posicion actual y activar su ProximityPrompt.
+    local grabbedAgain = false
     local grabStart = tick()
+    local droppedEgg = nil
 
-    while not grabbedAgain and (tick() - grabStart < 2) do
-        if eggObj and eggObj.Parent then
-            interactWithPrompt(eggObj)
+    while not grabbedAgain and (tick() - grabStart < 3) do
+        if not droppedEgg or not droppedEgg.Parent then
+            droppedEgg = findEggNearPlayer(eggName, 45)
         end
+
+        if droppedEgg and droppedEgg.Parent then
+            interactWithPrompt(droppedEgg)
+        end
+
         task.wait(0.05)
         grabbedAgain = characterHasEgg()
     end
 
-    -- 4. Solo continuar al Plot despues de confirmar el segundo Auto Grab
+    -- 4. Solo ir al Plot cuando el segundo Auto Grab fue confirmado
     if not grabbedAgain then
         return false
     end
