@@ -173,24 +173,83 @@ local function teleportToHome()
     local plots = Workspace:FindFirstChild("Plots")
     if not plots then return false end
 
-    for _, plot in ipairs(plots:GetChildren()) do
+    local function ownerMatches(v)
+        if not v then return false end
+        if v:IsA("ObjectValue") then
+            return v.Value == LocalPlayer
+        elseif v:IsA("StringValue") then
+            return v.Value == LocalPlayer.Name or v.Value == tostring(LocalPlayer.UserId)
+        elseif v:IsA("IntValue") or v:IsA("NumberValue") then
+            return tonumber(v.Value) == LocalPlayer.UserId
+        end
+        return tostring(v.Value) == LocalPlayer.Name or tostring(v.Value) == tostring(LocalPlayer.UserId)
+    end
+
+    local function isMyPlot(plot)
+        -- Ruta habitual: Plot > Data > Owner
         local data = plot:FindFirstChild("Data")
         if data then
             local owner = data:FindFirstChild("Owner")
-            if owner then
-                local isOwner = false
-                if owner:IsA("StringValue") then isOwner = (owner.Value == LocalPlayer.Name)
-                elseif owner:IsA("ObjectValue") then isOwner = (owner.Value == LocalPlayer)
-                else isOwner = (tostring(owner.Value) == LocalPlayer.Name) end
+            if owner and ownerMatches(owner) then
+                return true
+            end
+        end
 
-                if isOwner then
-                    local targetCF = plot:IsA("Model") and plot:GetPivot() or plot.CFrame
-                    teleportToCF(targetCF)
-                    return true
+        -- Atributos/valores alternativos de ownership
+        local ownerNames = {"Owner", "OwnerName", "Player", "PlayerName", "Username", "UserName", "UserId", "OwnerUserId"}
+        for _, name in ipairs(ownerNames) do
+            local attr = plot:GetAttribute(name)
+            if attr ~= nil and (tostring(attr) == LocalPlayer.Name or tostring(attr) == tostring(LocalPlayer.UserId)) then
+                return true
+            end
+
+            local valueObj = plot:FindFirstChild(name, true)
+            if valueObj and ownerMatches(valueObj) then
+                return true
+            end
+        end
+
+        return false
+    end
+
+    local function getTargetFromPlot(plot)
+        -- Preferir el spawn real de la parcela.
+        local targetNames = {
+            "Spawn", "SpawnLocation", "Home", "PlayerSpawn", "BaseSpawn", "PlotSpawn", "SpawnPoint"
+        }
+
+        for _, name in ipairs(targetNames) do
+            local spawn = plot:FindFirstChild(name, true)
+            if spawn then
+                if spawn:IsA("BasePart") then
+                    return spawn.CFrame + Vector3.new(0, 3, 0)
+                elseif spawn:IsA("Model") then
+                    return spawn:GetPivot() + Vector3.new(0, 3, 0)
                 end
             end
         end
+
+        -- Si no existe un objeto Spawn con esos nombres, volver al pivot de la parcela.
+        if plot:IsA("Model") then
+            return plot:GetPivot() + Vector3.new(0, 3, 0)
+        elseif plot:IsA("BasePart") then
+            return plot.CFrame + Vector3.new(0, 3, 0)
+        end
+
+        return nil
     end
+
+    for _, plot in ipairs(plots:GetChildren()) do
+        if isMyPlot(plot) then
+            local targetCF = getTargetFromPlot(plot)
+            if targetCF then
+                teleportToCF(targetCF)
+                task.wait(0.08)
+                return true
+            end
+        end
+    end
+
     return false
 end
 
@@ -352,13 +411,22 @@ local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
 
     addStealHistory(eggName, rarity, cost)
 
-    unequipEggs()
-    task.wait(0.05)
-    teleportToHome()
-    task.wait(0.1)
-    unequipEggs()
+    -- IMPORTANTE: primero intentar el TP al plot; no ocultar el huevo antes.
+    local wentHome = false
+    for _ = 1, 5 do
+        if teleportToHome() then
+            wentHome = true
+            break
+        end
+        task.wait(0.15)
+    end
 
-    return true
+    if wentHome then
+        task.wait(0.1)
+        unequipEggs()
+    end
+
+    return wentHome
 end
 
 local function getTop10EggsInServer()
