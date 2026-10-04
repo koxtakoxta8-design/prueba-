@@ -329,51 +329,38 @@ local function performAntiCheatAndReturn(eggName, rarity, cost)
     teleportToVector(ANTI_CHEAT_POS)
     task.wait(0.05)
 
-    -- SOLTAR
+    -- SOLTAR EL HUEVO
     triggerDropEggButton()
 
-    -- AGARRAR DE NUEVO: polling muy rápido, sin esperas largas
+    -- Intentar agarrarlo inmediatamente
     local deadline = tick() + 2
-    while not characterHasEgg() and tick() < deadline do
-        local char = LocalPlayer.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
+    while tick() < deadline do
+        if characterHasEgg() then
+            break
+        end
 
-        if root then
-            local nearestPrompt = nil
-            local nearestDist = 15
+        executeAntiCheatAutoGrab(0.03)
 
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("ProximityPrompt") and obj.Enabled then
-                    local parentPart = obj.Parent
-                    if parentPart and parentPart:IsA("BasePart") then
-                        local dist = (root.Position - parentPart.Position).Magnitude
-                        if dist <= nearestDist then
-                            nearestDist = dist
-                            nearestPrompt = obj
-                        end
-                    end
-                end
-            end
-
-            if nearestPrompt then
-                pcall(function()
-                    if fireproximityprompt then
-                        fireproximityprompt(nearestPrompt)
-                    else
-                        nearestPrompt:InputHoldBegin()
-                        nearestPrompt:InputHoldEnd()
-                    end
-                end)
-            end
+        -- Comprobar varias veces después del intento de agarre
+        if characterHasEgg() then
+            break
         end
 
         task.wait()
     end
 
-    -- APENAS detecta el huevo: TP AL PLOT INMEDIATO
-    if characterHasEgg() then
-        addStealHistory(eggName, rarity, cost)
-        teleportToHome()
+    -- Confirmación final: esperar solo hasta que el objeto aparezca
+    -- realmente en el Character, sin volver a ejecutar el ciclo largo.
+    local confirmDeadline = tick() + 0.5
+    while tick() < confirmDeadline do
+        if characterHasEgg() then
+            addStealHistory(eggName, rarity, cost)
+
+            -- TP AL PLOT EN EL MISMO MOMENTO DE CONFIRMAR EL AGARRE
+            teleportToHome()
+            break
+        end
+        task.wait()
     end
 
     unequipEggs()
