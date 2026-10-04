@@ -173,29 +173,53 @@ local function teleportToHome()
     local root = getRoot()
     if not root then return false end
 
-    -- Busca la parcela/base/tycoon del jugador usando nombres y ownership variados.
+    -- ============================================================
+    -- JK HUB - TP AL PLOT DEL JUGADOR
+    -- Busca primero ownership REAL del jugador y luego el spawn.
+    -- Evita escoger plots de otros jugadores.
+    -- ============================================================
+
     local containers = {
-        Workspace:FindFirstChild("Plots"), Workspace:FindFirstChild("plots"),
-        Workspace:FindFirstChild("Plot"), Workspace:FindFirstChild("plot"),
-        Workspace:FindFirstChild("Bases"), Workspace:FindFirstChild("bases"),
-        Workspace:FindFirstChild("Base"), Workspace:FindFirstChild("base"),
-        Workspace:FindFirstChild("Tycoons"), Workspace:FindFirstChild("tycoons"),
-        Workspace:FindFirstChild("Tycoon"), Workspace:FindFirstChild("tycoon"),
-        Workspace:FindFirstChild("PlayerPlots"), Workspace:FindFirstChild("PlayerBases"),
-        Workspace:FindFirstChild("Homes"), Workspace:FindFirstChild("Houses"),
-        Workspace:FindFirstChild("Islands"), Workspace:FindFirstChild("Claims")
+        Workspace:FindFirstChild("Plots"),
+        Workspace:FindFirstChild("plots"),
+        Workspace:FindFirstChild("Plot"),
+        Workspace:FindFirstChild("plot"),
+        Workspace:FindFirstChild("Bases"),
+        Workspace:FindFirstChild("bases"),
+        Workspace:FindFirstChild("Base"),
+        Workspace:FindFirstChild("base"),
+        Workspace:FindFirstChild("Tycoons"),
+        Workspace:FindFirstChild("tycoons"),
+        Workspace:FindFirstChild("Tycoon"),
+        Workspace:FindFirstChild("tycoon"),
+        Workspace:FindFirstChild("PlayerPlots"),
+        Workspace:FindFirstChild("PlayerBases"),
+        Workspace:FindFirstChild("PlayerHomes"),
+        Workspace:FindFirstChild("Homes"),
+        Workspace:FindFirstChild("Houses"),
+        Workspace:FindFirstChild("Islands"),
+        Workspace:FindFirstChild("Claims"),
+        Workspace:FindFirstChild("ClaimedPlots"),
+        Workspace:FindFirstChild("PlayerTycoons")
     }
 
     local ownerNames = {
-        "Owner", "OwnerName", "OwnerId", "OwnerUserId", "OwnerID",
-        "Player", "PlayerName", "PlayerId", "PlayerUserId", "PlayerID",
+        "Owner", "OwnerName", "OwnerId", "OwnerID", "OwnerUserId",
+        "Player", "PlayerName", "PlayerId", "PlayerID", "PlayerUserId",
         "User", "UserName", "Username", "UserId", "UserID",
-        "ClaimedBy", "ClaimOwner", "PlotOwner", "BaseOwner", "TycoonOwner",
-        "OwnerValue", "OwnerTag"
+        "ClaimedBy", "ClaimOwner", "PlotOwner", "BaseOwner",
+        "TycoonOwner", "OwnerValue", "OwnerTag", "ClaimedPlayer",
+        "ClaimedUser", "PlotUser", "BaseUser", "TycoonUser"
     }
 
     local function normalize(v)
-        return string.lower(string.gsub(tostring(v or ""), "[%s_%-]", ""))
+        return string.lower(
+            string.gsub(
+                tostring(v or ""),
+                "[%s_%-]",
+                ""
+            )
+        )
     end
 
     local myName = normalize(LocalPlayer.Name)
@@ -203,96 +227,317 @@ local function teleportToHome()
     local myId = tostring(LocalPlayer.UserId)
 
     local function valueMatches(v)
-        if v == nil then return false end
-        if typeof(v) == "Instance" then
-            if v == LocalPlayer then return true end
-            local ok, n = pcall(function() return v.Name end)
-            if ok and (normalize(n) == myName or normalize(n) == myDisplay) then return true end
+        if v == nil then
             return false
         end
-        local t = tostring(v)
-        return normalize(t) == myName or normalize(t) == myDisplay or t == myId
+
+        if typeof(v) == "Instance" then
+            if v == LocalPlayer then
+                return true
+            end
+
+            local okName, name = pcall(function()
+                return v.Name
+            end)
+
+            if okName then
+                local normalizedName = normalize(name)
+                if normalizedName == myName or normalizedName == myDisplay then
+                    return true
+                end
+            end
+
+            return false
+        end
+
+        local text = tostring(v)
+        local normalizedText = normalize(text)
+
+        return normalizedText == myName
+            or normalizedText == myDisplay
+            or text == myId
     end
 
-    local function hasOwnership(obj)
-        if not obj then return false end
+    -- Devuelve cuánta evidencia de ownership tiene el objeto.
+    -- 100 = ownership directo y fuerte.
+    -- 50  = ownership encontrado en un descendiente.
+    local function getOwnershipScore(obj)
+        if not obj then
+            return 0
+        end
 
+        local score = 0
+
+        -- Attributes directos.
         for _, name in ipairs(ownerNames) do
-            local ok, attr = pcall(function() return obj:GetAttribute(name) end)
-            if ok and attr ~= nil and valueMatches(attr) then return true end
+            local ok, attr = pcall(function()
+                return obj:GetAttribute(name)
+            end)
 
-            local child = obj:FindFirstChild(name)
-            if child then
-                local ok2, val = pcall(function() return child.Value end)
-                if ok2 and valueMatches(val) then return true end
-                if valueMatches(child) then return true end
+            if ok and attr ~= nil and valueMatches(attr) then
+                score = math.max(score, 100)
             end
         end
 
-        -- Revisar valores hijos/descendientes que tengan nombres de owner/player/user.
+        -- Values directos.
+        for _, name in ipairs(ownerNames) do
+            local child = obj:FindFirstChild(name)
+
+            if child then
+                if child:IsA("ObjectValue") and child.Value == LocalPlayer then
+                    score = math.max(score, 100)
+                end
+
+                local ok, val = pcall(function()
+                    return child.Value
+                end)
+
+                if ok and valueMatches(val) then
+                    score = math.max(score, 100)
+                end
+
+                if valueMatches(child) then
+                    score = math.max(score, 100)
+                end
+            end
+        end
+
+        -- Revisar descendientes, pero con menor prioridad.
         for _, v in ipairs(obj:GetDescendants()) do
             local lname = string.lower(v.Name)
-            if lname:find("owner", 1, true) or lname:find("player", 1, true)
-                or lname:find("userid", 1, true) or lname:find("username", 1, true)
-                or lname == "user" or lname == "claimedby" then
-                local ok, val = pcall(function() return v.Value end)
-                if ok and valueMatches(val) then return true end
-                if v:IsA("ObjectValue") and v.Value == LocalPlayer then return true end
+
+            if lname:find("owner", 1, true)
+                or lname:find("player", 1, true)
+                or lname:find("userid", 1, true)
+                or lname:find("username", 1, true)
+                or lname == "user"
+                or lname == "claimedby" then
+
+                if v:IsA("ObjectValue") and v.Value == LocalPlayer then
+                    score = math.max(score, 80)
+                end
+
+                local ok, val = pcall(function()
+                    return v.Value
+                end)
+
+                if ok and valueMatches(val) then
+                    score = math.max(score, 80)
+                end
             end
         end
 
-        return false
+        return score
     end
 
     local function looksLikePlot(obj)
-        if not obj then return false end
+        if not obj then
+            return false
+        end
+
         local n = string.lower(obj.Name)
-        return n:find("plot",1,true) or n:find("base",1,true)
-            or n:find("tycoon",1,true) or n:find("house",1,true)
-            or n:find("home",1,true) or n:find("island",1,true)
-            or n:find("claim",1,true)
+
+        return n:find("plot", 1, true)
+            or n:find("base", 1, true)
+            or n:find("tycoon", 1, true)
+            or n:find("farm", 1, true)
+            or n:find("house", 1, true)
+            or n:find("home", 1, true)
+            or n:find("island", 1, true)
+            or n:find("claim", 1, true)
     end
 
-    local function findTarget(plot)
-        local targetNames = {
-            "Spawn", "SpawnLocation", "PlotSpawn", "PlayerSpawn", "HomeSpawn",
-            "BaseSpawn", "SpawnPoint", "SpawnPart", "SpawnLocationPart",
-            "Home", "HouseSpawn", "TycoonSpawn", "ClaimSpawn"
-        }
+    local function findNearestPlotAncestor(obj)
+        local current = obj
 
-        -- Primero buscar un spawn con nombre claro.
-        for _, name in ipairs(targetNames) do
-            local obj = plot:FindFirstChild(name, true)
-            if obj then
-                if obj:IsA("BasePart") then return obj.CFrame + Vector3.new(0,3,0) end
-                if obj:IsA("Model") then return obj:GetPivot() + Vector3.new(0,3,0) end
+        for _ = 1, 15 do
+            if not current then
+                break
             end
+
+            if looksLikePlot(current) then
+                return current
+            end
+
+            current = current.Parent
         end
 
-        -- Después cualquier SpawnLocation dentro de la parcela.
-        for _, obj in ipairs(plot:GetDescendants()) do
-            if obj:IsA("SpawnLocation") then
-                return obj.CFrame + Vector3.new(0,3,0)
-            end
-        end
-
-        if plot:IsA("Model") then return plot:GetPivot() + Vector3.new(0,3,0) end
-        if plot:IsA("BasePart") then return plot.CFrame + Vector3.new(0,3,0) end
         return nil
     end
 
-    local candidates = {}
+    local function getTargetFromObject(plot)
+        if not plot then
+            return nil, 0
+        end
 
-    -- Revisar primero los contenedores habituales.
+        local bestCF = nil
+        local bestScore = -math.huge
+
+        local exactNames = {
+            "PlotSpawn",
+            "PlayerSpawn",
+            "HomeSpawn",
+            "BaseSpawn",
+            "FarmSpawn",
+            "TycoonSpawn",
+            "HouseSpawn",
+            "ClaimSpawn",
+            "SpawnPoint",
+            "SpawnPart",
+            "SpawnLocationPart",
+            "TeleportPoint",
+            "Teleport",
+            "HomePoint",
+            "Home",
+            "Spawn",
+            "SpawnLocation"
+        }
+
+        local function scoreTarget(obj, namePriority)
+            if not obj then
+                return
+            end
+
+            local cf = nil
+
+            if obj:IsA("BasePart") then
+                cf = obj.CFrame
+            elseif obj:IsA("Model") then
+                cf = obj:GetPivot()
+            end
+
+            if not cf then
+                return
+            end
+
+            local n = string.lower(obj.Name)
+            local score = namePriority or 0
+
+            if n:find("plot", 1, true) then
+                score = score + 8
+            end
+
+            if n:find("home", 1, true) then
+                score = score + 10
+            end
+
+            if n:find("base", 1, true) then
+                score = score + 10
+            end
+
+            if n:find("spawn", 1, true) then
+                score = score + 20
+            end
+
+            if n:find("teleport", 1, true) then
+                score = score + 15
+            end
+
+            if n == "spawnlocation" then
+                score = score + 18
+            end
+
+            if score > bestScore then
+                bestScore = score
+                bestCF = cf + Vector3.new(0, 3, 0)
+            end
+        end
+
+        -- 1. Nombres exactos conocidos.
+        for priority, name in ipairs(exactNames) do
+            local obj = plot:FindFirstChild(name, true)
+
+            if obj then
+                scoreTarget(obj, 1000 - priority)
+            end
+        end
+
+        -- 2. SpawnLocations reales.
+        for _, obj in ipairs(plot:GetDescendants()) do
+            if obj:IsA("SpawnLocation") then
+                scoreTarget(obj, 900)
+            end
+        end
+
+        -- 3. Partes con nombres relacionados al spawn/home/base/teleport.
+        for _, obj in ipairs(plot:GetDescendants()) do
+            if obj:IsA("BasePart") or obj:IsA("Model") then
+                local n = string.lower(obj.Name)
+
+                if n:find("spawn", 1, true)
+                    or n:find("home", 1, true)
+                    or n:find("teleport", 1, true)
+                    or n:find("base", 1, true)
+                    or n:find("plot", 1, true) then
+
+                    scoreTarget(obj, 500)
+                end
+            end
+        end
+
+        -- 4. Último recurso: pivot del plot.
+        -- Solo se usa si el plot tiene ownership confirmado.
+        if not bestCF then
+            local ok, pivot = pcall(function()
+                return plot:GetPivot()
+            end)
+
+            if ok and pivot then
+                bestCF = pivot + Vector3.new(0, 3, 0)
+                bestScore = 100
+            elseif plot:IsA("BasePart") then
+                bestCF = plot.CFrame + Vector3.new(0, 3, 0)
+                bestScore = 100
+            end
+        end
+
+        return bestCF, bestScore
+    end
+
+    local candidates = {}
+    local seen = {}
+
+    local function addCandidate(plot, ownershipScore, source)
+        if not plot or seen[plot] then
+            return
+        end
+
+        if ownershipScore <= 0 then
+            return
+        end
+
+        seen[plot] = true
+
+        local targetCF, targetScore = getTargetFromObject(plot)
+
+        if targetCF then
+            table.insert(candidates, {
+                Plot = plot,
+                Ownership = ownershipScore,
+                TargetScore = targetScore,
+                TargetCF = targetCF,
+                Source = source or "unknown"
+            })
+        end
+    end
+
+    -- ============================================================
+    -- 1. Buscar en los contenedores de plots/bases.
+    -- ============================================================
     for _, container in ipairs(containers) do
         if container then
             for _, obj in ipairs(container:GetChildren()) do
-                if hasOwnership(obj) then
-                    table.insert(candidates, obj)
+                local ownership = getOwnershipScore(obj)
+
+                if ownership > 0 then
+                    addCandidate(obj, ownership, "container")
                 else
-                    for _, d in ipairs(obj:GetDescendants()) do
-                        if hasOwnership(d) then
-                            table.insert(candidates, obj)
+                    -- Puede que el Owner esté dentro del modelo.
+                    for _, child in ipairs(obj:GetDescendants()) do
+                        local childOwnership = getOwnershipScore(child)
+
+                        if childOwnership > 0 then
+                            addCandidate(obj, childOwnership, "descendant")
                             break
                         end
                     end
@@ -301,43 +546,114 @@ local function teleportToHome()
         end
     end
 
-    -- Fallback: buscar ownership en todo Workspace y subir hasta Plot/Base/Tycoon/etc.
+    -- ============================================================
+    -- 2. Fallback global:
+    -- encontrar Owner/Player/UserId y subir al Plot/Base/Tycoon.
+    -- ============================================================
     if #candidates == 0 then
         for _, obj in ipairs(Workspace:GetDescendants()) do
-            if hasOwnership(obj) then
-                local current = obj
-                local best = nil
-                for _ = 1, 12 do
-                    if not current then break end
-                    if looksLikePlot(current) then
-                        best = current
-                        break
+            local lname = string.lower(obj.Name)
+
+            if lname:find("owner", 1, true)
+                or lname:find("player", 1, true)
+                or lname:find("userid", 1, true)
+                or lname:find("username", 1, true)
+                or lname == "claimedby"
+                or lname == "user" then
+
+                local ownership = 0
+
+                if obj:IsA("ObjectValue") and obj.Value == LocalPlayer then
+                    ownership = 100
+                else
+                    local ok, val = pcall(function()
+                        return obj.Value
+                    end)
+
+                    if ok and valueMatches(val) then
+                        ownership = 90
                     end
-                    current = current.Parent
                 end
-                if best then
-                    table.insert(candidates, best)
-                    break
+
+                if ownership > 0 then
+                    local plot = findNearestPlotAncestor(obj)
+
+                    if plot then
+                        addCandidate(plot, ownership, "global")
+                    end
                 end
             end
         end
     end
 
-    for _, plot in ipairs(candidates) do
-        local targetCF = findTarget(plot)
-        if targetCF then
-            for _ = 1, 3 do
-                teleportToCF(targetCF)
-                task.wait(0.08)
-                if (root.Position - targetCF.Position).Magnitude < 12 then
-                    return true
+    -- ============================================================
+    -- 3. Fallback por nombre del jugador.
+    -- Algunos juegos nombran el plot con el username.
+    -- ============================================================
+    if #candidates == 0 then
+        for _, container in ipairs(containers) do
+            if container then
+                for _, obj in ipairs(container:GetChildren()) do
+                    local normalizedObjectName = normalize(obj.Name)
+
+                    if normalizedObjectName == myName
+                        or normalizedObjectName == myDisplay then
+                        addCandidate(obj, 60, "player-name")
+                    end
                 end
             end
+        end
+    end
+
+    -- ============================================================
+    -- Elegir SOLO el candidato con mejor ownership.
+    -- En empate, gana el que tenga el mejor spawn.
+    -- ============================================================
+    table.sort(candidates, function(a, b)
+        if a.Ownership ~= b.Ownership then
+            return a.Ownership > b.Ownership
+        end
+
+        return a.TargetScore > b.TargetScore
+    end)
+
+    local chosen = candidates[1]
+
+    if not chosen or not chosen.TargetCF then
+        warn("JK HUB: NO se encontró el plot propio de " .. LocalPlayer.Name)
+        return false
+    end
+
+    -- ============================================================
+    -- TP + VERIFICACIÓN.
+    -- Si el juego bloquea el primer TP, se intenta varias veces.
+    -- ============================================================
+    for attempt = 1, 8 do
+        local currentRoot = getRoot()
+
+        if not currentRoot then
+            return false
+        end
+
+        currentRoot.CFrame = chosen.TargetCF
+
+        task.wait(0.10)
+
+        local distance = (currentRoot.Position - chosen.TargetCF.Position).Magnitude
+
+        if distance <= 15 then
             return true
         end
+
+        task.wait(0.10)
     end
 
-    warn("JK HUB: no se pudo identificar el Plot/Tycoon/Base del jugador")
+    warn(
+        "JK HUB: se encontró el plot de " ..
+        LocalPlayer.Name ..
+        " pero el TP no pudo confirmarse."
+    )
+
     return false
 end
 
