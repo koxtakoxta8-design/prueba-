@@ -1,3 +1,4 @@
+📋 COPIAR SCRIPT
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -270,42 +271,7 @@ local function characterHasEgg()
     return false
 end
 
--- Busca el huevo que acabamos de soltar cerca de la posición indicada.
-local function findDroppedEggNear(position, eggName, radius)
-    local containers = {
-        Workspace:FindFirstChild("RenderedEggs"),
-        Workspace:FindFirstChild("Shop"),
-        Workspace:FindFirstChild("ShopEggs"),
-        Workspace:FindFirstChild("Eggs")
-    }
-
-    local bestEgg = nil
-    local bestDistance = radius or 35
-
-    for _, container in ipairs(containers) do
-        if container then
-            for _, obj in ipairs(container:GetChildren()) do
-                if (obj:IsA("Model") or obj:IsA("BasePart"))
-                    and string.lower(obj.Name) == string.lower(eggName) then
-
-                    local cf = obj:IsA("Model") and obj:GetPivot() or obj.CFrame
-                    if cf then
-                        local distance = (cf.Position - position).Magnitude
-                        if distance <= bestDistance then
-                            bestDistance = distance
-                            bestEgg = obj
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    return bestEgg
-end
-
--- Obtiene una posición unos studs fuera del plot del jugador.
-local function getDropPositionNearHome()
+local function getMyPlotCF()
     local plots = Workspace:FindFirstChild("Plots")
     if not plots then return nil end
 
@@ -315,7 +281,6 @@ local function getDropPositionNearHome()
 
         if owner then
             local isOwner = false
-
             if owner:IsA("StringValue") then
                 isOwner = (owner.Value == LocalPlayer.Name)
             elseif owner:IsA("ObjectValue") then
@@ -325,12 +290,7 @@ local function getDropPositionNearHome()
             end
 
             if isOwner then
-                local plotCF = plot:IsA("Model") and plot:GetPivot() or plot.CFrame
-
-                if plotCF then
-                    -- 50 studs hacia un lado del plot.
-                    return (plotCF * CFrame.new(10, 3, 0)).Position
-                end
+                return plot:IsA("Model") and plot:GetPivot() or plot.CFrame
             end
         end
     end
@@ -338,78 +298,116 @@ local function getDropPositionNearHome()
     return nil
 end
 
-local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
-    -- 1. Buscar un punto cercano al plot del jugador.
-    local dropPosition = getDropPositionNearHome()
+local function getDropPosition50Studs()
+    local plotCF = getMyPlotCF()
+    if not plotCF then return nil end
 
-    if not dropPosition then
-        -- Si no se pudo localizar el plot, usar la posición configurada
-        -- como respaldo.
-        dropPosition = ANTI_CHEAT_POS
+    local root = getRoot()
+    if not root then return nil end
+
+    -- Dirección desde el centro del plot hacia el jugador.
+    -- Esto coloca el punto de soltado 50 studs AFUERA del plot.
+    local offset = root.Position - plotCF.Position
+    local horizontal = Vector3.new(offset.X, 0, offset.Z)
+
+    if horizontal.Magnitude < 0.1 then
+        horizontal = Vector3.new(plotCF.LookVector.X, 0, plotCF.LookVector.Z)
     end
 
-    -- 2. Ir a unos metros del plot mientras seguimos llevando el huevo.
-    teleportToVector(dropPosition)
-    task.wait(0.20)
+    horizontal = horizontal.Unit
 
-    -- 3. Soltar el huevo usando DropEgg.
-    triggerDropEggButton()
-    task.wait(0.20)
+    -- Exactamente 50 studs desde el centro del plot.
+    local dropPos = plotCF.Position + horizontal * 50
+    return CFrame.new(dropPos, dropPos + horizontal)
+end
 
-    -- 4. Buscar nuevamente el huevo que acabamos de soltar.
-    local droppedEgg = nil
+local function findDroppedEggNear(position, eggName)
+    local containers = {
+        Workspace:FindFirstChild("RenderedEggs"),
+        Workspace:FindFirstChild("Shop"),
+        Workspace:FindFirstChild("ShopEggs"),
+        Workspace:FindFirstChild("Eggs")
+    }
 
-    -- Primero intentamos usar la misma referencia.
-    if eggObj and eggObj.Parent then
-        local currentCF = eggObj:IsA("Model") and eggObj:GetPivot() or eggObj.CFrame
-        if currentCF and (currentCF.Position - dropPosition).Magnitude <= 35 then
-            droppedEgg = eggObj
-        end
-    end
+    local best = nil
+    local bestDistance = math.huge
 
-    -- Si la referencia cambió al hacer DropEgg, localizarlo por nombre.
-    local searchStart = tick()
-    while not droppedEgg and tick() - searchStart < 2 do
-        droppedEgg = findDroppedEggNear(dropPosition, eggName, 35)
-        if not droppedEgg then
-            task.wait(0.08)
-        end
-    end
+    for _, container in ipairs(containers) do
+        if container then
+            for _, obj in ipairs(container:GetChildren()) do
+                if (obj:IsA("Model") or obj:IsA("BasePart")) and obj.Parent then
+                    local nameMatches =
+                        obj.Name == eggName or
+                        string.find(string.lower(obj.Name), string.lower(eggName), 1, true)
 
-    -- 5. Volver a agarrar el mismo huevo.
-    if droppedEgg and droppedEgg.Parent then
-        local eggCF = droppedEgg:IsA("Model") and droppedEgg:GetPivot() or droppedEgg.CFrame
+                    if nameMatches then
+                        local cf = obj:IsA("Model") and obj:GetPivot() or obj.CFrame
+                        local distance = (cf.Position - position).Magnitude
 
-        if eggCF then
-            teleportToCF(eggCF)
-            task.wait(0.12)
-
-            local grabStart = tick()
-
-            while tick() - grabStart < 2 do
-                if characterHasEgg() then
-                    break
+                        if distance < bestDistance and distance <= 25 then
+                            best = obj
+                            bestDistance = distance
+                        end
+                    end
                 end
-
-                if droppedEgg and droppedEgg.Parent then
-                    interactWithPrompt(droppedEgg)
-                end
-
-                task.wait(0.08)
             end
         end
     end
 
-    -- 6. Registrar el huevo.
-    addStealHistory(eggName, rarity, cost)
+    return best
+end
 
-    -- 7. Llevar el huevo nuevamente al plot del jugador.
+local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
+    -- 1. Buscar un punto EXACTAMENTE a 50 studs fuera del plot.
+    local dropCF = getDropPosition50Studs()
+    if not dropCF then return false end
+
+    -- 2. TP a los 50 studs, NO al plot.
+    teleportToCF(dropCF)
+    task.wait(0.20)
+
+    -- 3. Soltar el huevo en ese punto.
+    triggerDropEggButton()
+    task.wait(0.25)
+
+    -- 4. Buscar el huevo recién soltado y volver a agarrarlo.
+    local droppedEgg = nil
+    for _ = 1, 20 do
+        droppedEgg = findDroppedEggNear(dropCF.Position, eggName)
+        if droppedEgg and droppedEgg.Parent then
+            break
+        end
+        task.wait(0.05)
+    end
+
+    if droppedEgg and droppedEgg.Parent then
+        local eggCF = droppedEgg:IsA("Model") and droppedEgg:GetPivot() or droppedEgg.CFrame
+
+        teleportToCF(eggCF)
+        task.wait(0.10)
+
+        for _ = 1, 10 do
+            interactWithPrompt(droppedEgg)
+            task.wait(0.05)
+
+            if characterHasEgg() then
+                break
+            end
+        end
+    end
+
+    -- 5. Ahora sí: TP al plot del jugador.
     task.wait(0.10)
-    teleportToHome()
-    task.wait(0.15)
-
-    -- Solo desequipar al final, después de haber vuelto al plot.
     unequipEggs()
+    task.wait(0.05)
+    local plotCF = getMyPlotCF()
+    if plotCF then
+        teleportToCF(plotCF)
+    end
+
+    task.wait(0.15)
+    addStealHistory(eggName, rarity, cost)
+    return true
 end
 
 local function getTop10EggsInServer()
