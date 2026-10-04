@@ -325,44 +325,65 @@ local function executeAntiCheatAutoGrab(maxTime)
 end
 
 local function performAntiCheatAndReturn(eggName, rarity, cost)
-    -- MISMO punto anti-cheat original
+    -- 1. MISMO punto anti-cheat original
     teleportToVector(ANTI_CHEAT_POS)
     task.wait(0.05)
 
-    -- SOLTAR EL HUEVO
+    -- 2. SOLTAR EL EGG
     triggerDropEggButton()
 
-    -- Intentar agarrarlo inmediatamente
+    -- 3. Esperar el AGARRE REAL.
+    --    En vez de depender únicamente de characterHasEgg(),
+    --    observamos el Character para detectar cuando el objeto
+    --    reaparece físicamente después del drop.
+    local char = LocalPlayer.Character
+    local grabbed = false
+    local grabbedConnection = nil
+
+    local function checkGrabbed()
+        if grabbed then return end
+        if characterHasEgg() then
+            grabbed = true
+        end
+    end
+
+    if char then
+        grabbedConnection = char.ChildAdded:Connect(function(child)
+            if grabbed then return end
+
+            local name = string.lower(child.Name or "")
+            if child:IsA("Tool")
+                or string.find(name, "egg")
+                or string.find(name, "fieldegg") then
+                grabbed = true
+            end
+        end)
+
+        -- También comprobar el estado actual por seguridad
+        checkGrabbed()
+    end
+
+    -- Intentar recoger continuamente mientras esperamos el agarre real
     local deadline = tick() + 2
-    while tick() < deadline do
-        if characterHasEgg() then
-            break
-        end
-
+    while not grabbed and tick() < deadline do
         executeAntiCheatAutoGrab(0.03)
-
-        -- Comprobar varias veces después del intento de agarre
-        if characterHasEgg() then
-            break
-        end
-
+        checkGrabbed()
         task.wait()
     end
 
-    -- Confirmación final: esperar solo hasta que el objeto aparezca
-    -- realmente en el Character, sin volver a ejecutar el ciclo largo.
-    local confirmDeadline = tick() + 0.5
-    while tick() < confirmDeadline do
-        if characterHasEgg() then
-            addStealHistory(eggName, rarity, cost)
-
-            -- TP AL PLOT EN EL MISMO MOMENTO DE CONFIRMAR EL AGARRE
-            teleportToHome()
-            break
-        end
-        task.wait()
+    if grabbedConnection then
+        grabbedConnection:Disconnect()
+        grabbedConnection = nil
     end
 
+    -- 4. ESTE ES EL MOMENTO IMPORTANTE:
+    --    apenas el egg vuelve al Character -> TP AL PLOT.
+    if grabbed or characterHasEgg() then
+        addStealHistory(eggName, rarity, cost)
+        teleportToHome()
+    end
+
+    -- Mantener el comportamiento original
     unequipEggs()
 end
 
