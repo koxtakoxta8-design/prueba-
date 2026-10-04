@@ -13,7 +13,7 @@ local DISCORD_IMAGE = "rbxassetid://93628638506572"
 local DISCORD_INVITE = "https://discord.gg/4TmDcDpztN"
 
 -- Coordenadas de anti-cheat para la parada intermedia
-local ANTI_CHEAT_POS = Vector3.new(217.306, 40315.734, 847.810)
+local ANTI_CHEAT_POS = Vector3.new(143.53, 40316.12, 919.94)
 
 local EggDatabase = {
     ["White Egg"]       = {Rank = 1,  Rarity = "Common",      Cost = "1"},
@@ -271,34 +271,41 @@ local function characterHasEgg()
 end
 
 local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
-    -- 1. Teletransportarse a las coordenadas indicadas
+    -- 1. TP a la nueva posicion intermedia
     teleportToVector(ANTI_CHEAT_POS)
     task.wait(0.15)
 
-    -- 2. Activar el botón DropEgg automáticamente
+    -- 2. Activar DropEgg
     triggerDropEggButton()
-    task.wait(0.1)
+    task.wait(0.15)
 
-    -- 3. Al instante volver a agarrarlo automáticamente si sigue disponible o mediante el prompt
-    if eggObj and eggObj.Parent then
-        local eggCF = eggObj:IsA("Model") and eggObj:GetPivot() or eggObj.CFrame
-        if eggCF then
-            teleportToCF(eggCF)
-            task.wait(0.05)
+    -- 3. SIN hacer TP al huevo: volver a activar el Auto Grab desde esta posicion
+    --    y esperar hasta confirmar que el huevo volvio al personaje.
+    local grabbedAgain = characterHasEgg()
+    local grabStart = tick()
+
+    while not grabbedAgain and (tick() - grabStart < 2) do
+        if eggObj and eggObj.Parent then
             interactWithPrompt(eggObj)
-            task.wait(0.1)
         end
+        task.wait(0.05)
+        grabbedAgain = characterHasEgg()
     end
 
-    -- Registrar en historial de steals
+    -- 4. Solo continuar al Plot despues de confirmar el segundo Auto Grab
+    if not grabbedAgain then
+        return false
+    end
+
     addStealHistory(eggName, rarity, cost)
 
-    -- 4. Desequipar y hacer TP final al plot de la casa
     unequipEggs()
     task.wait(0.05)
     teleportToHome()
     task.wait(0.1)
     unequipEggs()
+
+    return true
 end
 
 local function getTop10EggsInServer()
