@@ -164,9 +164,28 @@ end
 
 local function teleportToVector(vector3Pos)
     local root = getRoot()
-    if root and vector3Pos then
-        root.CFrame = CFrame.new(vector3Pos)
+    if not root or not vector3Pos then
+        return false
     end
+
+    -- TP fuerte y confirmado al punto anti-cheat.
+    for _ = 1, 6 do
+        root = getRoot()
+        if not root then return false end
+
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+        root.CFrame = CFrame.new(vector3Pos)
+
+        task.wait(0.06)
+
+        if (root.Position - vector3Pos).Magnitude <= 8 then
+            return true
+        end
+    end
+
+    warn("JK HUB: no se pudo llegar a ANTI_CHEAT_POS")
+    return false
 end
 
 local function teleportToHome()
@@ -496,35 +515,106 @@ local function interactWithPrompt(object)
 end
 
 local function triggerDropEggButton()
-    -- Buscar dinámicamente el botón DropEgg en la interfaz del jugador o del juego
+    -- Devuelve true si encontró una forma de ejecutar el DropEgg.
+    -- No permite que un error del botón detenga toda la secuencia.
+
     local foundBtn = nil
-    
-    -- Búsqueda en PlayerGui
+
+    -- Buscar DropEgg en PlayerGui.
     for _, gui in ipairs(PlayerGui:GetDescendants()) do
-        if (gui:IsA("TextButton") or gui:IsA("ImageButton")) and (string.lower(gui.Name) == "dropegg" or string.find(string.lower(gui.Name), "dropegg")) then
-            foundBtn = gui
-            break
+        if (gui:IsA("TextButton") or gui:IsA("ImageButton")) then
+            local n = string.lower(gui.Name)
+
+            if n == "dropegg"
+                or n:find("dropegg", 1, true)
+                or n:find("drop_egg", 1, true)
+                or n:find("drop egg", 1, true) then
+
+                if gui.Visible ~= false then
+                    foundBtn = gui
+                    break
+                end
+            end
         end
     end
 
-    if foundBtn then
-        for _, conn in ipairs(getconnections(foundBtn.MouseButton1Click)) do
-            conn:Fire()
-        end
-        for _, conn in ipairs(getconnections(foundBtn.Activated)) do
-            conn:Fire()
-        end
-    else
-        -- Fallback mediante remotos si estuviera disponible
+    -- Método 1: conexiones del botón.
+    if foundBtn and type(getconnections) == "function" then
+        local fired = false
+
         pcall(function()
-            local remote = ReplicatedStorage:FindFirstChild("Packages") 
-                and ReplicatedStorage.Packages:FindFirstChild("Networking") 
-                and ReplicatedStorage.Packages.Networking:FindFirstChild("RF/EggWorld/AskFieldEggDrop")
-            if remote then
-                remote:InvokeServer({ Reason = "PlayerRequest" })
+            for _, conn in ipairs(getconnections(foundBtn.MouseButton1Click)) do
+                if conn and conn.Fire then
+                    conn:Fire()
+                    fired = true
+                end
             end
         end)
+
+        pcall(function()
+            for _, conn in ipairs(getconnections(foundBtn.Activated)) do
+                if conn and conn.Fire then
+                    conn:Fire()
+                    fired = true
+                end
+            end
+        end)
+
+        if fired then
+            return true
+        end
     end
+
+    -- Método 2: activar eventos del botón de forma normal.
+    if foundBtn then
+        local ok = pcall(function()
+            if foundBtn:IsA("TextButton") then
+                foundBtn:Activate()
+            elseif foundBtn:IsA("ImageButton") then
+                foundBtn:Activate()
+            end
+        end)
+
+        if ok then
+            return true
+        end
+    end
+
+    -- Método 3: RemoteFunction conocido del juego.
+    local remote = nil
+
+    pcall(function()
+        local packages = ReplicatedStorage:FindFirstChild("Packages")
+        local networking = packages and packages:FindFirstChild("Networking")
+
+        if networking then
+            remote =
+                networking:FindFirstChild("RF/EggWorld/AskFieldEggDrop")
+                or networking:FindFirstChild("AskFieldEggDrop")
+                or networking:FindFirstChild("DropEgg")
+        end
+    end)
+
+    if remote and remote:IsA("RemoteFunction") then
+        local ok = pcall(function()
+            remote:InvokeServer({Reason = "PlayerRequest"})
+        end)
+
+        if ok then
+            return true
+        end
+    elseif remote and remote:IsA("RemoteEvent") then
+        local ok = pcall(function()
+            remote:FireServer({Reason = "PlayerRequest"})
+        end)
+
+        if ok then
+            return true
+        end
+    end
+
+    warn("JK HUB: no se encontró el método para soltar el huevo")
+    return false
 end
 
 local function characterHasEgg()
@@ -619,99 +709,146 @@ end
 
 local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
     -- ============================================================
-    -- SECUENCIA EXACTA:
-    -- 1) El jugador ya tiene el huevo.
-    -- 2) TP al punto anti-cheat.
-    -- 3) Soltar huevo.
-    -- 4) Esperar que vuelva a aparecer el ProximityPrompt.
-    -- 5) Activar el ProximityPrompt para agarrarlo otra vez.
-    -- 6) Confirmar que el huevo está nuevamente en el personaje.
-    -- 7) SOLO ENTONCES TP al plot.
+    -- SECUENCIA:
+    -- AGARRA HUEVO
+    --      ↓
+    -- TP ANTI-CHEAT
+    --      ↓
+    -- SUELTA HUEVO
+    --      ↓
+    -- ESPERA EL PROXIMITYPROMPT DEL HUEVO
+    --      ↓
+    -- AUTO GRAB / FIREPROXIMITYPROMPT
+    --      ↓
+    -- CONFIRMA SEGUNDO GRAB
+    --      ↓
+    -- TP AL PLOT
     -- ============================================================
 
     if not characterHasEgg() then
-        warn("JK HUB: no se confirmó el huevo antes de la rutina de retorno")
+        warn("JK HUB: performAntiCheatAndReturn se llamó sin tener huevo")
         return false
     end
 
-    -- 1. Punto anti-cheat
-    teleportToVector(ANTI_CHEAT_POS)
-    task.wait(0.20)
+    -- ============================================================
+    -- 1. TP A LAS COORDENADAS
+    -- ============================================================
+    local reachedAntiCheat = teleportToVector(ANTI_CHEAT_POS)
 
-    -- 2. Soltar huevo
-    triggerDropEggButton()
+    if not reachedAntiCheat then
+        warn("JK HUB: se canceló porque no llegó a ANTI_CHEAT_POS")
+        return false
+    end
+
+    -- Esperar un poco para que el servidor registre la posición.
     task.wait(0.25)
 
-    -- Confirmar que efectivamente dejó de estar equipado.
-    local dropStart = tick()
+    -- ============================================================
+    -- 2. SOLTAR EL HUEVO
+    -- ============================================================
+    local dropWorked = triggerDropEggButton()
 
-    while characterHasEgg() and (tick() - dropStart < 1.5) do
+    -- Aunque el botón no reporte éxito, esperar porque el juego
+    -- puede tardar unas décimas en quitar el Tool.
+    task.wait(0.15)
+
+    -- Confirmar que dejó de estar equipado.
+    local dropStart = tick()
+    local dropped = false
+
+    while tick() - dropStart < 2 do
+        if not characterHasEgg() then
+            dropped = true
+            break
+        end
+
         task.wait(0.05)
     end
 
-    -- 3. Buscar el huevo soltado y SU ProximityPrompt.
+    if not dropped then
+        warn("JK HUB: el huevo NO se soltó; no se intentará el segundo grab")
+        return false
+    end
+
+    -- ============================================================
+    -- 3. BUSCAR EL HUEVO QUE ACABA DE SOLTAR
+    -- ============================================================
+    local droppedEgg = nil
     local grabbedAgain = false
     local grabStart = tick()
-    local droppedEgg = nil
 
-    while not grabbedAgain and (tick() - grabStart < 5) do
+    while tick() - grabStart < 6 do
 
+        -- Si todavía no tenemos referencia, buscarla otra vez.
         if not droppedEgg or not droppedEgg.Parent then
-            droppedEgg = findEggNearPlayer(eggName, 55)
+            droppedEgg = findEggNearPlayer(eggName, 65)
         end
 
+        -- Si encontramos el objeto, buscar SIEMPRE su prompt actual.
         if droppedEgg and droppedEgg.Parent then
-            -- Rebuscar el prompt cada ciclo porque puede crearse después.
             local prompt =
                 droppedEgg:FindFirstChildWhichIsA("ProximityPrompt", true)
 
-            if prompt then
-                -- Hacer exactamente la misma interacción que usa el Auto Grab.
-                if fireproximityprompt then
+            if prompt and prompt.Enabled ~= false then
+
+                -- Este es el mismo mecanismo del Auto Grab.
+                if type(fireproximityprompt) == "function" then
                     pcall(function()
                         prompt.HoldDuration = 0
-                        fireproximityprompt(prompt)
+                        fireproximityprompt(prompt, 1, true)
                     end)
                 else
                     pcall(function()
                         prompt:InputHoldBegin()
-                        task.wait(0.03)
+                        task.wait(math.max(prompt.HoldDuration, 0.03))
                         prompt:InputHoldEnd()
                     end)
                 end
             end
         end
 
-        task.wait(0.06)
+        task.wait(0.08)
 
-        -- ESTA es la confirmación real del segundo grab.
-        grabbedAgain = characterHasEgg()
+        -- ========================================================
+        -- 4. CONFIRMACIÓN REAL DEL SEGUNDO GRAB
+        -- ========================================================
+        if characterHasEgg() then
+            grabbedAgain = true
+            break
+        end
+
+        -- Si el objeto desapareció, volver a escanear.
+        if droppedEgg and not droppedEgg.Parent then
+            droppedEgg = nil
+        end
     end
 
-    -- Si no volvió a agarrarlo, NO hacer TP al plot.
+    -- ============================================================
+    -- 5. SOLO DESPUÉS DEL SEGUNDO GRAB -> TP PLOT
+    -- ============================================================
     if not grabbedAgain then
-        warn("JK HUB: el ProximityPrompt apareció/no apareció, pero NO se confirmó el segundo grab")
+        warn("JK HUB: NO se confirmó el segundo grab mediante ProximityPrompt")
         return false
     end
 
-    -- 4. El huevo fue agarrado otra vez.
     addStealHistory(eggName, rarity, cost)
 
-    -- 5. AHORA sí TP al plot.
     local wentHome = false
 
-    for _ = 1, 6 do
+    for _ = 1, 8 do
         if teleportToHome() then
             wentHome = true
             break
         end
 
-        task.wait(0.15)
+        task.wait(0.20)
     end
 
     if wentHome then
         task.wait(0.15)
         unequipEggs()
+    else
+        warn("JK HUB: segundo grab confirmado, pero no se pudo hacer TP al plot")
     end
 
     return wentHome
