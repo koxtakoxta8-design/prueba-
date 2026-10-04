@@ -1,1068 +1,1371 @@
---==============================================================
--- KOXTA • RIDE A PET
--- FAST EGG CACHE • LOOP • INSTA TP • BURST x5
--- ProximityPrompt
---==============================================================
+
+
+Texto pegado(1).txt
+Documento
+bro visualiza bien el script es que no estas en tendiendo tp al huevo auto grab se ase tp pero no al plot mira que se ase tp a otro lado lo agarra de nuevo y ahora si al plot
+Ahhh, ahora sí te entendí 😅. No quieres que después de DropEgg vuelva directamente al huevo original.
+
+Quieres exactamente este orden:
+
+1. TP al huevo → 2. Auto Grab → 3. TP a ANTI_CHEAT_POS → 4. DropEgg → 5. TP NUEVAMENTE a donde quedó el huevo → 6. Auto Grab otra vez → 7. AHORA SÍ TP a tu plot.
+
+Y tienes razón: en tu código actual el paso 5 está mal planteado porque intenta reutilizar eggObj. En las líneas 282–288 hace TP al objeto original y lo intenta agarrar inmediatamente. 
+
+Además, el TP al plot solamente ocurre después de ese bloque, en teleportToHome(). 
+
+No voy a cambiar tu interfaz ni el resto del HUB. La modificación correcta es hacer que después del DropEgg se busque nuevamente el huevo que acaba de caer, se haga TP hacia ese huevo, se ejecute el Auto Grab y solo cuando se confirme que el personaje volvió a tener el huevo, se ejecute teleportToHome().
+
+Si quieres, te preparo ahora el código completo de las funciones que debes reemplazar, listo para copiar y pegar, sin tocar el resto del HUB.
+
+tp al huevo auto grab egg anti cheat post dropegg auto grab egg tp a plot
+Exacto. El orden que quieres es:
+
+TP al huevo → Auto Grab → TP Anti-Cheat → DropEgg → TP al huevo soltado → Auto Grab otra vez → TP a tu Plot.
+
+En tu script actual, la parte que hay que cambiar es performAntiCheatAndReturn, porque ahora intenta reutilizar el eggObj anterior después del DropEgg. 
+
+Te lo puedo dejar con ese flujo exacto, buscando el huevo nuevo después del DropEgg y confirmando el segundo Auto Grab antes de mandarte al Plot.
+
+no ase falta aserse tp al huevo soltado
+Sí, entendido 👍
+
+Entonces NO hacemos TP al huevo después del DropEgg.
+
+El flujo queda:
+
+1. TP al huevo
+→ 2. Auto Grab
+→ 3. TP al Anti-Cheat
+→ 4. DropEgg
+→ 5. Auto Grab nuevamente desde esa misma posición
+→ 6. TP a tu Plot
+
+O sea, después de DropEgg simplemente se intenta agarrar el huevo sin hacer otro TP. Luego, cuando confirme que characterHasEgg() es verdadero, recién hace teleportToHome(). 
+
+La parte clave sería:
+
+teleportToVector(ANTI_CHEAT_POS)
+task.wait(0.15)
+
+triggerDropEggButton()
+task.wait(0.15)
+
+-- SIN TP AL HUEVO
+-- Auto Grab nuevamente desde la posición actual
+local grabbedAgain = false
+
+for i = 1, 20 do
+    if characterHasEgg() then
+        grabbedAgain = true
+        break
+    end
+
+    interactWithPrompt(eggObj)
+    task.wait(0.1)
+end
+
+-- SOLO SI VOLVIÓ A TENER EL HUEVO
+if grabbedAgain then
+    unequipEggs()
+    task.wait(0.05)
+    teleportToHome()
+end
+
+Así no mete ningún TP adicional entre DropEgg y el segundo Auto Grab.
+
+exacto
+Exactamente 😎. Queda así:
+
+TP huevo → Auto Grab → TP Anti-Cheat → DropEgg → Auto Grab → TP Plot.
+
+Sin TP al huevo después del DropEgg.
+
+si aslo completo con la misma mecanica misma interfas
+
+Ha pensado durante 8s
+Listo. Mantiene la misma interfaz y el resto de la mecánica del script original; solo cambié la secuencia del proceso. El archivo original tenía el TP al objeto después de DropEgg, que era justamente lo que no querías. 
+
+Ahora funciona así
+TP huevo → Auto Grab → TP Anti-Cheat → DropEgg → Auto Grab sin TP → confirmar que tiene el huevo → TP a tu Plot.
+
+Además, el TP al Plot no ocurre si el segundo Auto Grab no fue confirmado.
+
+
+JK_HUB_MISMA_INTERFAZ_NUEVA_MECANICA.txt
+Documento
+
+
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UIS = game:GetService("UserInputService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
---==============================================================
--- CONFIG
---==============================================================
+local JK_IMAGE = "rbxassetid://125457404598852"
+local DISCORD_IMAGE = "rbxassetid://93628638506572"
+local DISCORD_INVITE = "https://discord.gg/4TmDcDpztN"
 
-local LOOP = false
-local BUSY = false
+-- Coordenadas de anti-cheat para la parada intermedia
+local ANTI_CHEAT_POS = Vector3.new(217.306, 40315.734, 847.810)
 
-local BURST_COUNT = 5
-local LOOP_DELAY = 1.0
-local PROMPT_DELAY = 0.035
-local EGG_OFFSET = Vector3.new(0, 2, 0)
-
-local LOGO_ID = "rbxassetid://103645600156879"
-
--- Zona excluida
-local EXCLUSION_CENTER = Vector3.new(
-    146.87,
-    40316.12,
-    911.14
-)
-
-local EXCLUSION_RADIUS = 210
-
---==============================================================
--- GUI
---==============================================================
-
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "KOXTA_RIDE_A_PET"
-Gui.ResetOnSpawn = false
-Gui.Parent = Player:WaitForChild("PlayerGui")
-
-local Main = Instance.new("Frame")
-Main.Size = UDim2.fromOffset(285,190)
-Main.Position = UDim2.new(.5,-142,.5,-95)
-Main.BackgroundColor3 = Color3.fromRGB(0,0,0)
-Main.BackgroundTransparency = 0.30
-Main.BorderSizePixel = 0
-Main.ClipsDescendants = true
-Main.Parent = Gui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0,9)
-Corner.Parent = Main
-
-local Border = Instance.new("UIStroke")
-Border.Color = Color3.fromRGB(0,0,0)
-Border.Thickness = 2
-Border.Parent = Main
-
---==============================================================
--- TOP BAR
---==============================================================
-
-local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1,0,0,34)
-TopBar.BackgroundColor3 = Color3.fromRGB(0,0,0)
-TopBar.BackgroundTransparency = .12
-TopBar.BorderSizePixel = 0
-TopBar.Parent = Main
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1,-75,1,0)
-Title.Position = UDim2.fromOffset(9,0)
-Title.BackgroundTransparency = 1
-Title.Text = "KOXTA • RIDE A PET"
-Title.TextColor3 = Color3.new(1,1,1)
-Title.TextSize = 12
-Title.Font = Enum.Font.GothamBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = TopBar
-
-local MinButton = Instance.new("TextButton")
-MinButton.Size = UDim2.fromOffset(32,30)
-MinButton.Position = UDim2.new(1,-67,0,2)
-MinButton.BackgroundTransparency = 1
-MinButton.Text = "—"
-MinButton.TextColor3 = Color3.new(1,1,1)
-MinButton.TextSize = 17
-MinButton.Font = Enum.Font.GothamBold
-MinButton.Parent = TopBar
-
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.fromOffset(32,30)
-CloseButton.Position = UDim2.new(1,-34,0,2)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255,65,65)
-CloseButton.TextSize = 12
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.Parent = TopBar
-
---==============================================================
--- LOGO
---==============================================================
-
-local Logo = Instance.new("ImageLabel")
-Logo.Size = UDim2.fromOffset(36,36)
-Logo.Position = UDim2.new(1,-47,0,42)
-Logo.BackgroundTransparency = 1
-Logo.Image = LOGO_ID
-Logo.ScaleType = Enum.ScaleType.Fit
-Logo.Parent = Main
-
-local LogoCorner = Instance.new("UICorner")
-LogoCorner.CornerRadius = UDim.new(1,0)
-LogoCorner.Parent = Logo
-
---==============================================================
--- INFO
---==============================================================
-
-local BestLabel = Instance.new("TextLabel")
-BestLabel.Size = UDim2.new(1,-60,0,23)
-BestLabel.Position = UDim2.fromOffset(11,43)
-BestLabel.BackgroundTransparency = 1
-BestLabel.Text = "🏆 Mejor: BUSCANDO..."
-BestLabel.TextColor3 = Color3.new(1,1,1)
-BestLabel.TextSize = 11
-BestLabel.Font = Enum.Font.GothamBold
-BestLabel.TextXAlignment = Enum.TextXAlignment.Left
-BestLabel.Parent = Main
-
--- El valor se usa internamente para elegir el mejor huevo,
--- pero NO se muestra en la interfaz.
-local ValueLabel = Instance.new("TextLabel")
-ValueLabel.Visible = false
-ValueLabel.Parent = Main
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1,-22,0,19)
-StatusLabel.Position = UDim2.fromOffset(11,86)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Estado: LISTO"
-StatusLabel.TextColor3 = Color3.fromRGB(180,180,180)
-StatusLabel.TextSize = 10
-StatusLabel.Font = Enum.Font.Gotham
-StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-StatusLabel.Parent = Main
-
-Player.CharacterAdded:Connect(function()
-    CachedPlotPosition = nil
-end)
-
---==============================================================
--- LOOP
---==============================================================
-
-local LoopButton = Instance.new("TextButton")
-LoopButton.Size = UDim2.fromOffset(126,34)
-LoopButton.Position = UDim2.fromOffset(11,116)
-LoopButton.BackgroundColor3 = Color3.fromRGB(18,18,18)
-LoopButton.BorderSizePixel = 0
-LoopButton.Text = "LOOP  •  OFF"
-LoopButton.TextColor3 = Color3.new(1,1,1)
-LoopButton.TextSize = 11
-LoopButton.Font = Enum.Font.GothamBold
-LoopButton.Parent = Main
-
-local LoopCorner = Instance.new("UICorner")
-LoopCorner.CornerRadius = UDim.new(0,7)
-LoopCorner.Parent = LoopButton
-
-local LoopStroke = Instance.new("UIStroke")
-LoopStroke.Color = Color3.fromRGB(0,0,0)
-LoopStroke.Thickness = 1.5
-LoopStroke.Parent = LoopButton
-
---==============================================================
--- INSTA TP
---==============================================================
-
-local InstaButton = Instance.new("TextButton")
-InstaButton.Size = UDim2.fromOffset(126,34)
-InstaButton.Position = UDim2.fromOffset(148,116)
-InstaButton.BackgroundColor3 = Color3.fromRGB(18,18,18)
-InstaButton.BorderSizePixel = 0
-InstaButton.Text = "INSTA TP"
-InstaButton.TextColor3 = Color3.new(1,1,1)
-InstaButton.TextSize = 11
-InstaButton.Font = Enum.Font.GothamBold
-InstaButton.Parent = Main
-
-local InstaCorner = Instance.new("UICorner")
-InstaCorner.CornerRadius = UDim.new(0,7)
-InstaCorner.Parent = InstaButton
-
-local InstaStroke = Instance.new("UIStroke")
-InstaStroke.Color = Color3.fromRGB(0,0,0)
-InstaStroke.Thickness = 1.5
-InstaStroke.Parent = InstaButton
-
---==============================================================
--- BURST INDICATOR
---==============================================================
-
-local BurstLabel = Instance.new("TextLabel")
-BurstLabel.Size = UDim2.new(1,-22,0,18)
-BurstLabel.Position = UDim2.fromOffset(11,155)
-BurstLabel.BackgroundTransparency = 1
-BurstLabel.Text = "RÁFAGA: x5  •  HUEVOS: 0"
-BurstLabel.TextColor3 = Color3.fromRGB(150,150,150)
-BurstLabel.TextSize = 9
-BurstLabel.Font = Enum.Font.Gotham
-BurstLabel.TextXAlignment = Enum.TextXAlignment.Left
-BurstLabel.Parent = Main
-
---==============================================================
--- UTILIDADES
---==============================================================
-
-local function GetRoot()
-    local Character = Player.Character
-    if not Character then
-        return nil
-    end
-
-    return Character:FindFirstChild("HumanoidRootPart")
-end
-
-local function GetPosition(Object)
-    if not Object then
-        return nil
-    end
-
-    if Object:IsA("BasePart") then
-        return Object.Position
-    end
-
-    if Object:IsA("Model") then
-        if Object.PrimaryPart then
-            return Object.PrimaryPart.Position
-        end
-
-        -- One-time fallback. RegisterEgg stores the result, so this is
-        -- not repeated on every selector pass.
-        local Part = Object:FindFirstChildWhichIsA("BasePart", true)
-        return Part and Part.Position
-    end
-
-    return nil
-end
-
-local function IsExcluded(Position)
-
-    if not Position then
-        return true
-    end
-
-    local X = math.abs(
-        Position.X - EXCLUSION_CENTER.X
-    )
-
-    local Z = math.abs(
-        Position.Z - EXCLUSION_CENTER.Z
-    )
-
-    return X <= EXCLUSION_RADIUS
-       and Z <= EXCLUSION_RADIUS
-end
-
-local function IsEgg(Object)
-    if not Object then
-        return false
-    end
-
-    if Object:IsA("ProximityPrompt") then
-        return GetEggFromPrompt(Object) ~= nil
-    end
-
-    return LooksLikeEggName(Object.Name)
-        or Object:GetAttribute("IsEgg") == true
-        or Object:GetAttribute("Egg") == true
-end
-
-local function FindPrompt(Object)
-    if not Object then
-        return nil
-    end
-
-    if Object:IsA("ProximityPrompt") then
-        return Object
-    end
-
-    return Object:FindFirstChildWhichIsA(
-        "ProximityPrompt",
-        true
-    )
-end
-
---==============================================================
--- VALOR
---==============================================================
-
-local function GetValue(Object)
-    if not Object then
-        return 0
-    end
-
-    -- Prefer direct attributes: cheap and stable.
-    local AttributeNames = {
-        "Luck",
-        "luck",
-        "EggLuck",
-        "RarityValue",
-        "Value",
-        "Price"
-    }
-
-    for _, Name in ipairs(AttributeNames) do
-        local Value = Object:GetAttribute(Name)
-        if typeof(Value) == "number" then
-            return Value
-        end
-    end
-
-    -- Only inspect direct children. Never recursively scan the whole egg
-    -- during the selector loop.
-    for _, Item in ipairs(Object:GetChildren()) do
-        if Item:IsA("NumberValue") or Item:IsA("IntValue") then
-            local Name = Item.Name:lower()
-
-            if Name:find("luck", 1, true)
-            or Name:find("rarity", 1, true)
-            or Name:find("value", 1, true)
-            or Name:find("price", 1, true) then
-                return Item.Value
-            end
-        end
-    end
-
-    return 0
-end
-
---==============================================================
--- PRIORIDAD DE HUEVOS
---==============================================================
-
-local EggPriority = {
-    ["White Egg"] = 1, ["Brown Egg"] = 5, ["Cracked Egg"] = 30,
-    ["Easter Egg"] = 50, ["Stone Egg"] = 100, ["Leaf Egg"] = 200,
-    ["Mushroom Egg"] = 500, ["Flower Egg"] = 750, ["Slime Egg"] = 1000,
-    ["Ice Egg"] = 3000, ["Glass Egg"] = 10000, ["Golden Egg"] = 30000,
-    ["Crystal Egg"] = 150000, ["Skull Egg"] = 250000,
-    ["Dominus Egg"] = 700000, ["Flaming Egg"] = 1000000,
-    ["Sinister Egg"] = 3000000, ["Soul Egg"] = 7000000,
-    ["Aurora Egg"] = 300000000, ["Galaxy Egg"] = 1500000000,
-    ["Blackhole Egg"] = 100000000000, ["Solaris Egg"] = 300000000000,
-    ["Cherub Egg"] = 1000000000000, ["Volcanic Egg"] = 2500000000000
+local EggDatabase = {
+    ["White Egg"]       = {Rank = 1,  Rarity = "Common",      Cost = "1"},
+    ["Brown Egg"]       = {Rank = 2,  Rarity = "Common",      Cost = "5"},
+    ["Cracked Egg"]     = {Rank = 3,  Rarity = "Rare",        Cost = "30"},
+    ["Easter Egg"]      = {Rank = 4,  Rarity = "Rare",        Cost = "50"},
+    ["Stone Egg"]       = {Rank = 5,  Rarity = "Rare",        Cost = "100"},
+    ["Leaf Egg"]        = {Rank = 6,  Rarity = "Rare",        Cost = "200"},
+    ["Mushroom Egg"]    = {Rank = 7,  Rarity = "Epic",        Cost = "500"},
+    ["Flower Egg"]      = {Rank = 8,  Rarity = "Epic",        Cost = "750"},
+    ["Slime Egg"]       = {Rank = 9,  Rarity = "Epic",        Cost = "1K"},
+    ["Ice Egg"]         = {Rank = 10, Rarity = "Epic",        Cost = "3K"},
+    ["Glass Egg"]       = {Rank = 11, Rarity = "Legendary",   Cost = "10K"},
+    ["Golden Egg"]      = {Rank = 12, Rarity = "Legendary",   Cost = "30K"},
+    ["Crystal Egg"]     = {Rank = 13, Rarity = "Mythic",      Cost = "150K"},
+    ["Skull Egg"]       = {Rank = 14, Rarity = "Mythic",      Cost = "250K"},
+    ["Dominus Egg"]     = {Rank = 15, Rarity = "Mythic",      Cost = "700K"},
+    ["Flaming Egg"]     = {Rank = 16, Rarity = "Mythic",      Cost = "1M"},
+    ["Sinister Egg"]    = {Rank = 17, Rarity = "Mythic",      Cost = "3M"},
+    ["Soul Egg"]        = {Rank = 18, Rarity = "Mythic",      Cost = "7M"},
+    ["Aurora Egg"]      = {Rank = 19, Rarity = "Divine",      Cost = "300M"},
+    ["Neptune Egg"]     = {Rank = 20, Rarity = "Divine",      Cost = "750M"},
+    ["Galaxy Egg"]      = {Rank = 21, Rarity = "Divine",      Cost = "1.5B"},
+    ["Nebula Egg"]      = {Rank = 22, Rarity = "Divine",      Cost = "5B"},
+    ["Blackhole Egg"]   = {Rank = 24, Rarity = "Ethereal",    Cost = "100B"},
+    ["Solaris Egg"]     = {Rank = 25, Rarity = "Ethereal",    Cost = "300B"},
+    ["Cherub Egg"]      = {Rank = 26, Rarity = "Ethereal",    Cost = "1T"}
 }
 
-local function GetEggPriority(Object)
-    return Object and EggPriority[Object.Name] or 0
+local stealsHistory = {}
+
+local autoFarmActive = false
+local autoFarmThread = nil
+local selectedTargetEgg = nil
+local targetClearedByUser = false
+
+local autoFarmEggs = {
+    ["Aurora Egg"] = true,
+    ["Solaris Egg"] = true
+}
+
+local animatedGradients = {}
+
+local function createAnimatedStroke(parent, thickness)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.new(1, 1, 1)
+    stroke.Thickness = thickness or 1.5
+    stroke.Parent = parent
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+        ColorSequenceKeypoint.new(0.5, Color3.new(0, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))
+    })
+    gradient.Rotation = 90
+    gradient.Parent = stroke
+
+    table.insert(animatedGradients, gradient)
+    return stroke, gradient
 end
 
-local function LooksLikeEggName(name)
-    return EggPriority[tostring(name or "")] ~= nil
+local function translateRarity(rarity)
+    local r = string.lower(rarity or "")
+    if r == "comun" or r == "common" then return "Common"
+    elseif r == "raro" or r == "rare" then return "Rare"
+    elseif r == "epico" or r == "epic" then return "Epic"
+    elseif r == "legendario" or r == "legendary" then return "Legendary"
+    elseif r == "mitico" or r == "mythic" then return "Mythic"
+    elseif r == "divino" or r == "divine" then return "Divine"
+    elseif r == "etereo" or r == "etereal" then return "Ethereal"
+    else return rarity or "Divine" end
 end
 
-local function GetEggFromPrompt(Prompt)
-    if not Prompt then return nil end
-    local current = Prompt.Parent
-
-    for _ = 1, 12 do
-        if not current then break end
-        if LooksLikeEggName(current.Name) then
-            return current
-        end
-        current = current.Parent
+local function applyRarityStyle(label, rarity)
+    for _, child in ipairs(label:GetChildren()) do
+        if child:IsA("UIGradient") then child:Destroy() end
     end
-
-    return nil
-end
-
---==============================================================
--- CACHE DE HUEVOS
---==============================================================
-
--- Solo 1 representante por cada tipo de huevo.
--- Ej.: 10 Volcanic -> se guarda 1 Volcanic.
-local EggByType = {}
-local EggCache = {}
-local CachedPlotPosition = nil
-
-local function RegisterEgg(Object)
-    if not Object or not Object.Parent then
-        return false
-    end
-
-    local Egg = Object
-
-    if Object:IsA("ProximityPrompt") then
-        local Current = Object.Parent
-
-        for _ = 1, 12 do
-            if not Current then
-                break
-            end
-
-            if EggPriority[Current.Name] then
-                Egg = Current
-                break
-            end
-
-            Current = Current.Parent
-        end
-    end
-
-    if not Egg
-    or not Egg.Parent
-    or not EggPriority[Egg.Name] then
-        return false
-    end
-
-    local EggType = Egg.Name
-
-    -- Ya tenemos un representante válido de este tipo.
-    if EggByType[EggType]
-    and EggByType[EggType].Object
-    and EggByType[EggType].Object.Parent then
-        return false
-    end
-
-    local Position = GetPosition(Egg)
-
-    if not Position or IsExcluded(Position) then
-        return false
-    end
-
-    local Prompt = FindPrompt(Egg)
-
-    if not Prompt then
-        return false
-    end
-
-    local Priority = EggPriority[EggType]
-
-    local Data = {
-        Object = Egg,
-        Position = Position,
-        Prompt = Prompt,
-        Value = Priority,
-        Priority = Priority,
-        EggType = EggType
-    }
-
-    EggByType[EggType] = Data
-    EggCache[Egg] = Data
-
-    return true
-end
-
-local function RemoveEgg(Egg)
-    if not Egg then
-        return
-    end
-
-    local EggType = Egg.Name
-    local Data = EggByType[EggType]
-
-    if Data and Data.Object == Egg then
-        EggByType[EggType] = nil
-        EggCache[Egg] = nil
-
-        -- Si todavía existe otro del mismo tipo, toma SOLO uno.
-        task.defer(function()
-            if EggByType[EggType] then
-                return
-            end
-
-            for _, Candidate in ipairs(workspace:GetDescendants()) do
-                if Candidate ~= Egg
-                and Candidate.Parent
-                and Candidate.Name == EggType then
-                    if RegisterEgg(Candidate) then
-                        break
-                    end
-                end
-            end
-        end)
+    local r = string.lower(rarity or "")
+    if r == "common" or r == "comun" then
+        label.TextColor3 = Color3.fromRGB(150, 150, 150)
+    elseif r == "rare" or r == "raro" then
+        label.TextColor3 = Color3.fromRGB(100, 200, 255)
+    elseif r == "epic" or r == "epico" then
+        label.TextColor3 = Color3.fromRGB(170, 80, 255)
+    elseif r == "legendary" or r == "legendario" then
+        label.TextColor3 = Color3.fromRGB(255, 220, 50)
+    elseif r == "mythic" or r == "mitico" then
+        label.TextColor3 = Color3.fromRGB(255, 105, 180)
+    elseif r == "divine" or r == "divino" then
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        local grad = Instance.new("UIGradient")
+        grad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 215, 0)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(218, 165, 32))
+        })
+        grad.Parent = label
+    elseif r == "ethereal" or r == "etereo" then
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        local grad = Instance.new("UIGradient")
+        grad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 140, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 180))
+        })
+        grad.Parent = label
+    else
+        label.TextColor3 = Color3.fromRGB(200, 200, 200)
     end
 end
 
-local function RebuildCache()
-    table.clear(EggByType)
-    table.clear(EggCache)
-
-    -- Un único escaneo inicial.
-    -- En cuanto ya existe un tipo, los duplicados se ignoran.
-    for _, Object in ipairs(workspace:GetDescendants()) do
-        if EggPriority[Object.Name]
-        and not EggByType[Object.Name] then
-            RegisterEgg(Object)
+local function getEggData(eggName)
+    if EggDatabase[eggName] then return EggDatabase[eggName] end
+    for name, data in pairs(EggDatabase) do
+        if string.find(string.lower(eggName), string.lower(name)) then
+            return data
         end
     end
+    return {Rank = 0, Rarity = "Divine", Cost = "---"}
 end
 
---==============================================================
--- EVENTOS: SOLO MANTENER 1 POR TIPO
---==============================================================
+local function getEggImage(eggName)
+    local main = PlayerGui:FindFirstChild("Main")
+    local index = main and main:FindFirstChild("Index")
+    local holders = index and index:FindFirstChild("Holders")
+    local eggsHolder = holders and holders:FindFirstChild("EggsHolder")
 
-workspace.DescendantAdded:Connect(function(Object)
-    if EggPriority[Object.Name]
-    and not EggByType[Object.Name] then
-        task.defer(function()
-            RegisterEgg(Object)
-        end)
+    if eggsHolder then
+        local eggFrame = eggsHolder:FindFirstChild(eggName)
+        if eggFrame then
+            local img = eggFrame:FindFirstChild("ImageLabel") or eggFrame:FindFirstChildOfClass("ImageLabel")
+            if img then return img.Image end
+        end
     end
-end)
-
-workspace.DescendantRemoving:Connect(function(Object)
-    if EggByType[Object.Name]
-    and EggByType[Object.Name].Object == Object then
-        RemoveEgg(Object)
-    end
-end)
-
---==============================================================
--- MEJOR HUEVO DESDE CACHE
---==============================================================
-
-local function GetDetectedTypeCount()
-    local Count = 0
-    for _ in pairs(EggByType) do
-        Count += 1
-    end
-    return Count
+    return JK_IMAGE
 end
 
-local function FindBestEggFast()
-    local Best = nil
-    local Highest = -math.huge
+local function getRoot()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    return char:FindFirstChild("HumanoidRootPart")
+end
 
-    for EggType, Data in pairs(EggByType) do
-        local Object = Data.Object
+local function teleportToCF(cf)
+    local root = getRoot()
+    if root and cf then
+        root.CFrame = cf * CFrame.new(0, 2, 0)
+    end
+end
 
-        if not Object or not Object.Parent then
-            EggByType[EggType] = nil
-            EggCache[Object] = nil
-        else
-            local Priority = EggPriority[EggType] or 0
+local function teleportToVector(vector3Pos)
+    local root = getRoot()
+    if root and vector3Pos then
+        root.CFrame = CFrame.new(vector3Pos)
+    end
+end
 
-            if Priority > Highest then
-                local Prompt = Data.Prompt
+local function teleportToHome()
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then return false end
 
-                if not Prompt or not Prompt.Parent then
-                    Prompt = FindPrompt(Object)
-                    Data.Prompt = Prompt
-                end
+    for _, plot in ipairs(plots:GetChildren()) do
+        local data = plot:FindFirstChild("Data")
+        if data then
+            local owner = data:FindFirstChild("Owner")
+            if owner then
+                local isOwner = false
+                if owner:IsA("StringValue") then isOwner = (owner.Value == LocalPlayer.Name)
+                elseif owner:IsA("ObjectValue") then isOwner = (owner.Value == LocalPlayer)
+                else isOwner = (tostring(owner.Value) == LocalPlayer.Name) end
 
-                if Prompt and Prompt.Enabled then
-                    Highest = Priority
-                    Best = Data
+                if isOwner then
+                    local targetCF = plot:IsA("Model") and plot:GetPivot() or plot.CFrame
+                    teleportToCF(targetCF)
+                    return true
                 end
             end
         end
     end
-
-    return Best
-end
-
---==============================================================
--- TP
---==============================================================
-
-local function Teleport(Position)
-
-    local Root = GetRoot()
-
-    if not Root then
-        return false
-    end
-
-    Root.CFrame =
-        CFrame.new(
-            Position + EGG_OFFSET
-        )
-
-    return true
-end
-
---==============================================================
--- RECOGER x5
---==============================================================
-
-local function ActivatePrompt(Prompt)
-    if not Prompt or not Prompt.Parent or not Prompt.Enabled then
-        return false
-    end
-
-    -- In supported executor environments this is the most direct way
-    -- to activate a ProximityPrompt.
-    if typeof(fireproximityprompt) == "function" then
-        local ok = pcall(function()
-            Prompt.HoldDuration = 0
-            fireproximityprompt(Prompt)
-        end)
-
-        if ok then
-            return true
-        end
-    end
-
-    -- Fallback for normal LocalScript-compatible prompt input.
-    local ok = pcall(function()
-        Prompt.HoldDuration = 0
-        Prompt:InputHoldBegin()
-        task.wait(PROMPT_DELAY)
-        Prompt:InputHoldEnd()
-    end)
-
-    return ok
-end
-
-local function BurstCollect(Egg)
-    if not Egg
-    or not Egg.Object
-    or not Egg.Object.Parent then
-        return false
-    end
-
-    local Prompt = Egg.Prompt
-
-    if not Prompt or not Prompt.Parent then
-        Prompt = FindPrompt(Egg.Object)
-        Egg.Prompt = Prompt
-    end
-
-    if not Prompt or not Prompt.Enabled then
-        return false
-    end
-
-    local Activated = false
-
-    for i = 1, BURST_COUNT do
-        if not Egg.Object.Parent then
-            break
-        end
-
-        if not Prompt or not Prompt.Parent then
-            Prompt = FindPrompt(Egg.Object)
-            Egg.Prompt = Prompt
-        end
-
-        if not Prompt or not Prompt.Enabled then
-            break
-        end
-
-        StatusLabel.Text =
-            "Estado: RÁFAGA " .. i .. "/" .. BURST_COUNT
-
-        if ActivatePrompt(Prompt) then
-            Activated = true
-        end
-
-        task.wait(PROMPT_DELAY)
-    end
-
-    return Activated
-end
-
---==============================================================
--- BUSCAR PLOT
---==============================================================
-
-local function IsMyPlot(Object)
-
-    for _,Name in ipairs({
-        "Owner",
-        "owner",
-        "OwnerName",
-        "ownerName"
-    }) do
-
-        local Attribute =
-            Object:GetAttribute(Name)
-
-        if Attribute ~= nil then
-
-            if tostring(Attribute)
-                == Player.Name
-            or tostring(Attribute)
-                == tostring(Player.UserId) then
-
-                return true
-            end
-        end
-
-        local Value =
-            Object:FindFirstChild(
-                Name,
-                true
-            )
-
-        if Value then
-
-            if Value:IsA("StringValue")
-            and Value.Value == Player.Name then
-
-                return true
-            end
-
-            if Value:IsA("IntValue")
-            and Value.Value == Player.UserId then
-
-                return true
-            end
-
-            if Value:IsA("ObjectValue")
-            and Value.Value == Player then
-
-                return true
-            end
-        end
-    end
-
     return false
 end
 
-local function FindMyPlot()
-    if CachedPlotPosition then
-        return CachedPlotPosition
+local function unequipEggs()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid:UnequipTools()
+    end
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if backpack then
+        for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("Tool") or string.find(string.lower(child.Name), "egg") then
+                child.Parent = backpack
+            end
+        end
+    end
+end
+
+local function interactWithPrompt(object)
+    if not object or not object.Parent then return end
+    local prompt = object:FindFirstChildOfClass("ProximityPrompt") 
+        or object:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+    if prompt then
+        if fireproximityprompt then
+            fireproximityprompt(prompt)
+        else
+            prompt:InputHoldBegin()
+            task.wait(0.02)
+            prompt:InputHoldEnd()
+        end
+    end
+end
+
+local function triggerDropEggButton()
+    -- Buscar dinámicamente el botón DropEgg en la interfaz del jugador o del juego
+    local foundBtn = nil
+    
+    -- Búsqueda en PlayerGui
+    for _, gui in ipairs(PlayerGui:GetDescendants()) do
+        if (gui:IsA("TextButton") or gui:IsA("ImageButton")) and (string.lower(gui.Name) == "dropegg" or string.find(string.lower(gui.Name), "dropegg")) then
+            foundBtn = gui
+            break
+        end
     end
 
-    -- Only the first lookup scans Workspace.
-    for _, Object in ipairs(workspace:GetDescendants()) do
-        local Name = Object.Name:lower()
+    if foundBtn then
+        for _, conn in ipairs(getconnections(foundBtn.MouseButton1Click)) do
+            conn:Fire()
+        end
+        for _, conn in ipairs(getconnections(foundBtn.Activated)) do
+            conn:Fire()
+        end
+    else
+        -- Fallback mediante remotos si estuviera disponible
+        pcall(function()
+            local remote = ReplicatedStorage:FindFirstChild("Packages") 
+                and ReplicatedStorage.Packages:FindFirstChild("Networking") 
+                and ReplicatedStorage.Packages.Networking:FindFirstChild("RF/EggWorld/AskFieldEggDrop")
+            if remote then
+                remote:InvokeServer({ Reason = "PlayerRequest" })
+            end
+        end)
+    end
+end
 
-        if Name:find("plot", 1, true)
-        or Name:find("tycoon", 1, true)
-        or Name:find("base", 1, true) then
+local function characterHasEgg()
+    local char = LocalPlayer.Character
+    if not char then return false end
+    for _, child in ipairs(char:GetChildren()) do
+        if child:IsA("Tool") or string.find(string.lower(child.Name), "egg") then
+            return true
+        end
+    end
+    return false
+end
 
-            if IsMyPlot(Object) then
-                local Position = GetPosition(Object)
+local function performAntiCheatAndReturn(eggObj, eggName, rarity, cost)
+    -- 1. TP al punto anti-cheat
+    teleportToVector(ANTI_CHEAT_POS)
+    task.wait(0.15)
 
-                if Position then
-                    CachedPlotPosition = Position
-                    return Position
+    -- 2. Soltar el huevo
+    triggerDropEggButton()
+    task.wait(0.15)
+
+    -- 3. SIN HACER TP: volver a activar el Auto Grab desde esta misma posición
+    --    Se intenta varias veces hasta confirmar que el huevo volvió al personaje.
+    local grabbedAgain = false
+    local startTime = tick()
+
+    while tick() - startTime < 2 do
+        if characterHasEgg() then
+            grabbedAgain = true
+            break
+        end
+
+        if eggObj and eggObj.Parent then
+            interactWithPrompt(eggObj)
+        end
+
+        task.wait(0.05)
+    end
+
+    -- 4. Solo después del segundo Auto Grab se registra y se hace TP al Plot
+    if grabbedAgain then
+        addStealHistory(eggName, rarity, cost)
+        unequipEggs()
+        task.wait(0.05)
+        teleportToHome()
+        task.wait(0.1)
+        unequipEggs()
+    end
+end
+
+local function getTop10EggsInServer()
+    local containers = {
+        Workspace:FindFirstChild("RenderedEggs"),
+        Workspace:FindFirstChild("Shop"),
+        Workspace:FindFirstChild("ShopEggs"),
+        Workspace:FindFirstChild("Eggs")
+    }
+
+    local foundEggs = {}
+    for _, container in ipairs(containers) do
+        if container then
+            local children = container:GetChildren()
+            for i = 1, #children do
+                local egg = children[i]
+                if egg:IsA("Model") or egg:IsA("BasePart") then
+                    local data = getEggData(egg.Name)
+                    table.insert(foundEggs, {Object = egg, Name = egg.Name, Data = data})
                 end
             end
         end
     end
 
-    return nil
+    table.sort(foundEggs, function(a, b) return a.Data.Rank > b.Data.Rank end)
+
+    local top10 = {}
+    for i = 1, math.min(10, #foundEggs) do
+        table.insert(top10, foundEggs[i])
+    end
+    return top10
 end
 
---==============================================================
--- UN CICLO
---==============================================================
+local oldGui = PlayerGui:FindFirstChild("JKHubUI")
+if oldGui then oldGui:Destroy() end
 
-local function RunOnce()
-    if BUSY then
-        return false
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "JKHubUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.fromOffset(310, 275)
+MainFrame.Position = UDim2.new(1, -330, 0, 75)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 14)
+MainCorner.Parent = MainFrame
+
+createAnimatedStroke(MainFrame, 2.5)
+
+local CoverImage = Instance.new("ImageLabel")
+CoverImage.Size = UDim2.new(1, 0, 1, 0)
+CoverImage.Image = JK_IMAGE
+CoverImage.ImageTransparency = 0.85
+CoverImage.ScaleType = Enum.ScaleType.Crop
+CoverImage.BackgroundTransparency = 1
+CoverImage.Parent = MainFrame
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 48)
+TopBar.BackgroundTransparency = 1
+TopBar.Parent = MainFrame
+
+local HubIcon = Instance.new("ImageLabel")
+HubIcon.Size = UDim2.fromOffset(32, 32)
+HubIcon.Position = UDim2.fromOffset(12, 8)
+HubIcon.BackgroundTransparency = 1
+HubIcon.Image = JK_IMAGE
+HubIcon.ScaleType = Enum.ScaleType.Fit
+HubIcon.Parent = TopBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(0, 75, 0, 20)
+TitleLabel.Position = UDim2.fromOffset(50, 7)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "JK HUB"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 16
+TitleLabel.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TopBar
+
+local SubTitleTop = Instance.new("TextLabel")
+SubTitleTop.Size = UDim2.new(0, 75, 0, 14)
+SubTitleTop.Position = UDim2.fromOffset(50, 27)
+SubTitleTop.BackgroundTransparency = 1
+SubTitleTop.Text = "RIDE A PET"
+SubTitleTop.TextColor3 = Color3.fromRGB(200, 170, 230)
+SubTitleTop.TextSize = 11
+SubTitleTop.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+SubTitleTop.TextXAlignment = Enum.TextXAlignment.Left
+SubTitleTop.Parent = TopBar
+
+local TabMainBtn = Instance.new("TextButton")
+TabMainBtn.Size = UDim2.fromOffset(48, 22)
+TabMainBtn.Position = UDim2.fromOffset(132, 13)
+TabMainBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 90)
+TabMainBtn.Text = "Main"
+TabMainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TabMainBtn.TextSize = 10
+TabMainBtn.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+TabMainBtn.Parent = TopBar
+
+local TabMainCorner = Instance.new("UICorner")
+TabMainCorner.CornerRadius = UDim.new(0, 6)
+TabMainCorner.Parent = TabMainBtn
+createAnimatedStroke(TabMainBtn, 1)
+
+local TabStealsBtn = Instance.new("TextButton")
+TabStealsBtn.Size = UDim2.fromOffset(48, 22)
+TabStealsBtn.Position = UDim2.fromOffset(184, 13)
+TabStealsBtn.BackgroundColor3 = Color3.fromRGB(30, 15, 45)
+TabStealsBtn.Text = "Steals"
+TabStealsBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+TabStealsBtn.TextSize = 10
+TabStealsBtn.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+TabStealsBtn.Parent = TopBar
+
+local TabStealsCorner = Instance.new("UICorner")
+TabStealsCorner.CornerRadius = UDim.new(0, 6)
+TabStealsCorner.Parent = TabStealsBtn
+createAnimatedStroke(TabStealsBtn, 1)
+
+local DiscordIcon = Instance.new("ImageButton")
+DiscordIcon.Size = UDim2.fromOffset(28, 28)
+DiscordIcon.Position = UDim2.new(1, -38, 0, 10)
+DiscordIcon.BackgroundTransparency = 1
+DiscordIcon.Image = DISCORD_IMAGE
+DiscordIcon.ScaleType = Enum.ScaleType.Fit
+DiscordIcon.Parent = TopBar
+
+DiscordIcon.MouseButton1Click:Connect(function()
+    if setclipboard then setclipboard(DISCORD_INVITE) end
+end)
+
+local Line = Instance.new("Frame")
+Line.Size = UDim2.new(1, -24, 0, 1)
+Line.Position = UDim2.fromOffset(12, 48)
+Line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Line.BackgroundTransparency = 0.5
+Line.BorderSizePixel = 0
+Line.Parent = MainFrame
+
+local MainContainer = Instance.new("Frame")
+MainContainer.Size = UDim2.new(1, 0, 1, -48)
+MainContainer.Position = UDim2.fromOffset(0, 48)
+MainContainer.BackgroundTransparency = 1
+MainContainer.Visible = true
+MainContainer.Parent = MainFrame
+
+local StealsContainer = Instance.new("Frame")
+StealsContainer.Size = UDim2.new(1, 0, 1, -48)
+StealsContainer.Position = UDim2.fromOffset(0, 48)
+StealsContainer.BackgroundTransparency = 1
+StealsContainer.Visible = false
+StealsContainer.Parent = MainFrame
+
+local DeleteHistoryBtn = Instance.new("TextButton")
+DeleteHistoryBtn.Size = UDim2.new(1, -24, 0, 26)
+DeleteHistoryBtn.Position = UDim2.fromOffset(12, 10)
+DeleteHistoryBtn.BackgroundColor3 = Color3.fromRGB(120, 30, 30)
+DeleteHistoryBtn.Text = "DELETE HISTORY"
+DeleteHistoryBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DeleteHistoryBtn.TextSize = 11
+DeleteHistoryBtn.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+DeleteHistoryBtn.Parent = StealsContainer
+
+local DeleteCorner = Instance.new("UICorner")
+DeleteCorner.CornerRadius = UDim.new(0, 8)
+DeleteCorner.Parent = DeleteHistoryBtn
+createAnimatedStroke(DeleteHistoryBtn, 1)
+
+local StealsScroll = Instance.new("ScrollingFrame")
+StealsScroll.Size = UDim2.new(1, -24, 1, -46)
+StealsScroll.Position = UDim2.fromOffset(12, 42)
+StealsScroll.BackgroundTransparency = 1
+StealsScroll.BorderSizePixel = 0
+StealsScroll.CanvasSize = UDim2.fromOffset(0, 0)
+StealsScroll.ScrollBarThickness = 4
+StealsScroll.Parent = StealsContainer
+
+local StealsLayout = Instance.new("UIListLayout")
+StealsLayout.Parent = StealsScroll
+StealsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+StealsLayout.Padding = UDim.new(0, 6)
+StealsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local function refreshStealsUI()
+    for _, child in ipairs(StealsScroll:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
     end
 
-    BUSY = true
+    StealsScroll.CanvasSize = UDim2.fromOffset(0, (#stealsHistory * 48) + 10)
 
-    StatusLabel.Text = "Estado: BUSCANDO"
+    for i, item in ipairs(stealsHistory) do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, 0, 0, 42)
+        row.BackgroundColor3 = Color3.fromRGB(25, 12, 38)
+        row.BorderSizePixel = 0
+        row.LayoutOrder = i
+        row.Parent = StealsScroll
 
-    local Egg = FindBestEggFast()
+        local rowCorner = Instance.new("UICorner")
+        rowCorner.CornerRadius = UDim.new(0, 8)
+        rowCorner.Parent = row
+        createAnimatedStroke(row, 1)
 
-    if not Egg then
-        BestLabel.Text = "🏆 Mejor huevo: NINGUNO"
-        StatusLabel.Text = "Estado: SIN HUEVO"
-        BUSY = false
-        return false
+        local img = Instance.new("ImageLabel")
+        img.Size = UDim2.fromOffset(32, 32)
+        img.Position = UDim2.fromOffset(5, 5)
+        img.BackgroundTransparency = 1
+        img.Image = (item.Image ~= "" and item.Image) or getEggImage(item.Name)
+        img.ScaleType = Enum.ScaleType.Fit
+        img.Parent = row
+
+        local nameLab = Instance.new("TextLabel")
+        nameLab.Size = UDim2.new(1, -85, 0, 16)
+        nameLab.Position = UDim2.fromOffset(42, 4)
+        nameLab.BackgroundTransparency = 1
+        nameLab.Text = string.upper(item.Name)
+        nameLab.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLab.TextSize = 11
+        nameLab.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+        nameLab.TextXAlignment = Enum.TextXAlignment.Left
+        nameLab.Parent = row
+
+        local rarityLab = Instance.new("TextLabel")
+        rarityLab.Size = UDim2.new(1, -85, 0, 14)
+        rarityLab.Position = UDim2.fromOffset(42, 20)
+        rarityLab.BackgroundTransparency = 1
+        rarityLab.Text = item.Rarity .. " • " .. item.Reward
+        rarityLab.TextSize = 9
+        rarityLab.FontFace = Font.fromEnum(Enum.Font.Gotham)
+        rarityLab.TextXAlignment = Enum.TextXAlignment.Left
+        rarityLab.Parent = row
+        applyRarityStyle(rarityLab, item.Rarity)
+
+        local timeLab = Instance.new("TextLabel")
+        timeLab.Size = UDim2.new(0, 40, 1, 0)
+        timeLab.Position = UDim2.new(1, -45, 0, 0)
+        timeLab.BackgroundTransparency = 1
+        timeLab.Text = item.TimeAgo
+        timeLab.TextColor3 = Color3.fromRGB(160, 160, 160)
+        timeLab.TextSize = 9
+        timeLab.FontFace = Font.fromEnum(Enum.Font.Gotham)
+        timeLab.TextXAlignment = Enum.TextXAlignment.Right
+        timeLab.Parent = row
     end
-
-    BestLabel.Text = "🏆 Mejor huevo: " .. Egg.Object.Name
-
-    if Egg.Object.Name == "Volcanic Egg" then
-    else
-    end
-
-    if IsExcluded(Egg.Position) then
-        StatusLabel.Text = "Estado: HUEVO EXCLUIDO"
-        BUSY = false
-        return false
-    end
-
-    -- Refresh the cached position once before TP.
-    local Position = GetPosition(Egg.Object)
-    if Position then
-        Egg.Position = Position
-    end
-
-    StatusLabel.Text = "Estado: TP AL HUEVO"
-
-    if not Teleport(Egg.Position) then
-        StatusLabel.Text = "Estado: TP FALLÓ"
-        BUSY = false
-        return false
-    end
-
-    task.wait(0.10)
-
-    -- Activate the prompt immediately after arriving.
-    local Collected = BurstCollect(Egg)
-
-    task.wait(0.10)
-
-    StatusLabel.Text = "Estado: BUSCANDO PLOT"
-
-    local Plot = FindMyPlot()
-
-    if Plot then
-        StatusLabel.Text = "Estado: TP AL PLOT"
-        Teleport(Plot)
-        task.wait(0.20)
-        StatusLabel.Text = Collected
-            and "Estado: COMPLETADO"
-            or "Estado: TP COMPLETADO"
-    else
-        StatusLabel.Text = Collected
-            and "Estado: HUEVO RECOGIDO"
-            or "Estado: HUEVO NO CONFIRMADO"
-    end
-
-    BUSY = false
-    return true
 end
 
---==============================================================
--- LOOP
---==============================================================
+function addStealHistory(eggName, rarity, reward)
+    table.insert(stealsHistory, 1, {
+        Name = eggName,
+        Rarity = rarity,
+        Reward = "+" .. reward,
+        TimeAgo = "Ahora",
+        Image = getEggImage(eggName)
+    })
+    if #stealsHistory > 50 then
+        table.remove(stealsHistory)
+    end
+    if StealsContainer.Visible then
+        refreshStealsUI()
+    end
+end
 
-LoopButton.MouseButton1Click:Connect(function()
+DeleteHistoryBtn.MouseButton1Click:Connect(function()
+    stealsHistory = {}
+    refreshStealsUI()
+end)
 
-    LOOP = not LOOP
+TabMainBtn.MouseButton1Click:Connect(function()
+    MainContainer.Visible = true
+    StealsContainer.Visible = false
+    TabMainBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 90)
+    TabMainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabStealsBtn.BackgroundColor3 = Color3.fromRGB(30, 15, 45)
+    TabStealsBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+end)
 
-    if LOOP then
+TabStealsBtn.MouseButton1Click:Connect(function()
+    MainContainer.Visible = false
+    StealsContainer.Visible = true
+    TabStealsBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 90)
+    TabStealsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabMainBtn.BackgroundColor3 = Color3.fromRGB(30, 15, 45)
+    TabMainBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    refreshStealsUI()
+end)
 
-        LoopButton.Text =
-            "LOOP  •  ON"
+local TargetFrame = Instance.new("Frame")
+TargetFrame.Size = UDim2.new(1, -24, 0, 62)
+TargetFrame.Position = UDim2.fromOffset(12, 7)
+TargetFrame.BackgroundColor3 = Color3.fromRGB(30, 15, 45)
+TargetFrame.BackgroundTransparency = 0.2
+TargetFrame.BorderSizePixel = 0
+TargetFrame.Parent = MainContainer
 
-        LoopButton.BackgroundColor3 =
-            Color3.fromRGB(
-                0,
-                100,
-                50
-            )
+local TargetCorner = Instance.new("UICorner")
+TargetCorner.CornerRadius = UDim.new(0, 10)
+TargetCorner.Parent = TargetFrame
 
-        task.spawn(function()
+createAnimatedStroke(TargetFrame, 1.5)
 
-            while LOOP
-            and Gui.Parent do
+local EggIcon = Instance.new("ImageLabel")
+EggIcon.Size = UDim2.fromOffset(40, 40)
+EggIcon.Position = UDim2.fromOffset(10, 11)
+EggIcon.BackgroundTransparency = 1
+EggIcon.ScaleType = Enum.ScaleType.Fit
+EggIcon.Parent = TargetFrame
 
-                RunOnce()
+local SubTitleTarget = Instance.new("TextLabel")
+SubTitleTarget.Size = UDim2.new(1, -75, 0, 13)
+SubTitleTarget.Position = UDim2.fromOffset(58, 6)
+SubTitleTarget.BackgroundTransparency = 1
+SubTitleTarget.Text = "CURRENT TARGET"
+SubTitleTarget.TextColor3 = Color3.fromRGB(200, 170, 210)
+SubTitleTarget.TextSize = 10
+SubTitleTarget.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+SubTitleTarget.TextXAlignment = Enum.TextXAlignment.Left
+SubTitleTarget.Parent = TargetFrame
 
-                task.wait(LOOP_DELAY)
-            end
+local EggNameLabel = Instance.new("TextLabel")
+EggNameLabel.Size = UDim2.new(1, -75, 0, 18)
+EggNameLabel.Position = UDim2.fromOffset(58, 20)
+EggNameLabel.BackgroundTransparency = 1
+EggNameLabel.Text = "AURORA EGG"
+EggNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+EggNameLabel.TextSize = 14
+EggNameLabel.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+EggNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+EggNameLabel.Parent = TargetFrame
 
+local EggRarityLabel = Instance.new("TextLabel")
+EggRarityLabel.Size = UDim2.new(0, 90, 0, 14)
+EggRarityLabel.Position = UDim2.fromOffset(58, 40)
+EggRarityLabel.BackgroundTransparency = 1
+EggRarityLabel.Text = "Divine"
+EggRarityLabel.TextSize = 12
+EggRarityLabel.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+EggRarityLabel.TextXAlignment = Enum.TextXAlignment.Left
+EggRarityLabel.Parent = TargetFrame
+applyRarityStyle(EggRarityLabel, "Divine")
+
+local Top10Btn = Instance.new("TextButton")
+Top10Btn.Size = UDim2.fromOffset(26, 26)
+Top10Btn.Position = UDim2.new(1, -30, 0, 5)
+Top10Btn.BackgroundTransparency = 1
+Top10Btn.Text = "▼"
+Top10Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Top10Btn.TextSize = 14
+Top10Btn.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+Top10Btn.Parent = TargetFrame
+
+local EggCostLabel = Instance.new("TextLabel")
+EggCostLabel.Size = UDim2.fromOffset(90, 14)
+EggCostLabel.Position = UDim2.new(1, -95, 1, -18)
+EggCostLabel.BackgroundTransparency = 1
+EggCostLabel.Text = "300M"
+EggCostLabel.TextColor3 = Color3.fromRGB(150, 230, 180)
+EggCostLabel.TextSize = 13
+EggCostLabel.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+EggCostLabel.TextXAlignment = Enum.TextXAlignment.Right
+EggCostLabel.Parent = TargetFrame
+
+local TPFarmLabel = Instance.new("TextLabel")
+TPFarmLabel.Size = UDim2.new(1, -90, 0, 22)
+TPFarmLabel.Position = UDim2.fromOffset(16, 77)
+TPFarmLabel.BackgroundTransparency = 1
+TPFarmLabel.Text = "TP FARM"
+TPFarmLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TPFarmLabel.TextSize = 14
+TPFarmLabel.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+TPFarmLabel.TextXAlignment = Enum.TextXAlignment.Left
+TPFarmLabel.Parent = MainContainer
+
+local SwitchContainer = Instance.new("TextButton")
+SwitchContainer.Size = UDim2.fromOffset(52, 26)
+SwitchContainer.Position = UDim2.new(1, -66, 0, 75)
+SwitchContainer.BackgroundColor3 = Color3.fromRGB(45, 30, 60)
+SwitchContainer.BorderSizePixel = 0
+SwitchContainer.Text = ""
+SwitchContainer.Parent = MainContainer
+
+local SwitchCorner = Instance.new("UICorner")
+SwitchCorner.CornerRadius = UDim.new(1, 0)
+SwitchCorner.Parent = SwitchContainer
+
+createAnimatedStroke(SwitchContainer, 1.5)
+
+local SwitchCircle = Instance.new("Frame")
+SwitchCircle.Size = UDim2.fromOffset(20, 20)
+SwitchCircle.Position = UDim2.fromOffset(3, 3)
+SwitchCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SwitchCircle.Parent = SwitchContainer
+
+local CircleCorner1 = Instance.new("UICorner")
+CircleCorner1.CornerRadius = UDim.new(1, 0)
+CircleCorner1.Parent = SwitchCircle
+
+local AutoFarmLabel = Instance.new("TextLabel")
+AutoFarmLabel.Size = UDim2.new(1, -130, 0, 22)
+AutoFarmLabel.Position = UDim2.fromOffset(16, 112)
+AutoFarmLabel.BackgroundTransparency = 1
+AutoFarmLabel.Text = "AUTO FARM"
+AutoFarmLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoFarmLabel.TextSize = 14
+AutoFarmLabel.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+AutoFarmLabel.TextXAlignment = Enum.TextXAlignment.Left
+AutoFarmLabel.Parent = MainContainer
+
+local ConfigAutoBtn = Instance.new("TextButton")
+ConfigAutoBtn.Size = UDim2.fromOffset(68, 24)
+ConfigAutoBtn.Position = UDim2.new(1, -140, 0, 111)
+ConfigAutoBtn.BackgroundColor3 = Color3.fromRGB(50, 25, 70)
+ConfigAutoBtn.Text = "Configure"
+ConfigAutoBtn.TextColor3 = Color3.fromRGB(200, 170, 230)
+ConfigAutoBtn.TextSize = 10
+ConfigAutoBtn.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+ConfigAutoBtn.Parent = MainContainer
+
+local ConfigAutoCorner = Instance.new("UICorner")
+ConfigAutoCorner.CornerRadius = UDim.new(0, 6)
+ConfigAutoCorner.Parent = ConfigAutoBtn
+
+createAnimatedStroke(ConfigAutoBtn, 1)
+
+local AutoSwitchContainer = Instance.new("TextButton")
+AutoSwitchContainer.Size = UDim2.fromOffset(52, 26)
+AutoSwitchContainer.Position = UDim2.new(1, -66, 0, 110)
+AutoSwitchContainer.BackgroundColor3 = Color3.fromRGB(45, 30, 60)
+AutoSwitchContainer.BorderSizePixel = 0
+AutoSwitchContainer.Text = ""
+AutoSwitchContainer.Parent = MainContainer
+
+local AutoSwitchCorner = Instance.new("UICorner")
+AutoSwitchCorner.CornerRadius = UDim.new(1, 0)
+AutoSwitchCorner.Parent = AutoSwitchContainer
+
+createAnimatedStroke(AutoSwitchContainer, 1.5)
+
+local AutoSwitchCircle = Instance.new("Frame")
+AutoSwitchCircle.Size = UDim2.fromOffset(20, 20)
+AutoSwitchCircle.Position = UDim2.fromOffset(3, 3)
+AutoSwitchCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+AutoSwitchCircle.Parent = AutoSwitchContainer
+
+local CircleCorner2 = Instance.new("UICorner")
+CircleCorner2.CornerRadius = UDim.new(1, 0)
+CircleCorner2.Parent = AutoSwitchCircle
+
+local Top10ListFrame = Instance.new("ScrollingFrame")
+Top10ListFrame.Size = UDim2.new(0, 200, 0, 168)
+Top10ListFrame.Position = UDim2.fromOffset(12, 7)
+Top10ListFrame.BackgroundColor3 = Color3.fromRGB(25, 12, 38)
+Top10ListFrame.BorderSizePixel = 0
+Top10ListFrame.Visible = false
+Top10ListFrame.ZIndex = 5
+Top10ListFrame.CanvasSize = UDim2.fromOffset(0, 0)
+Top10ListFrame.ScrollBarThickness = 5
+Top10ListFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
+Top10ListFrame.Parent = MainContainer
+
+local Top10ListCorner = Instance.new("UICorner")
+Top10ListCorner.CornerRadius = UDim.new(0, 10)
+Top10ListCorner.Parent = Top10ListFrame
+createAnimatedStroke(Top10ListFrame, 1.5)
+
+local Top10Header = Instance.new("Frame")
+Top10Header.Size = UDim2.new(1, -12, 0, 30)
+Top10Header.Position = UDim2.fromOffset(6, 6)
+Top10Header.BackgroundTransparency = 1
+Top10Header.ZIndex = 6
+Top10Header.Parent = Top10ListFrame
+
+local Top10TitleText = Instance.new("TextLabel")
+Top10TitleText.Size = UDim2.new(1, -30, 1, 0)
+Top10TitleText.BackgroundTransparency = 1
+Top10TitleText.Text = "SELECT TARGET"
+Top10TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+Top10TitleText.TextSize = 11
+Top10TitleText.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+Top10TitleText.TextXAlignment = Enum.TextXAlignment.Left
+Top10TitleText.ZIndex = 6
+Top10TitleText.Parent = Top10Header
+
+local CloseTop10Btn = Instance.new("TextButton")
+CloseTop10Btn.Size = UDim2.fromOffset(22, 22)
+CloseTop10Btn.Position = UDim2.new(1, -22, 0, 4)
+CloseTop10Btn.BackgroundColor3 = Color3.fromRGB(60, 25, 75)
+CloseTop10Btn.Text = "✕"
+CloseTop10Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseTop10Btn.TextSize = 11
+CloseTop10Btn.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+CloseTop10Btn.ZIndex = 7
+CloseTop10Btn.Parent = Top10Header
+
+local CloseTop10Corner = Instance.new("UICorner")
+CloseTop10Corner.CornerRadius = UDim.new(0, 6)
+CloseTop10Corner.Parent = CloseTop10Btn
+createAnimatedStroke(CloseTop10Btn, 1)
+
+CloseTop10Btn.MouseButton1Click:Connect(function()
+    Top10ListFrame.Visible = false
+end)
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = Top10ListFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 5)
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local ConfigListFrame = Instance.new("ScrollingFrame")
+ConfigListFrame.Size = UDim2.new(0, 200, 0, 168)
+ConfigListFrame.Position = UDim2.fromOffset(12, 7)
+ConfigListFrame.BackgroundColor3 = Color3.fromRGB(25, 12, 38)
+ConfigListFrame.BorderSizePixel = 0
+ConfigListFrame.Visible = false
+ConfigListFrame.ZIndex = 5
+ConfigListFrame.CanvasSize = UDim2.fromOffset(0, 40)
+ConfigListFrame.ScrollBarThickness = 5
+ConfigListFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
+ConfigListFrame.Parent = MainContainer
+
+local ConfigListCorner = Instance.new("UICorner")
+ConfigListCorner.CornerRadius = UDim.new(0, 10)
+ConfigListCorner.Parent = ConfigListFrame
+createAnimatedStroke(ConfigListFrame, 1.5)
+
+local ConfigHeader = Instance.new("Frame")
+ConfigHeader.Size = UDim2.new(1, -12, 0, 30)
+ConfigHeader.Position = UDim2.fromOffset(6, 6)
+ConfigHeader.BackgroundTransparency = 1
+ConfigHeader.ZIndex = 6
+ConfigHeader.Parent = ConfigListFrame
+
+local ConfigTitleText = Instance.new("TextLabel")
+ConfigTitleText.Size = UDim2.new(1, -30, 1, 0)
+ConfigTitleText.BackgroundTransparency = 1
+ConfigTitleText.Text = "AUTO FARM EGGS"
+ConfigTitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+ConfigTitleText.TextSize = 11
+ConfigTitleText.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+ConfigTitleText.TextXAlignment = Enum.TextXAlignment.Left
+ConfigTitleText.ZIndex = 6
+ConfigTitleText.Parent = ConfigHeader
+
+local CloseConfigBtn = Instance.new("TextButton")
+CloseConfigBtn.Size = UDim2.fromOffset(22, 22)
+CloseConfigBtn.Position = UDim2.new(1, -22, 0, 4)
+CloseConfigBtn.BackgroundColor3 = Color3.fromRGB(60, 25, 75)
+CloseConfigBtn.Text = "✕"
+CloseConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseConfigBtn.TextSize = 11
+CloseConfigBtn.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+CloseConfigBtn.ZIndex = 7
+CloseConfigBtn.Parent = ConfigHeader
+
+local CloseConfigCorner = Instance.new("UICorner")
+CloseConfigCorner.CornerRadius = UDim.new(0, 6)
+CloseConfigCorner.Parent = CloseConfigBtn
+createAnimatedStroke(CloseConfigBtn, 1)
+
+local ConfigUIListLayout = Instance.new("UIListLayout")
+ConfigUIListLayout.Parent = ConfigListFrame
+ConfigUIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ConfigUIListLayout.Padding = UDim.new(0, 5)
+ConfigUIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+CloseConfigBtn.MouseButton1Click:Connect(function()
+    ConfigListFrame.Visible = false
+end)
+
+local function setTargetEgg(eggObj, name, data)
+    targetClearedByUser = false
+    selectedTargetEgg = eggObj
+    EggNameLabel.Text = string.upper(name)
+    local englishRarity = translateRarity(data.Rarity)
+    EggRarityLabel.Text = englishRarity
+    applyRarityStyle(EggRarityLabel, englishRarity)
+    EggCostLabel.Text = data.Cost
+    EggIcon.Image = getEggImage(name)
+end
+
+local function refreshTop10List()
+    for _, child in ipairs(Top10ListFrame:GetChildren()) do
+        if child:IsA("TextButton") and child ~= CloseTop10Btn then child:Destroy() end
+    end
+
+    local top10 = getTop10EggsInServer()
+    Top10ListFrame.CanvasSize = UDim2.fromOffset(0, (#top10 * 38) + 40)
+
+    for _, item in ipairs(top10) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -12, 0, 34)
+        btn.BackgroundColor3 = Color3.fromRGB(35, 18, 55)
+        btn.Text = ""
+        btn.ZIndex = 6
+        btn.Parent = Top10ListFrame
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = btn
+        createAnimatedStroke(btn, 1)
+
+        local itemImg = Instance.new("ImageLabel")
+        itemImg.Size = UDim2.fromOffset(26, 26)
+        itemImg.Position = UDim2.fromOffset(6, 4)
+        itemImg.BackgroundTransparency = 1
+        itemImg.Image = getEggImage(item.Name)
+        itemImg.ScaleType = Enum.ScaleType.Fit
+        itemImg.ZIndex = 7
+        itemImg.Parent = btn
+
+        local itemTitle = Instance.new("TextLabel")
+        itemTitle.Size = UDim2.new(1, -75, 0, 16)
+        itemTitle.Position = UDim2.fromOffset(36, 2)
+        itemTitle.BackgroundTransparency = 1
+        itemTitle.Text = string.upper(item.Name)
+        itemTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        itemTitle.TextSize = 10
+        itemTitle.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+        itemTitle.TextXAlignment = Enum.TextXAlignment.Left
+        itemTitle.ZIndex = 7
+        itemTitle.Parent = btn
+
+        local englishRarity = translateRarity(item.Data.Rarity)
+        local itemSub = Instance.new("TextLabel")
+        itemSub.Size = UDim2.new(1, -40, 0, 14)
+        itemSub.Position = UDim2.fromOffset(36, 17)
+        itemSub.BackgroundTransparency = 1
+        itemSub.Text = englishRarity .. " • " .. item.Data.Cost
+        itemSub.TextSize = 9
+        itemSub.FontFace = Font.fromEnum(Enum.Font.Gotham)
+        itemSub.TextXAlignment = Enum.TextXAlignment.Left
+        itemSub.ZIndex = 7
+        itemSub.Parent = btn
+        applyRarityStyle(itemSub, englishRarity)
+
+        btn.MouseButton1Click:Connect(function()
+            setTargetEgg(item.Object, item.Name, item.Data)
+            Top10ListFrame.Visible = false
         end)
+    end
+end
 
+local function refreshConfigList()
+    for _, child in ipairs(ConfigListFrame:GetChildren()) do
+        if child:IsA("TextButton") and child ~= CloseConfigBtn then child:Destroy() end
+    end
+
+    local allEggsList = {}
+    for name, data in pairs(EggDatabase) do
+        table.insert(allEggsList, {Name = name, Data = data})
+    end
+    table.sort(allEggsList, function(a, b) return a.Data.Rank > b.Data.Rank end)
+
+    ConfigListFrame.CanvasSize = UDim2.fromOffset(0, (#allEggsList * 38) + 40)
+
+    for _, item in ipairs(allEggsList) do
+        local isSelected = autoFarmEggs[item.Name] == true
+
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -12, 0, 34)
+        btn.BackgroundColor3 = isSelected and Color3.fromRGB(80, 30, 120) or Color3.fromRGB(35, 18, 55)
+        btn.Text = ""
+        btn.ZIndex = 6
+        btn.Parent = ConfigListFrame
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = btn
+        createAnimatedStroke(btn, 1)
+
+        local itemImg = Instance.new("ImageLabel")
+        itemImg.Size = UDim2.fromOffset(26, 26)
+        itemImg.Position = UDim2.fromOffset(6, 4)
+        itemImg.BackgroundTransparency = 1
+        itemImg.Image = getEggImage(item.Name)
+        itemImg.ScaleType = Enum.ScaleType.Fit
+        itemImg.ZIndex = 7
+        itemImg.Parent = btn
+
+        local itemTitle = Instance.new("TextLabel")
+        itemTitle.Size = UDim2.new(1, -80, 0, 16)
+        itemTitle.Position = UDim2.fromOffset(36, 2)
+        itemTitle.BackgroundTransparency = 1
+        itemTitle.Text = string.upper(item.Name)
+        itemTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        itemTitle.TextSize = 10
+        itemTitle.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+        itemTitle.TextXAlignment = Enum.TextXAlignment.Left
+        itemTitle.ZIndex = 7
+        itemTitle.Parent = btn
+
+        local englishRarity = translateRarity(item.Data.Rarity)
+        local itemSub = Instance.new("TextLabel")
+        itemSub.Size = UDim2.new(1, -40, 0, 14)
+        itemSub.Position = UDim2.fromOffset(36, 17)
+        itemSub.BackgroundTransparency = 1
+        itemSub.Text = englishRarity .. " • " .. item.Data.Cost
+        itemSub.TextSize = 9
+        itemSub.FontFace = Font.fromEnum(Enum.Font.Gotham)
+        itemSub.TextXAlignment = Enum.TextXAlignment.Left
+        itemSub.ZIndex = 7
+        itemSub.Parent = btn
+        applyRarityStyle(itemSub, englishRarity)
+
+        local statusLabel = Instance.new("TextLabel")
+        statusLabel.Size = UDim2.new(0, 35, 1, 0)
+        statusLabel.Position = UDim2.new(1, -38, 0, 0)
+        statusLabel.BackgroundTransparency = 1
+        statusLabel.Text = isSelected and "[ON]" or "[OFF]"
+        statusLabel.TextColor3 = isSelected and Color3.fromRGB(150, 255, 150) or Color3.fromRGB(200, 100, 100)
+        statusLabel.TextSize = 10
+        statusLabel.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+        statusLabel.ZIndex = 7
+        statusLabel.Parent = btn
+
+        btn.MouseButton1Click:Connect(function()
+            autoFarmEggs[item.Name] = not autoFarmEggs[item.Name]
+            refreshConfigList()
+        end)
+    end
+end
+
+Top10Btn.MouseButton1Click:Connect(function()
+    ConfigListFrame.Visible = false
+    Top10ListFrame.Visible = not Top10ListFrame.Visible
+    if Top10ListFrame.Visible then refreshTop10List() end
+end)
+
+ConfigAutoBtn.MouseButton1Click:Connect(function()
+    Top10ListFrame.Visible = false
+    ConfigListFrame.Visible = not ConfigListFrame.Visible
+    if ConfigListFrame.Visible then refreshConfigList() end
+end)
+
+local function updateTargetDisplay()
+    if targetClearedByUser then return end
+    local top10 = getTop10EggsInServer()
+    if #top10 > 0 then
+        if not selectedTargetEgg or not selectedTargetEgg.Parent then
+            setTargetEgg(top10[1].Object, top10[1].Name, top10[1].Data)
+        end
+    end
+end
+
+local draggingMain = false
+local dragStartMain, startPosMain
+
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingMain = true
+        dragStartMain = input.Position
+        startPosMain = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then draggingMain = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingMain and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartMain
+        MainFrame.Position = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset + delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset + delta.Y)
+    end
+end)
+
+local CircleBtn = Instance.new("ImageButton")
+CircleBtn.Size = UDim2.fromOffset(60, 60)
+CircleBtn.Position = UDim2.new(0, 15, 0.8, 0)
+CircleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+CircleBtn.Image = JK_IMAGE
+CircleBtn.ScaleType = Enum.ScaleType.Fit
+CircleBtn.Active = true
+CircleBtn.Parent = ScreenGui
+
+local CircleCorner = Instance.new("UICorner")
+CircleCorner.CornerRadius = UDim.new(1, 0)
+CircleCorner.Parent = CircleBtn
+createAnimatedStroke(CircleBtn, 2.5)
+
+RunService.RenderStepped:Connect(function(dt)
+    for _, grad in ipairs(animatedGradients) do
+        grad.Rotation = (grad.Rotation + dt * 120) % 360
+    end
+end)
+
+local uiVisible = true
+CircleBtn.MouseButton1Click:Connect(function()
+    uiVisible = not uiVisible
+    MainFrame.Visible = uiVisible
+    if not uiVisible then 
+        Top10ListFrame.Visible = false 
+        ConfigListFrame.Visible = false
+    end
+end)
+
+local manualFarmActive = false
+local manualFarmThread = nil
+
+local function setManualSwitchState(state)
+    manualFarmActive = state
+    if state then
+        SwitchContainer.BackgroundColor3 = Color3.fromRGB(160, 60, 230)
+        SwitchCircle.Position = UDim2.fromOffset(29, 3)
     else
+        SwitchContainer.BackgroundColor3 = Color3.fromRGB(45, 30, 60)
+        SwitchCircle.Position = UDim2.fromOffset(3, 3)
+    end
+end
 
-        LoopButton.Text =
-            "LOOP  •  OFF"
+local function stopManualFarm()
+    setManualSwitchState(false)
+    if manualFarmThread then task.cancel(manualFarmThread); manualFarmThread = nil end
+end
 
-        LoopButton.BackgroundColor3 =
-            Color3.fromRGB(
-                18,
-                18,
-                18
-            )
-
-        StatusLabel.Text =
-            "Estado: LOOP DETENIDO"
+SwitchContainer.MouseButton1Click:Connect(function()
+    if manualFarmActive then
+        stopManualFarm()
+    else
+        stopManualFarm()
+        setManualSwitchState(true)
+        manualFarmThread = task.spawn(function()
+            local eggObj = selectedTargetEgg
+            local eggNameCaptured = EggNameLabel.Text
+            local eggRarityCaptured = EggRarityLabel.Text
+            local eggCostCaptured = EggCostLabel.Text
+            
+            if not eggObj or not eggObj.Parent then
+                local top10 = getTop10EggsInServer()
+                if #top10 > 0 then 
+                    eggObj = top10[1].Object
+                    eggNameCaptured = top10[1].Name
+                    eggRarityCaptured = translateRarity(top10[1].Data.Rarity)
+                    eggCostCaptured = top10[1].Data.Cost
+                    setTargetEgg(top10[1].Object, top10[1].Name, top10[1].Data) 
+                end
+            end
+            
+            if eggObj and eggObj.Parent then
+                local eggCF = eggObj:IsA("Model") and eggObj:GetPivot() or eggObj.CFrame
+                if eggCF then
+                    teleportToCF(eggCF)
+                    task.wait(0.05)
+                    local startTime = tick()
+                    while manualFarmActive and (tick() - startTime < 3) do
+                        interactWithPrompt(eggObj)
+                        task.wait(0.05)
+                        if characterHasEgg() or not eggObj.Parent then break end
+                    end
+                    
+                    -- Aplicar rutina anti-cheat (TP anti-cheat -> DropEgg -> Reagarrar -> TP House)
+                    performAntiCheatAndReturn(eggObj, eggNameCaptured, eggRarityCaptured, eggCostCaptured)
+                end
+            end
+            task.wait(0.2)
+            stopManualFarm()
+            updateTargetDisplay()
+        end)
     end
 end)
 
---==============================================================
--- INSTA TP
---==============================================================
-
-InstaButton.MouseButton1Click:Connect(function()
-    if BUSY then
-        return
+local function setAutoSwitchState(state)
+    autoFarmActive = state
+    if state then
+        AutoSwitchContainer.BackgroundColor3 = Color3.fromRGB(160, 60, 230)
+        AutoSwitchCircle.Position = UDim2.fromOffset(29, 3)
+    else
+        AutoSwitchContainer.BackgroundColor3 = Color3.fromRGB(45, 30, 60)
+        AutoSwitchCircle.Position = UDim2.fromOffset(3, 3)
     end
+end
 
-    task.spawn(RunOnce)
+local function stopAutoFarm()
+    setAutoSwitchState(false)
+    if autoFarmThread then task.cancel(autoFarmThread); autoFarmThread = nil end
+end
+
+AutoSwitchContainer.MouseButton1Click:Connect(function()
+    if autoFarmActive then
+        stopAutoFarm()
+    else
+        setAutoSwitchState(true)
+        autoFarmThread = task.spawn(function()
+            task.wait(1)
+            
+            while autoFarmActive do
+                local foundValidEgg = nil
+                local foundItemName = ""
+                local foundItemData = nil
+                
+                local containers = {
+                    Workspace:FindFirstChild("RenderedEggs"),
+                    Workspace:FindFirstChild("Shop"),
+                    Workspace:FindFirstChild("ShopEggs"),
+                    Workspace:FindFirstChild("Eggs")
+                }
+
+                local allEggs = {}
+                for _, container in ipairs(containers) do
+                    if container then
+                        local children = container:GetChildren()
+                        for i = 1, #children do
+                            local egg = children[i]
+                            if egg:IsA("Model") or egg:IsA("BasePart") then
+                                local data = getEggData(egg.Name)
+                                table.insert(allEggs, {Object = egg, Name = egg.Name, Data = data})
+                            end
+                        end
+                    end
+                end
+
+                for _, item in ipairs(allEggs) do
+                    if autoFarmEggs[item.Name] then
+                        foundValidEgg = item.Object
+                        foundItemName = item.Name
+                        foundItemData = item.Data
+                        break
+                    end
+                end
+
+                if foundValidEgg and foundValidEgg.Parent then
+                    local eggCF = foundValidEgg:IsA("Model") and foundValidEgg:GetPivot() or foundValidEgg.CFrame
+                    if eggCF then
+                        teleportToCF(eggCF)
+                        task.wait(0.05)
+                        local startTime = tick()
+                        while autoFarmActive and foundValidEgg.Parent and (tick() - startTime < 3) do
+                            interactWithPrompt(foundValidEgg)
+                            task.wait(0.05)
+                            if characterHasEgg() or not foundValidEgg.Parent then break end
+                        end
+                        
+                        local rarityStr = translateRarity(foundItemData.Rarity)
+                        
+                        -- Aplicar rutina anti-cheat (TP anti-cheat -> DropEgg -> Reagarrar -> TP House)
+                        performAntiCheatAndReturn(foundValidEgg, foundItemName, rarityStr, foundItemData.Cost)
+                    end
+                else
+                    task.wait(2)
+                end
+
+                task.wait(0.5)
+            end
+        end)
+    end
 end)
-
---==============================================================
--- ACTUALIZACIÓN LIGERA DEL PANEL
---==============================================================
 
 task.spawn(function()
-    while Gui.Parent do
-        if not BUSY then
-            local Egg = FindBestEggFast()
-
-            if Egg then
-                BestLabel.Text =
-                    "🏆 Mejor huevo: "
-                    .. Egg.Object.Name
-
-                if Egg.Object.Name == "Volcanic Egg"
-                or Egg.Object.Name:lower():find("volcanic", 1, true) then
-                else
-                    ValueLabel.Text =
-                        "Valor: "
-                        .. tostring(Egg.Value or 0)
-                end
-            else
-                BestLabel.Text = "🏆 Mejor huevo: NINGUNO"
-            end
-        end
-
-        -- No construir una tabla temporal solo para contar.
-        BurstLabel.Text = "RÁFAGA: x5"
-
-        task.wait(1.0)
+    while task.wait(1) do
+        if not manualFarmActive then updateTargetDisplay() end
     end
 end)
 
---==============================================================
--- CACHE INICIAL
---==============================================================
-
-RebuildCache()
-
-StatusLabel.Text =
-    "Estado: LISTO • DETECTOR ACTIVO"
-
---==============================================================
--- MINIMIZAR / RESTAURAR
---==============================================================
-
-local Minimized = false
-
-local FullSize =
-    UDim2.fromOffset(285,190)
-
-local BarSize =
-    UDim2.fromOffset(285,34)
-
-local FullPosition =
-    Main.Position
-
-MinButton.MouseButton1Click:Connect(function()
-
-    if not Minimized then
-
-        Minimized = true
-
-        TweenService:Create(
-            Main,
-            TweenInfo.new(
-                .35,
-                Enum.EasingStyle.Quart,
-                Enum.EasingDirection.Out
-            ),
-            {
-                Size = BarSize,
-
-                Position =
-                    UDim2.new(
-                        FullPosition.X.Scale,
-                        FullPosition.X.Offset,
-                        0,
-                        10
-                    )
-            }
-        ):Play()
-
-    else
-
-        Minimized = false
-
-        TweenService:Create(
-            Main,
-            TweenInfo.new(
-                .35,
-                Enum.EasingStyle.Quart,
-                Enum.EasingDirection.Out
-            ),
-            {
-                Size = FullSize,
-                Position = FullPosition
-            }
-        ):Play()
-    end
-end)
-
---==============================================================
--- CERRAR
---==============================================================
-
-CloseButton.MouseButton1Click:Connect(function()
-
-    LOOP = false
-    BUSY = false
-
-    Gui:Destroy()
-end)
-
---==============================================================
--- ARRASTRAR
---==============================================================
-
-local Dragging = false
-local DragStart
-local StartPosition
-
-TopBar.InputBegan:Connect(function(Input)
-
-    if Input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or Input.UserInputType ==
-        Enum.UserInputType.Touch then
-
-        Dragging = true
-        DragStart = Input.Position
-        StartPosition = Main.Position
-    end
-end)
-
-TopBar.InputEnded:Connect(function(Input)
-
-    if Input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or Input.UserInputType ==
-        Enum.UserInputType.Touch then
-
-        Dragging = false
-    end
-end)
-
-UIS.InputChanged:Connect(function(Input)
-
-    if not Dragging then
-        return
-    end
-
-    if Input.UserInputType ==
-        Enum.UserInputType.MouseMovement
-        or Input.UserInputType ==
-        Enum.UserInputType.Touch then
-
-        local Delta =
-            Input.Position - DragStart
-
-        Main.Position =
-            UDim2.new(
-                StartPosition.X.Scale,
-                StartPosition.X.Offset + Delta.X,
-                StartPosition.Y.Scale,
-                StartPosition.Y.Offset + Delta.Y
-            )
-
-        if not Minimized then
-            FullPosition = Main.Position
-        end
-    end
-end)
+stopManualFarm()
+stopAutoFarm()
