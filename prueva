@@ -329,61 +329,22 @@ local function performAntiCheatAndReturn(eggName, rarity, cost)
     teleportToVector(ANTI_CHEAT_POS)
     task.wait(0.05)
 
-    -- 2. SOLTAR EL EGG
+    -- 2. SOLTAR EL HUEVO
     triggerDropEggButton()
 
-    -- 3. Esperar el AGARRE REAL.
-    --    En vez de depender únicamente de characterHasEgg(),
-    --    observamos el Character para detectar cuando el objeto
-    --    reaparece físicamente después del drop.
-    local char = LocalPlayer.Character
-    local grabbed = false
-    local grabbedConnection = nil
+    -- 3. AGARRARLO DE NUEVO
+    executeAntiCheatAutoGrab(2.0)
 
-    local function checkGrabbed()
-        if grabbed then return end
-        if characterHasEgg() then
-            grabbed = true
-        end
-    end
+    -- 4. Esperar 1 segundo DESPUÉS de agarrarlo
+    --    antes de regresar al plot
+    task.wait(1)
 
-    if char then
-        grabbedConnection = char.ChildAdded:Connect(function(child)
-            if grabbed then return end
-
-            local name = string.lower(child.Name or "")
-            if child:IsA("Tool")
-                or string.find(name, "egg")
-                or string.find(name, "fieldegg") then
-                grabbed = true
-            end
-        end)
-
-        -- También comprobar el estado actual por seguridad
-        checkGrabbed()
-    end
-
-    -- Intentar recoger continuamente mientras esperamos el agarre real
-    local deadline = tick() + 2
-    while not grabbed and tick() < deadline do
-        executeAntiCheatAutoGrab(0.03)
-        checkGrabbed()
-        task.wait()
-    end
-
-    if grabbedConnection then
-        grabbedConnection:Disconnect()
-        grabbedConnection = nil
-    end
-
-    -- 4. ESTE ES EL MOMENTO IMPORTANTE:
-    --    apenas el egg vuelve al Character -> TP AL PLOT.
-    if grabbed or characterHasEgg() then
+    -- 5. Registrar y volver al plot
+    if characterHasEgg() then
         addStealHistory(eggName, rarity, cost)
-        teleportToHome()
     end
 
-    -- Mantener el comportamiento original
+    teleportToHome()
     unequipEggs()
 end
 
