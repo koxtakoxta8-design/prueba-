@@ -276,8 +276,8 @@ local function executeIdaAutoGrab(targetObj, activeCheckCondition)
     local startTime = tick()
     while activeCheckCondition() and (tick() - startTime < 3.5) do
         interactWithPrompt(targetObj)
-        task.wait(0.05)
         if characterHasEgg() or not targetObj.Parent then break end
+        task.wait()
     end
 end
 
@@ -285,61 +285,55 @@ local function executeAntiCheatAutoGrab(maxTime)
     local grabRadius = 15
     local timeout = maxTime or 2.0
     local startTime = tick()
-    
+
     while not characterHasEgg() and (tick() - startTime < timeout) do
         local character = LocalPlayer.Character
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            local rootPart = character.HumanoidRootPart
-            
-            pcall(function()
-                local nearestPrompt = nil
-                local nearestDist = grabRadius
-                
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    if obj:IsA("ProximityPrompt") and obj.Enabled then
-                        local parentPart = obj.Parent
-                        if parentPart and parentPart:IsA("BasePart") then
-                            local dist = (rootPart.Position - parentPart.Position).Magnitude
-                            if dist <= nearestDist then
-                                nearestDist = dist
-                                nearestPrompt = obj
-                            end
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+
+        if rootPart then
+            local nearestPrompt = nil
+            local nearestDist = grabRadius
+
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") and obj.Enabled then
+                    local parentPart = obj.Parent
+                    if parentPart and parentPart:IsA("BasePart") then
+                        local dist = (rootPart.Position - parentPart.Position).Magnitude
+                        if dist <= nearestDist then
+                            nearestDist = dist
+                            nearestPrompt = obj
                         end
                     end
                 end
-                
-                if nearestPrompt then
+            end
+
+            if nearestPrompt then
+                pcall(function()
                     if fireproximityprompt then
                         fireproximityprompt(nearestPrompt)
                     else
                         nearestPrompt:InputHoldBegin()
-                        task.wait(0.01)
                         nearestPrompt:InputHoldEnd()
                     end
-                end
-            end)
+                end)
+            end
         end
-        
-        task.wait(0.03)
+
+        if characterHasEgg() then break end
+        task.wait()
     end
 end
 
 local function performAntiCheatAndReturn(eggName, rarity, cost)
-    -- 1. MISMO punto anti-cheat original
+    -- Mantener el punto anti-cheat original
     teleportToVector(ANTI_CHEAT_POS)
-    task.wait(0.05)
+    task.wait()
 
-    -- 2. SOLTAR EL HUEVO
+    -- Soltar y recuperar rápidamente
     triggerDropEggButton()
-
-    -- 3. AGARRARLO DE NUEVO
     executeAntiCheatAutoGrab(2.0)
 
-    -- 4. Esperar 1 segundo DESPUÉS de agarrarlo
-    --    antes de regresar al plot
-    task.wait(1)
-
-    -- 5. Registrar y volver al plot
+    -- Sin espera fija de 2 segundos: salir al plot apenas se tenga
     if characterHasEgg() then
         addStealHistory(eggName, rarity, cost)
     end
@@ -1204,7 +1198,6 @@ SwitchContainer.MouseButton1Click:Connect(function()
                     performAntiCheatAndReturn(eggNameCaptured, eggRarityCaptured, eggCostCaptured)
                 end
             end
-            task.wait(0.2)
             stopManualFarm()
             updateTargetDisplay()
         end)
@@ -1283,7 +1276,7 @@ AutoSwitchContainer.MouseButton1Click:Connect(function()
                     task.wait(2)
                 end
 
-                task.wait(0.5)
+                task.wait()
             end
         end)
     end
