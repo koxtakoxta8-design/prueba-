@@ -394,7 +394,47 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 14)
 MainCorner.Parent = MainFrame
 
-createAnimatedStroke(MainFrame, 2.5)
+local Border = Instance.new("UIStroke")
+Border.Name = "GlowingBorder"
+Border.Color = Color3.fromRGB(245,245,245)
+Border.Thickness = 1.5
+Border.Transparency = 0.05
+Border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+Border.Parent = MainFrame
+
+local BorderGradient = Instance.new("UIGradient")
+BorderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(120,120,120)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255,255,255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(120,120,120))
+})
+BorderGradient.Parent = Border
+
+task.spawn(function()
+    while MainFrame.Parent do
+        TweenService:Create(
+            Border,
+            TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {
+                Thickness = 2.2,
+                Transparency = 0
+            }
+        ):Play()
+
+        task.wait(1.2)
+
+        TweenService:Create(
+            Border,
+            TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {
+                Thickness = 1.5,
+                Transparency = 0.12
+            }
+        ):Play()
+
+        task.wait(1.2)
+    end
+end)
 
 local CoverImage = Instance.new("ImageLabel")
 CoverImage.Size = UDim2.new(1, 0, 1, 0)
