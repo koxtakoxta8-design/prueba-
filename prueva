@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
@@ -953,38 +954,6 @@ local function updateTargetDisplay()
     end
 end
 
-local Dragging = false
-local DragStart
-local StartPosition
-
-MainFrame.InputBegan:Connect(function(Input)
-    if Input.UserInputType == Enum.UserInputType.MouseButton1
-    or Input.UserInputType == Enum.UserInputType.Touch then
-        Dragging = true
-        DragStart = Input.Position
-        StartPosition = MainFrame.Position
-        Input.Changed:Connect(function()
-            if Input.UserInputState == Enum.UserInputState.End then
-                Dragging = false
-            end
-        end)
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(Input)
-    if not Dragging then return end
-    if Input.UserInputType == Enum.UserInputType.MouseMovement
-    or Input.UserInputType == Enum.UserInputType.Touch then
-        local Delta = Input.Position - DragStart
-        MainFrame.Position = UDim2.new(
-            StartPosition.X.Scale,
-            StartPosition.X.Offset + Delta.X,
-            StartPosition.Y.Scale,
-            StartPosition.Y.Offset + Delta.Y
-        )
-    end
-end)
-
 local manualFarmActive = false
 local manualFarmThread = nil
 
@@ -1146,4 +1115,3 @@ task.spawn(function()
 end)
 
 updateTargetDisplay()
-stopAutoFarm()
