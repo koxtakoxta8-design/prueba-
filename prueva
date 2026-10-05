@@ -15,7 +15,7 @@ local DISCORD_IMAGE = "rbxassetid://93628638506572"
 local DISCORD_INVITE = "https://discord.gg/4TmDcDpztN"
 
 -- Coordenadas de anti-cheat para la parada intermedia
-local ANTI_CHEAT_POS = Vector3.new(217.306, 40315.734, 847.810)
+local ANTI_CHEAT_POS = Vector3.new(143.70, 40316.12, 918.94
 
 local EggDatabase = {
     ["White Egg"]       = {Rank = 1,  Rarity = "Common",      Cost = "1"},
@@ -171,11 +171,29 @@ local function teleportToVector(vector3Pos)
     end
 end
 
--- Punto de regreso al centro del mapa.
 local function teleportToHome()
-    teleportToVector(ANTI_CHEAT_POS)
-    task.wait(0.15)
-    return true
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then return false end
+
+    for _, plot in ipairs(plots:GetChildren()) do
+        local data = plot:FindFirstChild("Data")
+        if data then
+            local owner = data:FindFirstChild("Owner")
+            if owner then
+                local isOwner = false
+                if owner:IsA("StringValue") then isOwner = (owner.Value == LocalPlayer.Name)
+                elseif owner:IsA("ObjectValue") then isOwner = (owner.Value == LocalPlayer)
+                else isOwner = (tostring(owner.Value) == LocalPlayer.Name) end
+
+                if isOwner then
+                    local targetCF = plot:IsA("Model") and plot:GetPivot() or plot.CFrame
+                    teleportToCF(targetCF)
+                    return true
+                end
+            end
+        end
+    end
+    return false
 end
 
 local function unequipEggs()
@@ -721,30 +739,11 @@ local manualFarmActive=false
 local manualFarmThread=nil
 local autoFarmActive=false
 local autoFarmThread=nil
-local TPButton,IsTP,SetTP
-local LoopButton,IsLoop,SetLoop
 
-local function stopManualFarmInternal(resetButton)
-    manualFarmActive=false
-    if manualFarmThread then
-        pcall(task.cancel, manualFarmThread)
-        manualFarmThread=nil
-    end
-    if resetButton and IsTP() then SetTP(false) end
-end
 
-local function stopAutoFarmInternal(resetButton)
-    autoFarmActive=false
-    if autoFarmThread then
-        pcall(task.cancel, autoFarmThread)
-        autoFarmThread=nil
-    end
-    if resetButton and IsLoop() then SetLoop(false) end
-end
-
-TPButton,IsTP,SetTP = CreateSwitch("TPButton","INSTA TP",UDim2.fromOffset(15,139),function(state)
+local TPButton,IsTP,SetTP = CreateSwitch("TPButton","INSTA TP",UDim2.fromOffset(15,139),function(state)
     if state then
-        stopManualFarmInternal(false)
+        stopManualFarm()
         manualFarmActive=true
         setManualSwitchState(true)
         manualFarmThread=task.spawn(function()
@@ -777,18 +776,17 @@ TPButton,IsTP,SetTP = CreateSwitch("TPButton","INSTA TP",UDim2.fromOffset(15,139
                 end
             end
             manualFarmActive=false
-            manualFarmThread=nil
             setManualSwitchState(false)
             SetTP(false)
         end)
     else
-        stopManualFarmInternal(false)
+        stopManualFarm()
     end
 end)
 
-LoopButton,IsLoop,SetLoop = CreateSwitch("LoopButton","LOOP",UDim2.fromOffset(163,139),function(state)
+local LoopButton,IsLoop,SetLoop = CreateSwitch("LoopButton","LOOP",UDim2.fromOffset(163,139),function(state)
     if state then
-        stopAutoFarmInternal(false)
+        stopAutoFarm()
         autoFarmActive=true
         setAutoSwitchState(true)
         autoFarmThread=task.spawn(function()
@@ -831,10 +829,9 @@ LoopButton,IsLoop,SetLoop = CreateSwitch("LoopButton","LOOP",UDim2.fromOffset(16
                 end
                 task.wait()
             end
-            autoFarmThread=nil
         end)
     else
-        stopAutoFarmInternal(false)
+        stopAutoFarm()
     end
 end)
 
@@ -844,13 +841,15 @@ end
 function setAutoSwitchState(state)
     autoFarmActive=state
 end
-
 function stopManualFarm()
-    stopManualFarmInternal(true)
+    manualFarmActive=false
+    if manualFarmThread then task.cancel(manualFarmThread); manualFarmThread=nil end
+    if IsTP() then SetTP(false) end
 end
-
 function stopAutoFarm()
-    stopAutoFarmInternal(true)
+    autoFarmActive=false
+    if autoFarmThread then task.cancel(autoFarmThread); autoFarmThread=nil end
+    if IsLoop() then SetLoop(false) end
 end
 
 -- Drag táctil / mouse.
