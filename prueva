@@ -171,29 +171,10 @@ local function teleportToVector(vector3Pos)
     end
 end
 
+-- Regreso al centro del mapa usando la coordenada indicada
 local function teleportToHome()
-    local plots = Workspace:FindFirstChild("Plots")
-    if not plots then return false end
-
-    for _, plot in ipairs(plots:GetChildren()) do
-        local data = plot:FindFirstChild("Data")
-        if data then
-            local owner = data:FindFirstChild("Owner")
-            if owner then
-                local isOwner = false
-                if owner:IsA("StringValue") then isOwner = (owner.Value == LocalPlayer.Name)
-                elseif owner:IsA("ObjectValue") then isOwner = (owner.Value == LocalPlayer)
-                else isOwner = (tostring(owner.Value) == LocalPlayer.Name) end
-
-                if isOwner then
-                    local targetCF = plot:IsA("Model") and plot:GetPivot() or plot.CFrame
-                    teleportToCF(targetCF)
-                    return true
-                end
-            end
-        end
-    end
-    return false
+    teleportToVector(ANTI_CHEAT_POS)
+    return true
 end
 
 local function unequipEggs()
@@ -739,11 +720,30 @@ local manualFarmActive=false
 local manualFarmThread=nil
 local autoFarmActive=false
 local autoFarmThread=nil
+local TPButton,IsTP,SetTP
+local LoopButton,IsLoop,SetLoop
 
+local function stopManualFarmInternal(resetButton)
+    manualFarmActive=false
+    if manualFarmThread then
+        pcall(task.cancel, manualFarmThread)
+        manualFarmThread=nil
+    end
+    if resetButton and IsTP() then SetTP(false) end
+end
 
-local TPButton,IsTP,SetTP = CreateSwitch("TPButton","INSTA TP",UDim2.fromOffset(15,139),function(state)
+local function stopAutoFarmInternal(resetButton)
+    autoFarmActive=false
+    if autoFarmThread then
+        pcall(task.cancel, autoFarmThread)
+        autoFarmThread=nil
+    end
+    if resetButton and IsLoop() then SetLoop(false) end
+end
+
+TPButton,IsTP,SetTP = CreateSwitch("TPButton","INSTA TP",UDim2.fromOffset(15,139),function(state)
     if state then
-        stopManualFarm()
+        stopManualFarmInternal(false)
         manualFarmActive=true
         setManualSwitchState(true)
         manualFarmThread=task.spawn(function()
@@ -776,17 +776,18 @@ local TPButton,IsTP,SetTP = CreateSwitch("TPButton","INSTA TP",UDim2.fromOffset(
                 end
             end
             manualFarmActive=false
+            manualFarmThread=nil
             setManualSwitchState(false)
             SetTP(false)
         end)
     else
-        stopManualFarm()
+        stopManualFarmInternal(false)
     end
 end)
 
-local LoopButton,IsLoop,SetLoop = CreateSwitch("LoopButton","LOOP",UDim2.fromOffset(163,139),function(state)
+LoopButton,IsLoop,SetLoop = CreateSwitch("LoopButton","LOOP",UDim2.fromOffset(163,139),function(state)
     if state then
-        stopAutoFarm()
+        stopAutoFarmInternal(false)
         autoFarmActive=true
         setAutoSwitchState(true)
         autoFarmThread=task.spawn(function()
@@ -829,9 +830,10 @@ local LoopButton,IsLoop,SetLoop = CreateSwitch("LoopButton","LOOP",UDim2.fromOff
                 end
                 task.wait()
             end
+            autoFarmThread=nil
         end)
     else
-        stopAutoFarm()
+        stopAutoFarmInternal(false)
     end
 end)
 
@@ -841,15 +843,13 @@ end
 function setAutoSwitchState(state)
     autoFarmActive=state
 end
+
 function stopManualFarm()
-    manualFarmActive=false
-    if manualFarmThread then task.cancel(manualFarmThread); manualFarmThread=nil end
-    if IsTP() then SetTP(false) end
+    stopManualFarmInternal(true)
 end
+
 function stopAutoFarm()
-    autoFarmActive=false
-    if autoFarmThread then task.cancel(autoFarmThread); autoFarmThread=nil end
-    if IsLoop() then SetLoop(false) end
+    stopAutoFarmInternal(true)
 end
 
 -- Drag táctil / mouse.
