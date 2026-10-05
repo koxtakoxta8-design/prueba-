@@ -327,23 +327,40 @@ local function executeAntiCheatAutoGrab(maxTime)
 end
 
 local function performAntiCheatAndReturn(eggName, rarity, cost)
-    -- Punto anti-cheat exacto solicitado
-    teleportToVector(ANTI_CHEAT_POS)
-    task.wait(0.05)
-    teleportToVector(ANTI_CHEAT_POS)
-    task.wait(0.10)
+    -- Flujo exacto:
+    -- 1) Ya llegó al mejor huevo y lo agarró.
+    -- 2) Ir a las coordenadas indicadas.
+    -- 3) Soltar el huevo.
+    -- 4) Volver a agarrarlo.
+    -- 5) Ir al plot.
 
-    -- Soltar y recuperar rápidamente
-    triggerDropEggButton()
-    executeAntiCheatAutoGrab(2.0)
-
-    -- Sin espera fija de 2 segundos: salir al plot apenas se tenga
-    if characterHasEgg() then
-        addStealHistory(eggName, rarity, cost)
+    if not characterHasEgg() then
+        return
     end
 
-    teleportToHome()
-    unequipEggs()
+    -- Registrar el huevo antes del segundo traslado.
+    addStealHistory(eggName, rarity, cost)
+
+    -- 2) TP a las coordenadas.
+    teleportToVector(ANTI_CHEAT_POS)
+    task.wait(0.15)
+    teleportToVector(ANTI_CHEAT_POS)
+    task.wait(0.15)
+
+    -- 3) Soltar el huevo en las coordenadas.
+    triggerDropEggButton()
+    task.wait(0.12)
+
+    -- 4) Agarrarlo otra vez en las coordenadas.
+    executeAntiCheatAutoGrab(2.0)
+    task.wait(0.10)
+
+    -- 5) Solo después de recuperarlo, volver al plot.
+    if characterHasEgg() then
+        teleportToHome()
+        task.wait(0.10)
+        unequipEggs()
+    end
 end
 
 local function getTop10EggsInServer()
@@ -976,10 +993,7 @@ TPClick.MouseButton1Click:Connect(function()
 
     manualFarmActive = true
     manualFarmThread = task.spawn(function()
-        -- TP directo al punto indicado antes de iniciar el resto del proceso.
-        teleportToVector(ANTI_CHEAT_POS)
-        task.wait(0.15)
-
+        -- Primero va al mejor huevo.
         local eggObj = selectedTargetEgg
         local eggNameCaptured = "UNKNOWN"
         local eggRarityCaptured = "Divine"
@@ -1119,5 +1133,4 @@ task.spawn(function()
         end
     end
 end)
-
 updateTargetDisplay()
