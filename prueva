@@ -15,7 +15,7 @@ local DISCORD_IMAGE = "rbxassetid://93628638506572"
 local DISCORD_INVITE = "https://discord.gg/4TmDcDpztN"
 
 -- Coordenadas de anti-cheat para la parada intermedia
-local ANTI_CHEAT_POS = Vector3.new(143.704697, 40316.117188, 918.936829)
+-- Punto anti-cheat recibido\nlocal ANTI_CHEAT_POS = Vector3.new(143.704697, 40316.117188, 918.936829)
 
 local EggDatabase = {
     ["White Egg"]       = {Rank = 1,  Rarity = "Common",      Cost = "1"},
@@ -1113,5 +1113,4 @@ task.spawn(function()
         end
     end
 end)
-
 updateTargetDisplay()
