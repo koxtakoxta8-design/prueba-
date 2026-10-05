@@ -171,75 +171,11 @@ local function teleportToVector(vector3Pos)
     end
 end
 
--- Busca el plot del jugador y vuelve allí después de recoger el huevo.
--- Solo usa el punto anti-cheat como respaldo si no se encuentra el plot.
+-- Punto de regreso al centro del mapa.
 local function teleportToHome()
-    local plots = Workspace:FindFirstChild("Plots")
-    if plots then
-        local candidates = {}
-
-        for _, plot in ipairs(plots:GetChildren()) do
-            local data = plot:FindFirstChild("Data")
-            local owner = data and data:FindFirstChild("Owner")
-
-            local isOwner = false
-            if owner then
-                pcall(function()
-                    if owner:IsA("StringValue") then
-                        isOwner = owner.Value == LocalPlayer.Name or owner.Value == LocalPlayer.DisplayName
-                    elseif owner:IsA("ObjectValue") then
-                        isOwner = owner.Value == LocalPlayer
-                    else
-                        local value = tostring(owner.Value)
-                        isOwner = value == LocalPlayer.Name or value == tostring(LocalPlayer.UserId)
-                    end
-                end)
-            end
-
-            if isOwner then
-                table.insert(candidates, plot)
-            end
-        end
-
-        -- Fallback: algunos plots guardan el propietario como atributo.
-        if #candidates == 0 then
-            for _, plot in ipairs(plots:GetChildren()) do
-                local ownerName = plot:GetAttribute("OwnerName")
-                    or plot:GetAttribute("Username")
-                    or plot:GetAttribute("UserName")
-                    or plot:GetAttribute("Owner")
-                local ownerId = plot:GetAttribute("OwnerUserId")
-                    or plot:GetAttribute("UserId")
-                    or plot:GetAttribute("UserID")
-
-                if tostring(ownerName) == LocalPlayer.Name
-                    or tostring(ownerName) == LocalPlayer.DisplayName
-                    or tostring(ownerId) == tostring(LocalPlayer.UserId) then
-                    table.insert(candidates, plot)
-                end
-            end
-        end
-
-        if #candidates > 0 then
-            local plot = candidates[1]
-            local targetCF
-            if plot:IsA("Model") then
-                targetCF = plot:GetPivot()
-            elseif plot:IsA("BasePart") then
-                targetCF = plot.CFrame
-            end
-
-            if targetCF then
-                teleportToCF(targetCF)
-                task.wait(0.15)
-                return true
-            end
-        end
-    end
-
-    -- Último respaldo: punto anti-cheat.
     teleportToVector(ANTI_CHEAT_POS)
-    return false
+    task.wait(0.15)
+    return true
 end
 
 local function unequipEggs()
