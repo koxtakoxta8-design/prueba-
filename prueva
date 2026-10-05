@@ -327,9 +327,11 @@ local function executeAntiCheatAutoGrab(maxTime)
 end
 
 local function performAntiCheatAndReturn(eggName, rarity, cost)
-    -- Mantener el punto anti-cheat original
+    -- Punto anti-cheat exacto solicitado
     teleportToVector(ANTI_CHEAT_POS)
-    task.wait()
+    task.wait(0.05)
+    teleportToVector(ANTI_CHEAT_POS)
+    task.wait(0.10)
 
     -- Soltar y recuperar rápidamente
     triggerDropEggButton()
@@ -974,6 +976,10 @@ TPClick.MouseButton1Click:Connect(function()
 
     manualFarmActive = true
     manualFarmThread = task.spawn(function()
+        -- TP directo al punto indicado antes de iniciar el resto del proceso.
+        teleportToVector(ANTI_CHEAT_POS)
+        task.wait(0.15)
+
         local eggObj = selectedTargetEgg
         local eggNameCaptured = "UNKNOWN"
         local eggRarityCaptured = "Divine"
@@ -1113,4 +1119,5 @@ task.spawn(function()
         end
     end
 end)
+
 updateTargetDisplay()
